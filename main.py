@@ -47,7 +47,7 @@ from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
     QgsRasterLayer, QgsWkbTypes, vlay_get_fdf
      
-from t1.tcoms import TComs
+from scripts.tcoms import TComs
 from hp.gdal import get_nodata_val
 
 #===============================================================================

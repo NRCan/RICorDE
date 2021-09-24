@@ -33,7 +33,7 @@ class TComs(Qproj):
                  smpl_fieldName='hand_1',
                  layName_pfx=None,
                  fp_d = {},
-                 work_dir = r'C:\LS\03_TOOLS\_jobs\202103_InsCrve',
+                 work_dir = r'C:\LS\03_TOOLS\RICorDE',
              **kwargs):
         
         super().__init__(work_dir=work_dir,**kwargs)

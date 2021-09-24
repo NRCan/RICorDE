@@ -12,8 +12,7 @@ common methods for the depths workflow 1
 import os, datetime, copy
 import processing
 
-from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore,\
-    QgsRasterLayer
+from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore
 
 
 from hp.exceptions import Error

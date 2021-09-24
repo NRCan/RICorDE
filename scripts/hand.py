@@ -14,14 +14,14 @@ import os, datetime
 
 
 
-from hp.exceptions import Error
-from hp.dirz import force_open_dir
+#from hp.exceptions import Error
+#from hp.dirz import force_open_dir
  
-from hp.Q import Qproj, QgsRasterLayer, QgsCoordinateReferenceSystem, QgsMapLayerStore #only for Qgis sessions
+#from hp.Q import Qproj, QgsRasterLayer, QgsCoordinateReferenceSystem, QgsMapLayerStore #only for Qgis sessions
 
 from hp.whitebox import Whitebox
  
-from t1.tcoms import TComs
+from scripts.tcoms import TComs
 
 """doesn't seem to be working... need to stick with QGIS algos
 import whitebox

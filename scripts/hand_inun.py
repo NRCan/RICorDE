@@ -30,11 +30,11 @@ from hp.Q import Qproj, QgsVectorLayer, view, vlay_get_fdf, QgsMapLayerStore, \
 from qgis.analysis import QgsRasterCalculatorEntry
 from hp.gdal import rlay_to_array
 
-from t1.tcoms import TComs
+from scripts.tcoms import TComs
 
 
 
-from animation import capture_images
+from hp.animation import capture_images
 
 
 class HIses(TComs): #get inundation raters from HAND and raw polygonss

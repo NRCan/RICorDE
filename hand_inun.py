@@ -101,7 +101,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                    fp_key = 'hvgrid_fp', #becuase weve done a nasty nesting
                    logger=None,
                       ):
-        """TODO: promote this method to dep_wflow"""
+        """TODO: promote this method to main"""
         
         #=======================================================================
         # defaults

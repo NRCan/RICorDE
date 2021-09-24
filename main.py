@@ -192,7 +192,7 @@ class Session(TComs):
         if not 'bfp_fp' in self.fp_d:
             log.info('bulilding bfps')
             
-            from microsoftBldgFt import mbfpSession
+            from data_collect.microsoftBldgFt import mbfpSession
             
             with mbfpSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
                 # get filepaths
@@ -252,7 +252,7 @@ class Session(TComs):
         if not 'fic_fp' in self.fp_d:
             log.info('building fic polys')
             
-            from t1.fic_composite import ficSession
+            from data_collect.fic_composite import ficSession
             
             with ficSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
             
@@ -313,7 +313,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('downloading and clipping HRDEM')
             
-            from t1.hrdem import HRDEMses
+            from data_collect.hrdem import HRDEMses
             
             with HRDEMses(session=self, logger=logger, inher_d=self.childI_d, fp_d=self.fp_d,
                           aoi_fp=aoi_fp) as wrkr:
@@ -367,7 +367,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('getting NHN')
             
-            from NHN_dl import NHNses as SubSession
+            from data_collect.nhn import NHNses as SubSession
             
             with SubSession(session=self, logger=log, 
                             fp_d=self.fp_d, #letting these passs
@@ -570,7 +570,7 @@ class Session(TComs):
         # build
         #=======================================================================
         if not fp_key in self.fp_d:
-            from t1.hand import HANDses as SubSession
+            from scripts.hand import HANDses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
                 """passing all filepathss for a clean kill"""
@@ -790,7 +790,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             
             log.info('building \'%s\' w/ %s %s'%(fp_key, args, kwargs))
-            from t1.hand_inun import HIses as SubSession
+            from scripts.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -924,7 +924,7 @@ class Session(TComs):
             ofp = os.path.join(self.out_dir, self.layName_pfx+'_hrun_imax_%03d.tif'%(hval*100))
             
             
-            from t1.tcoms import TComs as SubSession
+            from scripts.tcoms import TComs as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1210,7 +1210,7 @@ class Session(TComs):
         #=======================================================================
         if not fp_key in self.fp_d:
             log.info('building \'%s\' w/ %s %s'%(fp_key, args, kwargs))
-            from t1.hand_inun import HIses as SubSession
+            from scripts.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1253,7 +1253,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('building HAND inundation set \n \n')
             
-            from t1.hand_inun import HIses as SubSession
+            from scripts.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1294,7 +1294,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('building HAND wsl set')
             
-            from t1.hand_inun import HIses as SubSession
+            from scripts.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1347,7 +1347,7 @@ class Session(TComs):
             
             
             
-            from t1.hand_inun import HIses as SubSession
+            from scripts.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:

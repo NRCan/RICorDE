@@ -89,48 +89,7 @@ def run(#main runner
     
         
 
-def Fred12():
-    
-    return run(
-        name='Fred12',
-        aoi_fp=r'C:\LS\02_WORK\02_Mscripts\InsuranceCurves\04_CALC\Fred\aoi\aoi12_fred_0722.gpkg',
-        crsid='EPSG:3979',
-        
-        fp_d={
-            'dem_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\depWf\fred01_0723\hrdem_Fred01_0722_05_fild.tif',
-            'fic_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\depWf\fred01_0723\FiC_Fred01_1x_20180502-20180504_072223.gpkg',
-            'nhn_raw_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\depWf\fred01_0723\NHN_HD_WATERBODY_Fred01_0723_raw.gpkg',
-            'nhn_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\depWf\fred01_0723\NHN_HD_WATERBODY_Fred01_0723_clean.gpkg',
-            'hand_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\depWf\fred01_0723\Fred01_DR_0723_HAND.tif',
-            'ndb_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\depWf\fred01_0723\Fred01_DR_0723_ndb.gpkg',
-            'inun1_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_inun1.gpkg',
-            'smpls1_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_smpls1.gpkg',
-            'hInun_max_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_hrun_imax_700.tif',
-            'inun2r_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_inun2r.tif',
-            'inun2_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_inun2.gpkg',
-            'hvgrid_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_hvgrid.tif',
-            'hinun_pick':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\hinun_set.pickle',
-            'hwsl_pick':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\hwsl_set.pickle',
-            'wslM_fp':r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724\Fred01_DR_0724_wslM.tif',
 
-            },
-        out_dir=r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\DR\Fred12_0724',
-        
-        
-        #FiC  period of interest
-        min_dt=datetime.datetime.strptime('2018-05-02', '%Y-%m-%d'),
-        max_dt=datetime.datetime.strptime('2018-05-04', '%Y-%m-%d'),
-        
-        #NHN
-        waterTypes=['Unknown','Watercourse'],
-        
-        #gen
-        
-        dem_resolution=5,
-        hval_prec=0.2,
-        
-        
-        )
 
 
 

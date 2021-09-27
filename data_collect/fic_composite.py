@@ -180,23 +180,18 @@ class ficSession(Qproj):
         
         log.info('found %i feats within date range AND aoi'%(
             vlay_raw.dataProvider().featureCount()))
-
+        
+        
         #=======================================================================
-        # clean
+        # pre- clean
         #=======================================================================
         vlay = processing.run('native:dropmzvalues', 
                        {'INPUT':vlay_raw, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
                        feedback=self.feedback, context=self.context)['OUTPUT']
                        
         mstore.addMapLayer(vlay)
-        #fix geo
-        #=======================================================================
-        # ofp1 = os.path.join(self.out_dir, 'FiC_%s_%ix_%s-%s.gpkg'%(self.name,
-        #                          vlay.dataProvider().featureCount(),
-        #                         min_dt.strftime('%Y%m%d'), max_dt.strftime('%Y%m%d')))
-        #=======================================================================
-                                      
-                                                     
+        
+        #fix geo                                                     
         vlay1 = processing.run('native:fixgeometries', {'INPUT':vlay, 'OUTPUT':'TEMPORARY_OUTPUT'},  
                                feedback=self.feedback)['OUTPUT']
         
@@ -204,51 +199,32 @@ class ficSession(Qproj):
         #=======================================================================
         # clip
         #=======================================================================
-        #=======================================================================
-        # ofp2 = os.path.join(self.out_dir, 'FiC_%s_%ix_%s-%s_aoi.gpkg'%(self.name,
-        #                          vlay.dataProvider().featureCount(),
-        #                         min_dt.strftime('%Y%m%d'), max_dt.strftime('%Y%m%d')))
-        #=======================================================================
         
-        vlay2 = processing.run('native:clip', { 'INPUT' : vlay1,'OUTPUT' : 'TEMPORARY_OUTPUT','OVERLAY' : self.aoi_vlay}, 
+        vlay2 = processing.run('native:clip', { 'INPUT' : vlay1,
+                                               'OUTPUT' : 'TEMPORARY_OUTPUT','OVERLAY' : self.aoi_vlay}, 
                        feedback=self.feedback)['OUTPUT']
         mstore.addMapLayer(vlay2)
         
+        
         #=======================================================================
-        # dissolve
+        # #setup outputs
         #=======================================================================
-        
-        """simpler to dissolve all runs.. even if theres only 1 feat"""
-        
-        
-        #setup outputs
         ofp = os.path.join(self.out_dir, 'FiC_%s_%ix_%s-%s_%s.gpkg'%(self.name,
-                     vlay.dataProvider().featureCount(),
+                     vlay_raw.dataProvider().featureCount(),
                     min_dt.strftime('%Y%m%d'), max_dt.strftime('%Y%m%d'),
                     datetime.datetime.now().strftime('%m%d%H')
                     ))
         if os.path.exists(ofp):
             log.warning('output file exists and overwwrite=%s\n    %s'%(self.overwrite, ofp))
             assert self.overwrite
-        
-        
-        if reproject:
-            output = 'TEMPORARY_OUTPUT'
-        else:
-            output = ofp
-
-        #run
-        res1 = processing.run('native:dissolve', { 'INPUT' : vlay2,'OUTPUT' : output,'FIELD' : []}, 
-                   feedback=self.feedback)['OUTPUT']
-        
+            
+            
         #=======================================================================
-        # reproject
+        # clean
         #=======================================================================
-        if reproject:
-            mstore.addMapLayer(res1)
-                #reproejct
-            res_d = self.reproject(res1, output=ofp, logger=log, selected_only=False)
-
+        self._clean(vlay_raw, mstore, ofp, log, reproject=reproject)
+        
+        
         #=======================================================================
         # wrap
         #=======================================================================
@@ -262,6 +238,166 @@ class ficSession(Qproj):
         return ofp, meta_d
     
 
+    def _clean(self,
+               vlay_raw,
+               mstore,
+               ofp,
+               log,
+               reproject=True,
+               ):
+        #=======================================================================
+        # clean
+        #=======================================================================
+        #drop MZ
+        vlay = processing.run('native:dropmzvalues', 
+                       {'INPUT':vlay_raw, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
+                       feedback=self.feedback, context=self.context)['OUTPUT']
+                       
+        mstore.addMapLayer(vlay)
+        
+        #fix geo                                                     
+        vlay1 = processing.run('native:fixgeometries', {'INPUT':vlay, 'OUTPUT':'TEMPORARY_OUTPUT'},  
+                               feedback=self.feedback)['OUTPUT']
+        
+        mstore.addMapLayer(vlay1)
+
+        
+        #=======================================================================
+        # dissolve
+        #=======================================================================
+        
+        """simpler to dissolve all runs.. even if theres only 1 feat"""
+
+        if reproject:
+            output = 'TEMPORARY_OUTPUT'
+        else:
+            output = ofp
+
+        #run
+        res1 = processing.run('native:dissolve', { 'INPUT' : vlay1,'OUTPUT' : output,'FIELD' : []}, 
+                   feedback=self.feedback)['OUTPUT']
+        
+        #=======================================================================
+        # reproject
+        #=======================================================================
+        if reproject:
+            mstore.addMapLayer(res1)
+                #reproejct
+            res_d = self.reproject(res1, output=ofp, logger=log, selected_only=False)
+            
+            return ofp
+        return res1
+            
+        
+
+
+    
+    def merge_fics(self, #helper func to merge to FiC files
+                   fp_l,
+                  reproject=True,
+ 
+                   logger=None,
+                   ofp=None,
+                   ):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger = self.logger
+ 
+        
+        log = logger.getChild('merge_fics')
+        mstore=QgsMapLayerStore() #build a new store
+        
+        log.info('on %i polys'%len(fp_l))
+        
+        if ofp is None: ofp = os.path.join(self.out_dir, 'FiC_merge_%ix.gpkg'%len(fp_l))
+        
+        
+        #=======================================================================
+        # merge
+        #=======================================================================
+        if len(fp_l)>1:
+            vlay1 = processing.run('native:mergevectorlayers', {'LAYERS':fp_l, 'OUTPUT':'TEMPORARY_OUTPUT'},  
+                                   feedback=self.feedback)['OUTPUT']
+            
+            mstore.addMapLayer(vlay1)
+        else:
+            vlay1 = fp_l[0]
+            
+        #=======================================================================
+        # clean
+        #=======================================================================
+        self._clean(vlay1, mstore, ofp, log, reproject=reproject)
+        
+        log.info('finished on \n     %s'%ofp)
+        return ofp
+    
+    def get_aoi(self, #build an AOi from a cleaned FiC Poly
+                fp,
+                clip_fp=None, #alternate polygon to clip with
+                #buffer=100, holesize=10000, simplify=10,
+                prec=100,
+                logger=None,):
+        """
+        just using bounding boxes
+        """
+        
+        #=======================================================================
+        # defautls
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log = logger.getChild('get_aoi')
+        ofp = os.path.join(self.out_dir, '%s_%s_aoi.gpkg'%(self.name, os.path.splitext(os.path.basename(fp))[0]))
+        
+
+        log.info('on %s'%fp)
+        #=======================================================================
+        # algos
+        #=======================================================================
+        #=======================================================================
+        # #buffer
+        # res1 = processing.run('native:buffer', { 'DISSOLVE' : True, 'DISTANCE' : buffer, 'END_CAP_STYLE' : 0,
+        #                                          'INPUT' : fp, 
+        #                                         'JOIN_STYLE' : 0, 'MITER_LIMIT' : 2, 
+        #                                         'OUTPUT' : 'TEMPORARY_OUTPUT', 'SEGMENTS' : 5 }, 
+        #    feedback=self.feedback)['OUTPUT']
+        # 
+        # #delete holes
+        # res2 = processing.run('native:deleteholes', { 'INPUT' : res1,'OUTPUT' : 'TEMPORARY_OUTPUT','MIN_AREA' : holesize}, 
+        #    feedback=self.feedback)['OUTPUT']
+        #    
+        # #simplify
+        # ofp = processing.run('native:simplifygeometries', { 'INPUT' : res2, 
+        #                             'METHOD' : 0, 
+        #                             'OUTPUT' : ofp, 'TOLERANCE' : simplify }, 
+        #    feedback=self.feedback)['OUTPUT']
+        #=======================================================================
+        if clip_fp is None:
+            output=ofp
+        else:
+            output='TEMPORARY_OUTPUT'
+        
+        res1 = processing.run('native:boundingboxes', { 'INPUT' : fp,'OUTPUT' : output,
+                                                       'ROUND_TO' : prec}, 
+            feedback=self.feedback)['OUTPUT']
+        
+        
+        #clip #just overlap with HRDEM
+        if not clip_fp is None:
+            res2 = processing.run('native:clip', { 'INPUT' : res1, 
+                                      'OUTPUT' : ofp, 
+                                      'OVERLAY' : clip_fp}, 
+                                                    feedback=self.feedback)['OUTPUT']
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        log.info('converted FiC to aoi \n    %s'%ofp)
+        return ofp
+        
+        
+
+   
         
                        
         

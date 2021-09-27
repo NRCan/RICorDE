@@ -457,7 +457,7 @@ class Qproj(QAlgos, Basic):
                 vlay_raw.name(), vlay_raw.crs().authid(), self.qproj.crs().authid(), reproj, set_proj_crs))
             
             if reproj:
-                vlay2 = self.reproject(vlay1, logger=log)['OUTPUT']
+                vlay2 = self.reproject(vlay1, logger=log)
                 mstore.addMapLayer(vlay1)
 
                 

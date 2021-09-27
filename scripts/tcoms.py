@@ -29,6 +29,10 @@ class TComs(Qproj):
     dem_psize=1.0 #pixel size of dem
     hval_prec=1
     
+    #adding placeholders for runs w/o aois
+    aoi_vlay=None
+    aoi_fp=None
+    
     def __init__(self, 
                  smpl_fieldName='hand_1',
                  layName_pfx=None,

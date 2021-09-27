@@ -46,6 +46,7 @@ class QAlgos(object):
         'EPSG:3979':{
             'EPSG:3857':'+proj=pipeline +step +inv +proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77 +x_0=0 +y_0=0 +ellps=GRS80 +step +proj=webmerc +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84',
             'EPSG:2950':'+proj=pipeline +step +inv +proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77 +x_0=0 +y_0=0 +ellps=GRS80 +step +proj=tmerc +lat_0=0 +lon_0=-73.5 +k=0.9999 +x_0=304800 +y_0=0 +ellps=GRS80',
+            'EPSG:3978':'+proj=noop'
             },
         'EPSG:3402':{
             'EPSG:3857':'+proj=pipeline +step +inv +proj=tmerc +lat_0=0 +lon_0=-115 +k=0.9992 +x_0=500000 +y_0=0 +ellps=GRS80 +step +proj=webmerc +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84'
@@ -56,6 +57,9 @@ class QAlgos(object):
             },
         'EPSG:2950':{
             'EPSG:3979':'+proj=pipeline +step +inv +proj=tmerc +lat_0=0 +lon_0=-73.5 +k=0.9999 +x_0=304800 +y_0=0 +ellps=GRS80 +step +proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77 +x_0=0 +y_0=0 +ellps=GRS80',
+            },
+        'EPSG:3978':{
+            'EPSG:3979':'+proj=noop'
             }
 
         }

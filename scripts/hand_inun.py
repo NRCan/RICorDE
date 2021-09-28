@@ -382,17 +382,20 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # output
         #=======================================================================
-        #summary data
-        df = pd.DataFrame.from_dict(res_d, orient='index')
-        self.session.smry_d['run_hwslSet'] = df.copy()
+        if len(res_d)>0:
+            #summary data
+            df = pd.DataFrame.from_dict(res_d, orient='index')
+            self.session.smry_d['run_hwslSet'] = df.copy()
+                
+            #write the reuslts pickel
+            """only taking those w/ successfulr asters"""
+            res_d = df[df['error'].isna()].set_index('hval', drop=True)['fp'].to_dict()
             
-        #write the reuslts pickel
-        """only taking those w/ successfulr asters"""
-        res_d = df[df['error'].isna()].set_index('hval', drop=True)['fp'].to_dict()
-        
-        with open(ofp, 'wb') as f:
-            # Pickle the 'data' dictionary using the highest protocol available.
-            pickle.dump(res_d, f, pickle.HIGHEST_PROTOCOL)
+            with open(ofp, 'wb') as f:
+                # Pickle the 'data' dictionary using the highest protocol available.
+                pickle.dump(res_d, f, pickle.HIGHEST_PROTOCOL)
+        else:
+            log.error('failed to get any results')
         
         #=======================================================================
         # wrap

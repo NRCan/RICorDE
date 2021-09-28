@@ -364,11 +364,13 @@ class Session(TComs):
         if logger is None: logger=self.logger
         log=logger.getChild('load_nhn')
         fp_key = 'nhn_fp'
+        
+        log.info('getting %s'%fp_key)
         #=======================================================================
         # build from scratch
         #=======================================================================
         if not fp_key in self.fp_d:
-            log.info('getting NHN')
+            
             
             from data_collect.nhn import NHNses as SubSession
             
@@ -378,23 +380,21 @@ class Session(TComs):
             
                 ofp_d, meta_d = wrkr.run(**kwargs)
                 
+                """want to check before we store to ofp_d"""
+                self.check_streams(ofp_d[fp_key],aoi_fp, logger=log)
+                
                 #update containers
                 self.meta_d.update({'load_nhn':meta_d})
                 self.ofp_d.update(ofp_d)
             
             ofp = self.ofp_d[fp_key]
         else:
+
             ofp = self.fp_d[fp_key]
             
-        
-        
-        #=======================================================================
-        # checks
-        #=======================================================================
-        self.check_streams(ofp,aoi_fp, logger=log )
-        
-        
-        
+            self.check_streams(ofp,aoi_fp, logger=log)
+            
+ 
         #=======================================================================
         # wrap
         #=======================================================================
@@ -422,7 +422,7 @@ class Session(TComs):
         #=======================================================================
         vlay = self.vlay_load(streams_fp, logger=log)
         assert vlay.crs() == self.qproj.crs()
-        
+        log.debug('on %s'%streams_fp)
         #=======================================================================
         # get areas
         #=======================================================================
@@ -446,6 +446,9 @@ class Session(TComs):
         #=======================================================================
         self.mstore.addMapLayer(vlay)
         self.mstore.removeMapLayers([vlay])
+        
+        log.debug('finished')
+        return
     
 
         
@@ -508,7 +511,7 @@ class Session(TComs):
         # add minimum water bodies to FiC inundation
         #=======================================================================
         #nodata boundary of hand layer (polygon)
-        ndb_fp = self.build_nd_bndry(hand_fp=hand_fp, stream_fp=nhn_rlay_fp, logger=log)
+        ndb_fp = self.build_nd_bndry(hand_fp=hand_fp, logger=log)
         
         #merge, crop, and clean
         inun1_fp = self.build_inun1(fic_fp=fic_fp,nhn_fp=nhn_fp,ndb_fp=ndb_fp,
@@ -597,7 +600,7 @@ class Session(TComs):
     
     def build_nd_bndry(self, #get the no-data boundary of the HAND-ray (as a vector)
                   hand_fp='',
-                  stream_fp='',
+                  #stream_fp='',
                   logger=None,
                   ):
         
@@ -651,7 +654,7 @@ class Session(TComs):
             
             #fix geometry
             nd_vlay2_fp = self.fixgeo(nd_vlay1, logger=log, 
-                                      output=os.path.join(self.temp_dir, 'nd_vlay2.gpkg'))
+                                      output=os.path.join(self.temp_dir, 'nd_vlay2_fixgeo.gpkg'))
              
             #===================================================================
             # #merge back in streams
@@ -659,11 +662,16 @@ class Session(TComs):
             #===================================================================
             """these seem to still be neeeded"""
             #delete all the holes
-            nd_vlay4 = self.deleteholes(nd_vlay2_fp, hole_area=0, logger=log)
+            nd_vlay4 = self.deleteholes(nd_vlay2_fp, hole_area=0, logger=log,
+                                        output=os.path.join(self.temp_dir, 'nd_vlay4_deleteholes.gpkg'))
+            
+            #fix geometry
+            """needed a second time for some polys"""
+            nd_vlay5 = self.fixgeo(nd_vlay4, logger=log, 
+                                      output=os.path.join(self.temp_dir, 'nd_vlay5_fixgeo.gpkg'))
             
             #dissolve
-            
-            _ = self.dissolve(nd_vlay4, output=ofp, logger=log)
+            _ = self.dissolve(nd_vlay5, output=ofp, logger=log)
             
             #wrap
             self.mstore.addMapLayers([nd_vlay1])

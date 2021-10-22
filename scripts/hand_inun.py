@@ -107,7 +107,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('r.hvgrid')
+        log=logger.getChild('rhvgrid')
         
         if sample_spacing is None:
             sample_spacing = self.dem_psize*5
@@ -1163,7 +1163,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             #===================================================================
             """v.surf.idw isnt generating the correct resolution
             ores = self.get_resolution(interp_raw_fp)"""
-            
+            log.info('warpreproject on %s'%interp_raw_fp)
             self.warpreproject(interp_raw_fp, 
                                resolution=resolution, nodata_val=-9999,
                                output=ofp, logger=log)

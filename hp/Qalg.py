@@ -633,7 +633,7 @@ class QAlgos(object):
         #=======================================================================
         # setup
         #=======================================================================
-        ins_d = { 'CRS' : crs, 'LAYERS' :vlay_l,      'OUTPUT' : output }
+        ins_d = { 'CRS' : crs, 'LAYERS' :vlay_l,'OUTPUT' : output }
         
         log.debug('executing \'%s\' with: \n     %s'
             %(algo_nm,  ins_d))

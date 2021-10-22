@@ -656,10 +656,7 @@ class Session(TComs):
             nd_vlay2_fp = self.fixgeo(nd_vlay1, logger=log, 
                                       output=os.path.join(self.temp_dir, 'nd_vlay2_fixgeo.gpkg'))
              
-            #===================================================================
-            # #merge back in streams
-            # nd_vlay3 = self.mergevectorlayers([nd_vlay2_fp, stream_fp], logger=log)
-            #===================================================================
+
             """these seem to still be neeeded"""
             #delete all the holes
             nd_vlay4 = self.deleteholes(nd_vlay2_fp, hole_area=0, logger=log,

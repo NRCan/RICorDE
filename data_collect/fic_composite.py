@@ -312,12 +312,16 @@ class ficSession(Qproj):
         
         if ofp is None: ofp = os.path.join(self.out_dir, 'FiC_merge_%ix.gpkg'%len(fp_l))
         
-        
+        #=======================================================================
+        # check
+        #=======================================================================
+        for fp in fp_l: assert os.path.exists(fp), 'bad fp: %s'%fp
         #=======================================================================
         # merge
         #=======================================================================
         if len(fp_l)>1:
-            vlay1 = processing.run('native:mergevectorlayers', {'LAYERS':fp_l, 'OUTPUT':'TEMPORARY_OUTPUT'},  
+            log.debug('merging \n    %s'%fp_l)
+            vlay1 = processing.run('native:mergevectorlayers', {'CRS':None,'LAYERS':fp_l, 'OUTPUT':'TEMPORARY_OUTPUT'},  
                                    feedback=self.feedback)['OUTPUT']
             
             mstore.addMapLayer(vlay1)

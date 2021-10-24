@@ -1529,6 +1529,9 @@ class Session(TComs):
                         d=None,
                         logger=None,
                         ):
+        """
+        called on exit
+        """
         from pathlib import Path
         #=======================================================================
         # defaults
@@ -1582,6 +1585,14 @@ class Session(TComs):
                          'wkbType':QgsWkbTypes().displayString(vlay.wkbType()),
                          'crs':vlay.crs().authid(),
                          })
+                    
+                    #Polytons
+                    if 'Polygon' in QgsWkbTypes().displayString(vlay.wkbType()):
+                        res_d[fp_key]['area'] = self.vlay_poly_tarea(vlay)
+                       
+                        
+                        
+                    
                 else:
                     pass
             except Exception as e:

@@ -248,6 +248,7 @@ class ficSession(Qproj):
         #=======================================================================
         # clean
         #=======================================================================
+        log.debug('native:dropmzvalues')
         #drop MZ
         vlay = processing.run('native:dropmzvalues', 
                        {'INPUT':vlay_raw, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
@@ -255,7 +256,8 @@ class ficSession(Qproj):
                        
         mstore.addMapLayer(vlay)
         
-        #fix geo                                                     
+        #fix geo                     
+        log.debug('native:fixgeometries')                                
         vlay1 = processing.run('native:fixgeometries', {'INPUT':vlay, 'OUTPUT':'TEMPORARY_OUTPUT'},  
                                feedback=self.feedback)['OUTPUT']
         
@@ -274,6 +276,7 @@ class ficSession(Qproj):
             output = ofp
 
         #run
+        log.debug('native:dissolve')
         res1 = processing.run('native:dissolve', { 'INPUT' : vlay1,'OUTPUT' : output,'FIELD' : []}, 
                    feedback=self.feedback)['OUTPUT']
         
@@ -281,6 +284,7 @@ class ficSession(Qproj):
         # reproject
         #=======================================================================
         if reproject:
+            log.debug('reproject')
             mstore.addMapLayer(res1)
                 #reproejct
             res_d = self.reproject(res1, output=ofp, logger=log, selected_only=False)
@@ -358,24 +362,7 @@ class ficSession(Qproj):
         #=======================================================================
         # algos
         #=======================================================================
-        #=======================================================================
-        # #buffer
-        # res1 = processing.run('native:buffer', { 'DISSOLVE' : True, 'DISTANCE' : buffer, 'END_CAP_STYLE' : 0,
-        #                                          'INPUT' : fp, 
-        #                                         'JOIN_STYLE' : 0, 'MITER_LIMIT' : 2, 
-        #                                         'OUTPUT' : 'TEMPORARY_OUTPUT', 'SEGMENTS' : 5 }, 
-        #    feedback=self.feedback)['OUTPUT']
-        # 
-        # #delete holes
-        # res2 = processing.run('native:deleteholes', { 'INPUT' : res1,'OUTPUT' : 'TEMPORARY_OUTPUT','MIN_AREA' : holesize}, 
-        #    feedback=self.feedback)['OUTPUT']
-        #    
-        # #simplify
-        # ofp = processing.run('native:simplifygeometries', { 'INPUT' : res2, 
-        #                             'METHOD' : 0, 
-        #                             'OUTPUT' : ofp, 'TOLERANCE' : simplify }, 
-        #    feedback=self.feedback)['OUTPUT']
-        #=======================================================================
+ 
         if clip_fp is None:
             output=ofp
         else:

@@ -49,6 +49,7 @@ class NHNses(Qproj):
         'Unknown':-1,
         'Lake':4,
         'Watercourse':6,
+        'Canal':1,
         }
     
     def __init__(self, 

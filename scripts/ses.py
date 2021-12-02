@@ -100,7 +100,7 @@ class Session(TComs):
         #HRDEM
         resolution=1,
         #buildingFootPrint kwargs
-        prov='quebec',
+        #prov='quebec',
         
         #FiC kwargs
            min_dt=datetime.datetime.strptime('2017-05-05', '%Y-%m-%d'),
@@ -314,7 +314,7 @@ class Session(TComs):
         # build from scratch
         #=======================================================================
         if not fp_key in self.fp_d:
-            log.info('downloading and clipping HRDEM')
+            log.info('\'%s\' downloading and clipping HRDEM'%fp_key)
             
             from data_collect.hrdem import HRDEMses
             
@@ -408,7 +408,7 @@ class Session(TComs):
     def check_streams(self, #coverage checks against the NHN water bodies
                       streams_fp,
                       aoi_fp,
-                      min_ratio=0.01, #minimum stream_area/aoi_area
+                      min_ratio=0.001, #minimum stream_area/aoi_area
                       logger=None):
         
         #=======================================================================

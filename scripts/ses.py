@@ -24,6 +24,28 @@ PROCEDURE GUIDE
         filepaths
     layers within a function
         QgsLayers or filepaths
+        
+        
+#===============================================================================
+# TODO
+#===============================================================================
+switch to default input as raster
+
+change variable names to be more geneirc (less Canadian)
+
+paralleleize expensive loops
+
+add some better logic checks (%inundation)
+
+create a master parameter list 
+    explan function/roll of each parameter
+    which functions use the parameter
+    default value
+
+better organize outputs
+    temps should be a single folder
+    intermediaries a second
+    only the main depths output lands at the top level
     
 
 
@@ -57,7 +79,7 @@ from hp.gdal import get_nodata_val
 class Session(TComs):
     
  
-    
+    afp_d = {}
     #special inheritance parameters for this session
     childI_d = {'Session':['aoi_vlay', 'out_dir', 'name', 'layName_pfx', 'fp_d', 'dem_psize',
                            'hval_prec', 'temp_dir']}
@@ -710,6 +732,9 @@ class Session(TComs):
               ):
         """
         consider making this a separate worker class
+        
+        TODO: switch this to all raster based
+        
         """
         
         #=======================================================================

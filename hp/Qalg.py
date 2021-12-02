@@ -1028,6 +1028,10 @@ class QAlgos(object):
         
         if resolution is None:
             resolution = self.get_resolution(extent_layer)
+            
+        """because this algo is resolution based, can result in a row/column mismatch"""
+        assert round(resolution, 2)==resolution, 'got overly precise resolution: %s'%str(resolution)
+    
  
         feedback=self.feedback
             
@@ -1039,9 +1043,12 @@ class QAlgos(object):
                     'PIXEL_SIZE' : resolution,
                   'TARGET_CRS' : extent_layer.crs() }
         
-        #log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
+        log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
  
         res_d = processing.run(algo_nm, ins_d,  feedback=feedback, context=self.context)
+        
+        assert self.rlay_check_match(extent_layer, res_d['OUTPUT'], logger=log), 'result failed to match'
+        
         mstore.removeAllMapLayers()
         return res_d['OUTPUT']
     

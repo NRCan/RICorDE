@@ -12,7 +12,7 @@ common methods for the depths workflow 1
 import os, datetime, copy
 import processing
 
-from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore
+from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, QgsRasterLayer
 
 
 from hp.exceptions import Error
@@ -387,11 +387,14 @@ class TComs(Qproj):
                                                 output=os.path.join(out_dir, 'cost_neutral.tif'))
         
         #get the backlink raster
+        log.debug('getting the backlink raster')
+        
         cd_fp, blink_fp = Whitebox(out_dir=out_dir, logger=log
                  ).costDistance(source_fp=rlay1_fp, cost_fp=cost_fp)
                  
         
         #allocate the costs
+        log.debug('getting the costAllocation raster')
         rlay2_fp = Whitebox(out_dir=out_dir, logger=log
                  ).costAllocation(source_fp=rlay1_fp, blink_fp=blink_fp)
                  
@@ -447,6 +450,76 @@ class TComs(Qproj):
     #===========================================================================
     # HELPERS----
     #===========================================================================
+    def createconstantrasterlayer(self,
+            ref_lay,
+            burn_val=1, #value to burn
+ 
+ 
+            logger=None,
+            output='TEMPORARY_OUTPUT',
+            ):
+        """
+        replacement for native algo not relying on resolution
+        """
+        
+        #=======================================================================
+        # setups and defaults
+        #=======================================================================
+        if logger is None: logger=self.logger    
+        log = logger.getChild('createconstantrasterlayer')
+        
+        
+        
+        #=======================================================================
+        # calculatore
+        #=======================================================================
+        rcentry = self._rCalcEntry(ref_lay)
+        layname='%s const%.0f'%(rcentry.raster.name(), burn_val*100)
+        
+        if not output=='TEMPORARY_OUTPUT':
+            ofp = output
+        else:
+            ofp=None
+        
+        ofp = self.rcalc1(ref_lay,
+                        
+                    '\"{0}\"*0'.format(rcentry.ref) + '+%.4f'%burn_val,
+                     [rcentry],
+                     layname=layname, ofp=ofp, clear_all = False,
+                    logger=log)
+        
+        #=======================================================================
+        # check
+        #=======================================================================
+        res_lay = QgsRasterLayer(ofp, layname)
+        
+        assert self.rlay_check_match(rcentry.raster, res_lay, logger=log), 'result failed to match'
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        #clean up memory
+        mstore = QgsMapLayerStore()
+        if isinstance(ref_lay, str):
+            mstore.addMapLayer(rcentry.raster)
+            
+        if not output=='TEMPORARY_OUTPUT':
+            mstore.addMapLayer(res_lay)
+            result = ofp
+        else:
+            result = res_lay
+            
+        mstore.removeAllMapLayers()
+        
+        return result
+        
+ 
+
+            
+                    
+                    
+        
+        
     def _log_datafiles(self, 
                        log=None,
                        d = None,

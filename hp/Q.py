@@ -1487,6 +1487,70 @@ class Qproj(QAlgos, Basic):
             rlay,
             '{0:.2f}*numpy.round(A/{0:.2f})'.format(multiple),
             **kwargs)
+        
+    def rlay_check_match(self, #check if raster dimensions and resolutions match
+                         rlay1_raw,
+                         rlay2_raw,
+                         logger=None):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('rlay_check_match')
+        
+        #=======================================================================
+        # load
+        #=======================================================================
+        rlay1 = self._rlay_get(rlay1_raw, logger=log)
+        rlay2 = self._rlay_get(rlay2_raw, logger=log)
+        
+        #=======================================================================
+        # run tests
+        #=======================================================================
+        log.debug('testing %s vs %s'%(rlay1.name(), rlay2.name()))
+        res_d = dict()
+        for i, testName in enumerate([
+            'width', 'height', 'rasterUnitsPerPixelY', 'rasterUnitsPerPixelX', 'crs'
+            ]):
+            
+        
+            v1 = getattr(rlay1, testName)()
+            v2 = getattr(rlay2, testName)()
+            
+            res_d[testName] = {'result':v1==v2, rlay1.name():v1, rlay2.name():v2}
+            
+            
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        res_df = pd.DataFrame.from_dict(res_d).T.infer_objects()
+ 
+        
+        if not res_df['result'].all():
+            log.error('failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']]))
+            return False
+        
+        log.debug('passed %i tests'%len(res_df))
+        return True
+
+
+            
+        
+        
+        
+    def _rlay_get(self, rlay, **kwargs): #retrieve raster from filepath or rasterobject
+        if isinstance(rlay, str):
+            return self.rlay_load(rlay, **kwargs)
+ 
+        elif isinstance(rlay, QgsRasterLayer):
+            return rlay
+        else:
+            raise Error('bad type: %s'%type(rlay))
+        
+        
+        
+        
+        
     #===========================================================================
     # HELPERS---------
     #===========================================================================

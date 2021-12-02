@@ -341,7 +341,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         log.info('building %i wsl rasters on \'%s\' resl=%.1f'%(
             len(hi_fp_d), os.path.basename(dem_fp), hres))
         res_d = dict()
-        
+        fail_cnt = 0
         for i, (hval, fp) in enumerate(hi_fp_d.items()):
             log.info('(%i/%i) hval=%.2f on %s w/ resolution = %.2f'%(
                 i,len(hi_fp_d)-1,hval, os.path.basename(fp), hres))
@@ -372,6 +372,11 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                 """
                 log.warning('failed to get wsl on %i hval=%.2f w/ \n    %s'%(i, hval, e))
                 res_d[i] = {'hval':hval,'inun_fp':fp, 'error':e}
+                
+                #check we aren't continuously failing
+                fail_cnt +=1
+                if fail_cnt>5:
+                    raise Error('failed to get wsl too many times')
             
 
         #===================================================================

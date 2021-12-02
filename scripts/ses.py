@@ -339,6 +339,9 @@ class Session(TComs):
         rlay = self.rlay_load(ofp, logger=log)
         assert rlay.crs() == self.qproj.crs(), 'passed dem \'%s\' doesnt match  the proj crs'%(rlay.name())
         
+        resolution = self.get_resolution(rlay)
+ 
+        
         self.dem_psize = round(rlay.rasterUnitsPerPixelY(),2)
 
         meta_d.update({'real_pixel_count':self.rlay_get_cellCnt(ofp), 'pixel_size':self.dem_psize})

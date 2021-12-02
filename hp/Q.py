@@ -1200,6 +1200,12 @@ class Qproj(QAlgos, Basic):
             assert ofp==res
             
         assert os.path.exists(ofp)
+        
+        #=======================================================================
+        # check again
+        #=======================================================================
+        self.rlay_check_match(rlay, ofp, logger=log)
+ 
         #=======================================================================
         # wrap
         #=======================================================================
@@ -1210,7 +1216,10 @@ class Qproj(QAlgos, Basic):
                 mstore.addMapLayer(rcentry.raster)
         mstore.removeAllMapLayers()
         
-        log.debug('finished')
+        #check and report
+        stats_d = self.rasterlayerstatistics(ofp)
+        
+        log.debug('finished w/ \n    %s'%stats_d)
         return ofp
     
     def mask_build(self, #get a mask from a raster with data
@@ -1349,13 +1358,22 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('mask_apply')
-        assert self.rlay_check_match(rlay, mask_rlay, logger=log), 'mask mismatch'
+        
+        log.debug('masking \'%s\' w/ \'%s\' amd inverting mask=%s'%(
+            rlay, mask_rlay ,invert_mask))
+                
+        #=======================================================================
+        # check
+        #=======================================================================
+        if not self.rlay_check_match(rlay, mask_rlay, logger=log):
+            """still works I guess?"""
+            log.warning('mask and base layer doesnt match')
         #=======================================================================
         # handle inverstion
         #=======================================================================
-        
+
         if invert_mask:
- 
+            
             mask_rlay1 = self.mask_invert(mask_rlay, logger=log,
                           ofp=os.path.join(self.temp_dir, 
                            '%s_invert.tif'%os.path.basename(mask_rlay).replace('.tif', '')),

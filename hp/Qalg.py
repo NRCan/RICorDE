@@ -17,6 +17,7 @@ import time, sys, os
 import processing  
 from qgis.core import *
 from qgis.analysis import QgsNativeAlgorithms
+import numpy as np
 
 #===============================================================================
 # custom  imports
@@ -950,6 +951,7 @@ class QAlgos(object):
             rlay,
  
             logger=None,feedback='none',
+            allow_empty=False, 
             ):
         
         #=======================================================================
@@ -957,7 +959,7 @@ class QAlgos(object):
         #=======================================================================
         if logger is None: logger=self.logger    
         algo_nm = 'native:rasterlayerstatistics'
-        #log = logger.getChild('simplifygeometries')
+        #
         
         if feedback =='none':
             feedback=None
@@ -973,6 +975,15 @@ class QAlgos(object):
  
         res_d = processing.run(algo_nm, ins_d,  feedback=feedback, context=self.context)
         
+        #check result
+        if np.isnan(res_d['MEAN']):
+            
+            msg = 'got empty layer: %s'%rlay
+            
+            assert allow_empty, msg
+            logger.getChild('rasterlayerstatistics').error(msg)
+
+      
         return res_d 
     
     def roundraster(self,

@@ -1218,12 +1218,11 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         # build
         #=======================================================================
         if not fp_key in self.fp_d:
-            log.info('building interior interpolation on %s'%os.path.basename(rlay_fp))
- 
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_interp2.tif')
-        
-            if os.path.exists(ofp): assert self.overwrite
+            log.info('\'%s\' building interior interpolation on %s'%(fp_key, os.path.basename(rlay_fp)))
             
+            #setup paths
+            ofp = os.path.join(self.out_dir, self.layName_pfx+'_interp2.tif')
+            if os.path.exists(ofp): assert self.overwrite
             assert os.path.exists(inun2r_fp)
             #===================================================================
             # extraploate into interior

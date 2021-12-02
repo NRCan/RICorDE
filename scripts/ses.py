@@ -312,7 +312,7 @@ class Session(TComs):
         fp_key = 'dem_fp'
         meta_d = dict()
         
-        assert isinstance(resolution, int)
+        assert isinstance(resolution, int), 'user specifed bad resolution: \'%s\' (%s)'%(resolution, type(resolution))
         #=======================================================================
         # build from scratch
         #=======================================================================

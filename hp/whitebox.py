@@ -172,6 +172,55 @@ class Whitebox(object):
         
         return out_fp
     
+    def NewRasterFromBase(self,
+                        rlay_fp,
+                        value=1.0, #constant value to burn
+                        data_type='float',
+                        logger=None, out_fp=None,
+                        ):
+
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        tool_nm = 'NewRasterFromBase'
+        if logger is None: logger=self.logger
+        log=logger.getChild(tool_nm)
+        
+        if out_fp is None: 
+            out_fp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(rlay_fp))[0]+'_burn.tif')
+            
+
+        
+        #=======================================================================
+        # checks
+        #=======================================================================
+        assert os.path.exists(rlay_fp), rlay_fp
+        if os.path.exists(out_fp):
+            assert self.overwrite
+            os.remove(out_fp)
+        assert out_fp.endswith('.tif')
+        
+        """seems to be working
+        nan_val = get_nodata_val(rlay_fp)
+        assert nan_val==-9999,'got unsupported nodata val: \'%s\''%nan_val"""
+ 
+        #=======================================================================
+        # setup
+        #=======================================================================
+        args = [self.exe_fp,'-v','--run={}'.format(tool_nm),'--output={}'.format(out_fp),
+                '--input={}'.format(rlay_fp),
+                '--value={}'.format(value),
+                '--data_type={}'.format(data_type),
+                ]
+        
+        #=======================================================================
+        # execute
+        #=======================================================================
+        log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(rlay_fp)))
+        self.__run__(args) #execute
+        
+        return out_fp
+    
     def IdwInterpolation(self,
                         vlay_pts_fp, fieldn, 
                         weight=2, #IDW weight value

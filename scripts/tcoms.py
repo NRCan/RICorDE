@@ -452,7 +452,7 @@ class TComs(Qproj):
     # HELPERS----
     #===========================================================================
     def createconstantrasterlayer(self,
-            ref_lay,
+            rlay_fp,
             burn_val=1, #value to burn
  
  
@@ -462,57 +462,22 @@ class TComs(Qproj):
         """
         replacement for native algo not relying on resolution
         """
-        
-        #=======================================================================
-        # setups and defaults
-        #=======================================================================
-        if logger is None: logger=self.logger    
-        log = logger.getChild('createconstantrasterlayer')
-        
-        
-        
-        #=======================================================================
-        # calculatore
-        #=======================================================================
-        rcentry = self._rCalcEntry(ref_lay)
-        layname='%s const%.0f'%(rcentry.raster.name(), burn_val*100)
-        
-        if not output=='TEMPORARY_OUTPUT':
-            ofp = output
+        if output=='TEMPORARY_OUTPUT':
+            out_fp = None
         else:
-            ofp=None
+            out_fp=output
         
-        ofp = self.rcalc1(ref_lay,
-                        
-                    '\"{0}\"*0'.format(rcentry.ref) + '+%.4f'%burn_val,
-                     [rcentry],
-                     layname=layname, ofp=ofp, clear_all = False,
-                    logger=log)
+        assert isinstance(rlay_fp, str)
+ 
         
-        #=======================================================================
-        # check
-        #=======================================================================
-        res_lay = QgsRasterLayer(ofp, layname)
+        _ =  Whitebox(out_dir=self.out_dir, logger=logger
+                 ).NewRasterFromBase(rlay_fp, value=burn_val, out_fp=out_fp)
+                 
+        assert self.rlay_check_match(rlay_fp, out_fp, logger=logger), 'new layer failed to match'
         
-        assert self.rlay_check_match(rcentry.raster, res_lay, logger=log), 'result failed to match'
+        return out_fp
         
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        #clean up memory
-        mstore = QgsMapLayerStore()
-        if isinstance(ref_lay, str):
-            mstore.addMapLayer(rcentry.raster)
-            
-        if not output=='TEMPORARY_OUTPUT':
-            mstore.addMapLayer(res_lay)
-            result = ofp
-        else:
-            result = res_lay
-            
-        mstore.removeAllMapLayers()
         
-        return result
         
  
 

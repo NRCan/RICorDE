@@ -139,6 +139,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #re-interpolate interior regions
         interp2_rlay_fp, d = self.interp_interior(interp_rlay_fp,inun2r_fp=inun2r_fp, logger=log)
         meta_d.update({'interp_interior':d})
+        
         #low-pass and downsample
         hvgrid_fp, d = self.smooth_hvals(interp2_rlay_fp, logger=log,
                                       range_thresh=range_thresh,max_grade=max_grade,
@@ -334,6 +335,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         else:
             dem1_fp = dem_fp
 
+        assert self.rlay_check_match(fp, dem1_fp, logger=log), 'HANDinun resolution does not match dem'
         mstore.removeAllMapLayers()
         #=======================================================================
         # get water level rasters
@@ -1114,9 +1116,11 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                 assert self.overwrite
                 os.remove(ofp)
             
+            #load samples
             smpl_vlay = self.vlay_load(smpl_fp, logger=log)
             mstore = QgsMapLayerStore()
             mstore.addMapLayer(smpl_vlay)
+            
             #===================================================================
             # get default parameters
             #===================================================================
@@ -1168,7 +1172,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             #===================================================================
             """v.surf.idw isnt generating the correct resolution
             ores = self.get_resolution(interp_raw_fp)"""
-            log.info('warpreproject on %s'%interp_raw_fp)
+            log.info('warpreproject resolution=%.4f on  %s'%(resolution, interp_raw_fp))
             self.warpreproject(interp_raw_fp, 
                                resolution=resolution, nodata_val=-9999,
                                output=ofp, logger=log)
@@ -1193,7 +1197,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
  
         return ofp, meta_d
     
-    def interp_interior(self,
+    def interp_interior(self, #interpolate edge values onto interior
                         rlay_fp, #raster with initial interpolation
                         inun2r_fp='', #maximum inundation raster
                       logger=None,

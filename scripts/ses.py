@@ -98,7 +98,7 @@ class Session(TComs):
     def run_get_data(self, #common data retrival workflow
                       
         #HRDEM
-        resolution=1,
+        resolution=None,
         #buildingFootPrint kwargs
         #prov='quebec',
         
@@ -123,7 +123,7 @@ class Session(TComs):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('rd')
+        log=logger.getChild('rgd')
     
         if aoi_fp is None: aoi_fp=self.aoi_fp
         assert os.path.exists(aoi_fp), 'got invalid aoi_fp: \'%s\''%aoi_fp
@@ -301,6 +301,7 @@ class Session(TComs):
     def load_hrdem(self, 
                    aoi_fp='',
                    logger=None,
+                   resolution=2,
                  **kwargs):
         
         #=======================================================================
@@ -310,6 +311,8 @@ class Session(TComs):
         log=logger.getChild('load_hrdem')
         fp_key = 'dem_fp'
         meta_d = dict()
+        
+        assert isinstance(resolution, int)
         #=======================================================================
         # build from scratch
         #=======================================================================
@@ -321,7 +324,7 @@ class Session(TComs):
             with HRDEMses(session=self, logger=logger, inher_d=self.childI_d, fp_d=self.fp_d,
                           aoi_fp=aoi_fp) as wrkr:
             
-                ofp, runtime = wrkr.get_hrdem(**kwargs)
+                ofp, runtime = wrkr.get_hrdem(resolution=resolution, **kwargs)
                 meta_d['runtime (mins)'] = runtime
 
             #add and load
@@ -339,7 +342,10 @@ class Session(TComs):
         rlay = self.rlay_load(ofp, logger=log)
         assert rlay.crs() == self.qproj.crs(), 'passed dem \'%s\' doesnt match  the proj crs'%(rlay.name())
         
-        resolution = self.get_resolution(rlay)
+        #resolution
+        raw_res = self.get_resolution(rlay)
+        assert raw_res == float(resolution), 'resolution failed to match (%s vs %s)'%(raw_res, resolution)
+ 
  
         
         self.dem_psize = round(rlay.rasterUnitsPerPixelY(),2)
@@ -479,7 +485,7 @@ class Session(TComs):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('im')
+        log=logger.getChild('rImax')
         
         ofp_d_old = copy.copy(self.afp_d)
         
@@ -1126,7 +1132,7 @@ class Session(TComs):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('hdm')
+        log=logger.getChild('rHdMo')
         
         ofp_d_old = copy.copy(self.afp_d)
         #=======================================================================
@@ -1307,7 +1313,7 @@ class Session(TComs):
             
             from scripts.hand_inun import HIses as SubSession
             
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d,
+            with SubSession(session=self, logger=log, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
             
                 ofp = wrkr.run_hwslSet(*args, **kwargs)

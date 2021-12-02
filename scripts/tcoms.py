@@ -419,6 +419,7 @@ class TComs(Qproj):
         
         log.debug('finished in %s w/ \n    %s'%(
             datetime.datetime.now() - start, rlay3_fp))
+        
         return rlay3_fp
     
     def get_hand_inun(self, #get an inundation raster from a hand rasterand value

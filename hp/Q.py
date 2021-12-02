@@ -1349,7 +1349,7 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('mask_apply')
-
+        assert self.rlay_check_match(rlay, mask_rlay, logger=log), 'mask mismatch'
         #=======================================================================
         # handle inverstion
         #=======================================================================

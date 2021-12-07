@@ -42,7 +42,7 @@ start =  datetime.datetime.now()
 from hp.exceptions import Error
 from hp.dirz import force_open_dir
  
-from hp.plot import Plotr #only needed for plotting sessions
+
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
     QgsRasterLayer, QgsWkbTypes, vlay_get_fdf
      
@@ -60,7 +60,7 @@ class Session(TComs):
     
     #special inheritance parameters for this session
     childI_d = {'Session':['aoi_vlay', 'out_dir', 'name', 'layName_pfx', 'fp_d', 'dem_psize',
-                           'hval_prec', 'temp_dir']}
+                           'hval_prec', 'temp_dir', 'init_plt_d', 'plot']}
     
     smry_d = dict() #container of frames summarizing some calcs
     meta_d = dict() #1d summary data (goes on the first page of the smry_d)_
@@ -68,13 +68,14 @@ class Session(TComs):
     def __init__(self, 
                  tag='DR',
                  aoi_fp = None,
+                 figsize     = (6.5, 6.5), 
                  **kwargs):
         
 
             
             
         
-        super().__init__(tag=tag, **kwargs)
+        super().__init__(tag=tag,figsize=figsize, **kwargs)
         
  
         #special aoi
@@ -151,25 +152,21 @@ class Session(TComs):
         # building footprints
         #===========================================================================
         #self.load_bfp(prov=prov, logger=log)
-        
-
-        
-
-        
+ 
  
         #=======================================================================
         # wrap
         #=======================================================================
+        #promote meta
+        self._promote_meta('01run_get_data')
+        
+        
+        
         d = self.ofp_d
         log.info('%i data files built \n    %s'%(
             len(d), list(d.keys())))
  
-        
-        #self._log_datafiles(log)
-        
-        """
-        self.ofp_d['dem_fp']='test'
-        """
+ 
         
         self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
 
@@ -284,7 +281,7 @@ class Session(TComs):
         #=======================================================================
         vlay = self.vlay_load(fp, logger=log)
         assert vlay.isValid()
-        assert vlay.wkbType()==6
+        assert vlay.wkbType()==6,'expected \'MultiPolygon\' on \'%s\' got: %s'%(vlay.name(), QgsWkbTypes().displayString(vlay.wkbType()))
         assert vlay.dataProvider().featureCount()>0
         assert vlay.crs()==self.qproj.crs(), 'crs mismatch'
         
@@ -552,6 +549,9 @@ class Session(TComs):
         #=======================================================================
         # wrap
         #=======================================================================
+        #promote meta
+        self._promote_meta('02run_imax')
+ 
         
         #get just those datalayers built by this function
         ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
@@ -639,6 +639,7 @@ class Session(TComs):
                 assert self.overwrite
                 os.remove(ofp)
                 
+            assert os.path.exists(self.temp_dir)
             #===================================================================
             # merge back in streams
             #===================================================================
@@ -653,9 +654,12 @@ class Session(TComs):
             
  
             #raster to no-data edge polygon
+            log.debug('polygonizing masked hand')
             nd_vlay_fp1 = self.polygonizeGDAL(rlay1_fp, logger=log,
                                       output=os.path.join(self.temp_dir, 'hand_mask1.gpkg'),
                                       )
+            
+            assert os.path.exists(nd_vlay_fp1), 'failed to polygonize hand mask'
             
             #clean/dissolve
             """need to drop DN field"""
@@ -815,7 +819,7 @@ class Session(TComs):
                 ofp, meta_d = wrkr.get_edge_samples(*args,fp_key=fp_key, **kwargs)
                 
             self.ofp_d[fp_key] = ofp
-            self.meta_d.update({'get_edge_samples':meta_d})
+            self.meta_d.update({'build_samples1':meta_d})
             
             assert self.smpl_fieldName == meta_d['smpl_fieldName']
         #=======================================================================
@@ -838,22 +842,30 @@ class Session(TComs):
                           
                           #data parameters
                           qhigh=0.75, 
-                          qlow=0.25,
+                          qlow=0.25, #used to set the lower threshold on cap_samples
                           
                           cap=7.0, #maxiomum hval to allow (overwrite quartile
                           floor = 0.5, #minimum
                           
+                          drop_zeros=True,
+                          
                           coln=None,
+                          plot=None,
                           logger=None,
                           prec=3,
                           ):
         """
         calculating these bounds each run
+        
+        TODO: 
+            merge w/ hand_inun cap_samples
         """
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
+        if plot is None:
+            plot=self.plot
         log=logger.getChild('get_sample_bounds')
 
 
@@ -880,11 +892,14 @@ class Session(TComs):
         
         sraw = df_raw[coln].round(prec).copy()
         
-        
+        if drop_zeros:
+            s1 = sraw[sraw>0.1]
+        else:
+            s1 = sraw
         #===================================================================
         # upper bound
         #===================================================================
-        qh = sraw.quantile(q=qhigh)
+        qh = s1.quantile(q=qhigh)
         if qh > cap:
             log.warning('q%.2f (%.2f) exceeds cap (%.2f).. using cap'%(
                 qhigh, qh, cap))
@@ -895,23 +910,34 @@ class Session(TComs):
         #=======================================================================
         # lower bound
         #=======================================================================
-        ql = sraw.quantile(q=qlow)
+        ql = s1.quantile(q=qlow)
         if ql < floor:
             log.warning('q%.2f (%.2f) is lower than floor (%.2f).. using floor'%(
                 qlow, ql, floor))
             hv_min = floor
+            
+            use_floor=True
         else:
             hv_min=ql
+            use_floor=False
             
         #=======================================================================
         # wrap
         #=======================================================================
+        if plot:
+            plot_fp = self.plot_hand_vals(sraw, xval_lines_d={'max (q=%.2f)'%qhigh:hv_max,
+                                                              'min (q=%.2f, use_floor=%s)'%(qlow, use_floor):hv_min}, 
+                                title='get_sample_bounds',
+                                label=os.path.basename(pts_fp),logger=log)
+        else:
+            plot_fp=None
+            
         log.info('got hv_max=%.2f, hv_min=%.2f'%(hv_max, hv_min))
         
         self.hv_max=round(hv_max, 3)
         self.hv_min=round(hv_min, 3)
             
-        self.meta_d.update({'get_sample_bounds':{'hv_max':self.hv_max, 'hv_min':self.hv_min}})
+        self.meta_d.update({'get_sample_bounds':{'hv_max':self.hv_max, 'hv_min':self.hv_min, 'plot_fp':plot_fp}})
         
         return self.hv_max, self.hv_min
     
@@ -1197,6 +1223,9 @@ class Session(TComs):
         #=======================================================================
         # wrap
         #=======================================================================
+        #promote meta
+        self._promote_meta('03run_hdep_mosaic')
+ 
         
         #get just those datalayers built by this function
         ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
@@ -1357,6 +1386,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('building wsl mosaic')
             
+            #retrieve unique values from meta?
             if hvgrid_uq_vals is None:
                 if 'hvgrid_uq_vals' in self.meta_d: 
                     hvgrid_uq_vals=self.meta_d['hvgrid_uq_vals']
@@ -1485,7 +1515,10 @@ class Session(TComs):
         
         return dep3_fp
         
-        
+    
+    #===========================================================================
+    # misc-----------
+    #===========================================================================
     
     def get_delta(self, #subtract two rasters
                   top_fp,
@@ -1533,6 +1566,8 @@ class Session(TComs):
                           [rcent],
                           logger=log,layname=layname,
                           **kwargs)
+        
+    
         
     def set_layer_stats(self, #push all layer statistics to the summary
                         d=None,
@@ -1613,6 +1648,21 @@ class Session(TComs):
         df = pd.DataFrame.from_dict(res_d, orient='index')
         
         self.smry_d = {**{'layerSummary':df}, **self.smry_d}
+        
+    def _promote_meta(self,
+                      tabnm):
+        
+        #add some commons
+        tdelta = datetime.datetime.now() - start
+        runtime = tdelta.total_seconds()/60.0
+        #self.meta_d.update(self.ofp_d) #this is on the layerSummary now
+        
+        self.meta_d = {**{'now':datetime.datetime.now(), 'runtime (mins)':runtime}, **self.meta_d}
+        
+        self.smry_d[tabnm] = pd.Series(self.meta_d, name='val').to_frame()
+        
+        #reset the metad
+        self.meta_d = dict()
                 
             
             
@@ -1633,7 +1683,8 @@ class Session(TComs):
         #=======================================================================
         # summary tab
         #=======================================================================
-
+        """if the script completed, meta_d should be empty"""
+        #add inheritance variables
         for attn in self.childI_d['Session']:
             self.meta_d[attn] = getattr(self, attn)
             
@@ -1647,6 +1698,11 @@ class Session(TComs):
         self.smry_d = {**{'_smry':pd.Series(self.meta_d, name='val').to_frame()},
                         **self.smry_d}
         
+        #check it
+        for k,v in self.smry_d.items():
+            if not isinstance(v, pd.DataFrame):
+                raise Error('got bad type on \'%s\': %s'%(k, type(v)))
+        
         #=======================================================================
         # write the summary xlsx
         #=======================================================================
@@ -1654,6 +1710,7 @@ class Session(TComs):
         #get the filepath
         ofp = os.path.join(self.out_dir, self.layName_pfx+'_calc_smry_%s.xls'%(
             datetime.datetime.now().strftime('%H%M%S')))
+        
         if os.path.exists(ofp):
             assert self.overwrite
             os.remove(ofp)

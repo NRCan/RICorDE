@@ -16,7 +16,7 @@ class BuildLogr(object): #simple class to build a logger
     
     def __init__(self,
 
-            logcfg_file =r'C:\LS\03_TOOLS\coms\logger.conf',
+            logcfg_file =r'C:\LS\09_REPOS\01_COMMON\coms\logger.conf',
             ):
         """
         creates a log file (according to the logger.conf parameters) in the passed working directory

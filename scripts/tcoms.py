@@ -11,6 +11,8 @@ common methods for the depths workflow 1
 #===============================================================================
 import os, datetime, copy
 import processing
+import pandas as pd
+import numpy as np
 
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, QgsRasterLayer
 
@@ -20,11 +22,13 @@ from hp.dirz import delete_dir
 
 from hp.whitebox import Whitebox
 
+from hp.plot import Plotr #only needed for plotting sessions
 
 
 
 
-class TComs(Qproj):
+
+class TComs(Plotr, Qproj):
     
     dem_psize=1.0 #pixel size of dem
     hval_prec=1
@@ -37,10 +41,10 @@ class TComs(Qproj):
                  smpl_fieldName='hand_1',
                  layName_pfx=None,
                  fp_d = {},
-                 work_dir = r'C:\LS\03_TOOLS\RICorDE',
+                 #work_dir = r'C:\LS\03_TOOLS\RICorDE',
              **kwargs):
         
-        super().__init__(work_dir=work_dir,**kwargs)
+        super().__init__(**kwargs)
         
         self.smpl_fieldName=smpl_fieldName
         
@@ -447,6 +451,129 @@ class TComs(Qproj):
                            compress=compress, 
                            **kwargs)
         
+        
+    #===========================================================================
+    # plotters----
+    #===========================================================================
+    
+    def plot_hand_vals(self, #histogram of hand values
+                   sraw,
+                   xval_lines_d = {},
+                   title=None,
+                   label='HAND values', 
+                   logger=None,
+                   figsize=None,
+                   stat_keys = ['min', 'max', 'median', 'mean', 'std'],
+                   style_d = {},
+                   
+                   binWidth=0.1,
+                   ):
+        """
+        called by:
+            get_sample_bounds
+        """
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('plot_hand_vals')
+        plt = self.plt
+        
+        if title is None:
+            title= sraw.name
+        
+            
+        if figsize is None:
+            figsize=self.figsize
+        #=======================================================================
+        # data
+        #=======================================================================
+        assert isinstance(sraw, pd.Series)
+        
+        data = sraw.dropna().values
+        
+ 
+        #======================================================================
+        # figure setup
+        #======================================================================
+        plt.close()
+        fig = plt.figure(self.fignum, 
+                         figsize=figsize,
+                     tight_layout=False,
+                     constrained_layout = False,
+                     )
+        self.fignum+=1
+        
+        fig.suptitle(title)
+ 
+        
+        ax = fig.add_subplot(111)
+        
+        ax.set_ylabel('count')
+        ax.set_xlabel(sraw.name)
+        
+        #=======================================================================
+        # #add the hist
+        #=======================================================================
+        histVals_ar, bins_ar, patches = ax.hist(
+            data, 
+            bins=np.arange(data.min(), data.max()+binWidth, binWidth), 
+            stacked=False,  label=label,
+            alpha=0.9, **style_d)
+        
+        assert len(bins_ar)>1, '%s only got 1 bin!'%title
+        
+        """throwing warning"""
+        ax.set_xticklabels(['%.1f'%value for value in ax.get_xticks()])
+        
+        
+        #===================================================================
+        # #add the summary stats
+        #===================================================================
+
+        bin_width = round(abs(bins_ar[1]-bins_ar[0]), 3)
+
+        
+        
+        stat_d = {
+            **{'count':len(data), #real values count
+               'zeros (count)':(sraw == 0).sum(), #pre-filter 
+               'bin width':bin_width,
+               #'bin_max':int(max(histVals_ar)),
+               },
+            **{k:round(getattr(sraw, k)(), 3) for k in stat_keys}}
+        
+ 
+ 
+            
+        #dump into a string
+        annot = label #start witht the data name
+        for k, v in stat_d.items():
+            annot = annot + '\n%s=%s' % (k, v)
+        
+        anno_obj = ax.text(0.5, 0.5, annot, transform=ax.transAxes, va='center')
+        
+        
+        #=======================================================================
+        # draw vertical bands
+        #=======================================================================
+        color_idx = np.linspace(0, 1, len(xval_lines_d))
+ 
+ 
+        for i, (label, xval) in enumerate(xval_lines_d.items()):
+            ax.axvline(x=xval,  linewidth=0.5, linestyle='dashed', 
+                       color=plt.cm.cool(color_idx[i]), label='%s=%.2f'%(label, xval))
+            
+        #=======================================================================
+        # save the figure
+        #=======================================================================
+        ax.legend()
+        """
+        plt.show()
+        """
+        return self.output_fig(fig, logger=log)
+        
+    
 
     #===========================================================================
     # HELPERS----
@@ -479,14 +606,9 @@ class TComs(Qproj):
         
         
         
- 
 
-            
-                    
-                    
         
-        
-    def _log_datafiles(self, 
+    def _log_datafiles(self, #output all data files 
                        log=None,
                        d = None,
                        ):
@@ -497,13 +619,11 @@ class TComs(Qproj):
             d = copy.copy(self.fp_d) #start with the passed
             d.update(self.ofp_d) #add the loaded
         
-        
 
         s0=''
         for k,v in d.items():
             s0 = s0+'\n    \'%s\':r\'%s\','%(k,  v)
-
-                
+               
         log.info(s0)
             
             

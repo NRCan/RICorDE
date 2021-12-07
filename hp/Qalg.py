@@ -19,6 +19,7 @@ from qgis.core import *
 from qgis.analysis import QgsNativeAlgorithms
 import numpy as np
 
+#from osgeo import gdal
 #===============================================================================
 # custom  imports
 #===============================================================================
@@ -1889,10 +1890,22 @@ class QAlgos(object):
         #=======================================================================
         if logger is None: logger=self.logger
         log = logger.getChild('polygonize')
+        
+        #=======================================================================
+        # prechecks
+        #=======================================================================
+        if isinstance(rlay, str):
+            assert os.path.exists(rlay)
+            #gdal.Open(rlay, 1)
+        elif isinstance(rlay, QgsRasterLayer):
+            pass
+        else:
+            raise Error('bad type: %s'%type(rlay))
 
         algo_nm = 'gdal:polygonize'
         
-        ins_d = { 'BAND' : 1, 'EIGHT_CONNECTEDNESS' : True, 
+        ins_d = { 'BAND' : 1, 
+                 'EIGHT_CONNECTEDNESS' : False, 
                  'EXTRA' : '', 'FIELD' : 'DN', 
                  'INPUT' : rlay, 
                  'OUTPUT' : output }
@@ -1900,6 +1913,17 @@ class QAlgos(object):
         log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
         
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
+        
+        """
+        self.extrapNoData(rlay, 1)
+        self.layerextent(rlay)
+        """
+        
+        #=======================================================================
+        # postcheck
+        #=======================================================================
+
+        assert os.path.exists(res_d['OUTPUT']), 'failed to polygonize: %s'%rlay
         
         return res_d['OUTPUT']
     

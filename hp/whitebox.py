@@ -27,7 +27,7 @@ mod_logger = logging.getLogger(__name__)
 
 class Whitebox(object):
     
-    exe_fp = r'C:\LS\06_SOFT\whitebox\20210520\WBT\whitebox_tools.exe'
+    exe_fp = r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe'
     
     def __init__(self,
                  out_dir=None,
@@ -39,6 +39,8 @@ class Whitebox(object):
         self.out_dir=out_dir
         self.logger=logger.getChild('wbt')
         self.overwrite =overwrite
+        
+        assert os.path.exists(self.exe_fp), 'failed to find WBT executable \n    %s'%self.exe_fp
 
 
     def breachDepressionsLeastCost(self,
@@ -57,6 +59,8 @@ class Whitebox(object):
         
         if ofp is None: 
             ofp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(dem_fp))[0]+'_hyd.tif')
+            
+        assert os.path.exists(dem_fp)
 
         #=======================================================================
         # configure        
@@ -85,7 +89,9 @@ class Whitebox(object):
         #=======================================================================
         # wrap
         #=======================================================================
+        
         log.debug(result.stdout)
+        assert os.path.exists(ofp), 'failed to get result on %s'%dem_fp
         log.info('finished w/ %s'%ofp)
         
         
@@ -108,7 +114,11 @@ class Whitebox(object):
             out_fp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(dem_fp))[0]+'_HAND.tif')
         
         assert out_fp.endswith('.tif')
- 
+        
+        #=======================================================================
+        # prechecks
+        #=======================================================================
+        assert os.path.exists(dem_fp), dem_fp
         #=======================================================================
         # setup
         #=======================================================================

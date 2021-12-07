@@ -835,6 +835,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                          key_sfx='', 
                          fp_key=None,
                          sample_spacing=None,  #spacing between sampling points
+                         plot=True,
                          logger=None,
                          ):
         """
@@ -868,7 +869,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         log.debug('on %s'%os.path.basename(rToSamp_fp))
         meta_d = {'smpl_fieldName':self.smpl_fieldName, 'sample_spacing':sample_spacing}
         #=======================================================================
-        # get the points
+        # get the sampling points
         #=======================================================================
         
         smpts_fp, d = self.get_smpl_pts(inun_fp=inun_fp,
@@ -879,11 +880,32 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         
         meta_d.update({'get_smpl_pts':d})
         
-        #raw samples along edges of inun2
+        #=======================================================================
+        # #sample the raster
+        #=======================================================================
         smpls_fp = self.get_samples(smpts_fp=smpts_fp, hand_fp=rToSamp_fp, logger=log,
                                      fp_key = fp_key)
         
+        #=======================================================================
+        # get stats
+        #=======================================================================
+        if plot:
+            self.plot_samples(smpls_fp)
+        
+        
         return smpls_fp, meta_d
+    
+    def plot_samples(self, #helper for plotting the histogram of the samples
+                     fp,
+                     logger=None,
+                     ):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('plot_samples')
+        
 
     def get_samples(self,
                     smpts_fp='', 
@@ -987,6 +1009,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                     vmin=0.0, #minimum HAND value to allow
                     vmax=100.0,
                     prec=3,
+                    plot=None,
                     logger=None,
                     ):
         """
@@ -996,6 +1019,9 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         min/max typically calculated by get_sample_bounds() using quartiles of the initial sample
         
         see note on get_edge_samples()
+        
+        TODO:
+            merge w/ Session.get_sample_bounds
         """
         
         #=======================================================================
@@ -1003,6 +1029,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('cap_samples')
+        if plot is None:
+            plot=self.plot
         
         fp_key = 'smpls2C_fp'
         
@@ -1062,6 +1090,16 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             res_vlay = self.vlay_new_df(df, geo_d=geo_d, logger=log)
             
             self.vlay_write(res_vlay,ofp,  logger=log)
+            
+            #===================================================================
+            # plot
+            #===================================================================
+            if plot:
+                self.plot_hand_vals(sraw, 
+                                    title='cap_samples',
+                            xval_lines_d={'max':vmax,'min':vmin}, 
+                                label=os.path.basename(smpls_fp),logger=log)
+                
             
             #===================================================================
             # meta

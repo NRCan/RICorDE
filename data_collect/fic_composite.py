@@ -21,7 +21,7 @@ TODO: build workflow to identify peak flow day from:
 #===============================================================================
 # imports-----------
 #===============================================================================
-import os, datetime
+import os, datetime, zipfile
 import pandas as pd
 import numpy as np
 
@@ -108,7 +108,7 @@ class ficSession(Qproj):
         
         dfield = vlay.fields().at(findx)
         
-        assert dfield.type() == 16, 'got bad type on field \'%s\: %s'%(date_fieldNm, dfield.typeName())
+        assert dfield.type() == 16, 'got bad type on field \'%s\': %s'%(date_fieldNm, dfield.typeName())
         
         #=======================================================================
         # #store
@@ -151,6 +151,7 @@ class ficSession(Qproj):
         #=======================================================================
         # build temporal expression
         #=======================================================================
+        """not sure this is working well for dense dates"""
         exp_str = '\"%s\" > to_datetime(\'%s\')'%(self.date_fieldNm, min_dt.strftime('%Y-%m-%d %H:%M:%S')) +\
                     ' AND ' +\
                     '\"%s\" < to_datetime(\'%s\')'%(self.date_fieldNm, max_dt.strftime('%Y-%m-%d %H:%M:%S'))
@@ -171,14 +172,14 @@ class ficSession(Qproj):
                   }
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
         
-        assert vlay_db.selectedFeatureCount() >0, 'failed to find any features within the date range'
+        assert vlay_db.selectedFeatureCount() >0, 'failed to find any features within the date range\n    %s to %s'%(min_dt, max_dt)
         log.info("found %i features within the date range"%vlay_db.selectedFeatureCount())
         
         #=======================================================================
         # #save selected features
         #=======================================================================
         
-        ofp = os.path.join(self.out_dir, 'FiC_%s_%s-%s_%s.gpkg'%(self.name,
+        ofp = os.path.join(self.out_dir, 'FiC_%s_%s-%s_%s_raw.gpkg'%(self.name,
 
                     min_dt.strftime('%Y%m%d'), max_dt.strftime('%Y%m%d'),
                     datetime.datetime.now().strftime('%m%d%H')
@@ -190,6 +191,7 @@ class ficSession(Qproj):
         #=======================================================================
         # wrap
         #=======================================================================
+        log.info('wrote fic_raw to %s'%ofp)
  
         return ofp, {'fic_date_cnt': vlay_db.selectedFeatureCount(),'min_dt':min_dt, 'max_dt':max_dt}
         
@@ -198,7 +200,8 @@ class ficSession(Qproj):
         
     def clean_fic(self,
                   fic_raw_fp, #filepath to raw fic polys (single obesrvation)
-                  reproject=False,
+                    #can be a zip file (containing shp), shp, or gpkg
+                  reproject=True,
                   aoi_vlay = None,
                   logger=None,
                   ):
@@ -211,34 +214,46 @@ class ficSession(Qproj):
         if logger is None: logger = self.logger
         
         log = logger.getChild('clean_fic')
+        
+        #=======================================================================
+        # handle zips
+        #=======================================================================
+        if fic_raw_fp.endswith('.zip'):
+            fic_raw_fp = self.get_from_zip(fic_raw_fp, logger=log)
+
+        #=======================================================================
+        # load it
+        #=======================================================================
+        vlay_raw = self.vlay_load(fic_raw_fp, reproj=reproject, logger=log, dropZ=True)
+        mstore.addMapLayer(vlay_raw)
         #=======================================================================
         # spatial selection
         #=======================================================================
-        vlay_raw = self.selectbylocation(fic_raw_fp, aoi_vlay,
-                                          method='subselection', result_type='layer')
+        vlay0 = self.selectbylocation(vlay_raw, aoi_vlay,method='new', result_type='layer')
         
         log.info('found %i feats within date range AND aoi'%(
-            vlay_raw.dataProvider().featureCount()))
+            vlay0.dataProvider().featureCount()))
         
-        
+        mstore.addMapLayer(vlay0)
         #=======================================================================
         # pre- clean
         #=======================================================================
-        vlay = processing.run('native:dropmzvalues', 
-                       {'INPUT':vlay_raw, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
-                       feedback=self.feedback, context=self.context)['OUTPUT']
-                       
-        mstore.addMapLayer(vlay)
+        #=======================================================================
+        # vlay0 = processing.run('native:dropmzvalues', 
+        #                {'INPUT':vlay00, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
+        #                feedback=self.feedback, context=self.context)['OUTPUT']
+        #                
+        # mstore.addMapLayer(vlay0)
+        #=======================================================================
         
         #fix geo                                                     
-        vlay1 = processing.run('native:fixgeometries', {'INPUT':vlay, 'OUTPUT':'TEMPORARY_OUTPUT'},  
+        vlay1 = processing.run('native:fixgeometries', {'INPUT':vlay0, 'OUTPUT':'TEMPORARY_OUTPUT'},  
                                feedback=self.feedback)['OUTPUT']
         
         mstore.addMapLayer(vlay1)
         #=======================================================================
         # clip
         #=======================================================================
-        
         vlay2 = processing.run('native:clip', { 'INPUT' : vlay1,
                                                'OUTPUT' : 'TEMPORARY_OUTPUT','OVERLAY' : self.aoi_vlay}, 
                        feedback=self.feedback)['OUTPUT']
@@ -248,7 +263,8 @@ class ficSession(Qproj):
         #=======================================================================
         # #setup outputs
         #=======================================================================
-        ofp = os.path.join(self.out_dir, '%s_%i.gpkg'%(vlay_raw.name(), vlay_raw.dataProvider().featureCount()))
+        ofn = ('%s_%i'%(vlay_raw.name(), vlay_raw.dataProvider().featureCount())).replace('_raw', '')
+        ofp = os.path.join(self.out_dir,ofn+'.gpkg')
         if os.path.exists(ofp):
             log.warning('output file exists and overwwrite=%s\n    %s'%(self.overwrite, ofp))
             assert self.overwrite
@@ -257,20 +273,51 @@ class ficSession(Qproj):
         #=======================================================================
         # clean
         #=======================================================================
-        self._clean(vlay_raw, mstore, ofp, log, reproject=reproject)
+        self._clean(vlay2, mstore, ofp, log, reproject=reproject)
         
         
         #=======================================================================
         # wrap
         #=======================================================================
         meta_d = { 
-                  'fic_cnt':vlay_raw.dataProvider().featureCount(),
+                  'fic_cnt':vlay2.dataProvider().featureCount(),
  
                   }
         log.info('finished extracting clipped polys to \n    %s'%ofp)
         mstore.removeAllMapLayers()
         
         return ofp, meta_d
+    
+    def get_from_zip(self, #pull the shapefile out of standard zip files provided by FiC
+                     zip_fp,
+                     logger=None,
+                     ):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger = self.logger
+        
+        log = logger.getChild('get_from_zip')
+        
+        #=======================================================================
+        # pull out files
+        #=======================================================================
+        temp_dir = os.path.join(self.temp_dir, os.path.basename(zip_fp).replace('.zip',''))
+        with zipfile.ZipFile(zip_fp, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+    
+        log.info('extracted %i files from zip to \n    %s'%(len(os.listdir(temp_dir)), temp_dir))
+        
+        #=======================================================================
+        # select shapefile
+        #=======================================================================
+        
+        fn_match = [e for e in os.listdir(temp_dir) if e.endswith('.shp') and e.startswith('FloodExtentPolygon')]
+
+        assert len(fn_match)==1, 'failed to match.. got %i \n    %s'%(len(fn_match), fn_match)
+        
+        return os.path.join(temp_dir, fn_match[0])
     
 
     def _clean(self,
@@ -305,11 +352,13 @@ class ficSession(Qproj):
         
         """simpler to dissolve all runs.. even if theres only 1 feat"""
 
-        if reproject:
-            output = 'TEMPORARY_OUTPUT'
-        else:
-            output = ofp
-
+        #=======================================================================
+        # if reproject:
+        #     output = 'TEMPORARY_OUTPUT'
+        # else:
+        #     output = ofp
+        #=======================================================================
+        output = ofp
         #run
         log.debug('native:dissolve')
         res1 = processing.run('native:dissolve', { 'INPUT' : vlay1,'OUTPUT' : output,'FIELD' : []}, 
@@ -318,13 +367,15 @@ class ficSession(Qproj):
         #=======================================================================
         # reproject
         #=======================================================================
-        if reproject:
-            log.debug('reproject')
-            mstore.addMapLayer(res1)
-                #reproejct
-            res_d = self.reproject(res1, output=ofp, logger=log, selected_only=False)
-            
-            return ofp
+        #=======================================================================
+        # if reproject:
+        #     log.debug('reproject')
+        #     mstore.addMapLayer(res1)
+        #         #reproejct
+        #     res_d = self.reproject(res1, output=ofp, logger=log, selected_only=False)
+        #     
+        #     return ofp
+        #=======================================================================
         return res1
             
         

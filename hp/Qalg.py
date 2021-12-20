@@ -182,6 +182,8 @@ class QAlgos(object):
         inid = vlay.crs().authid()
         outid = crsOut.authid()
         
+        assert not inid == outid
+        
         assert inid in self.proj_d, 'missing requested source crs: %s'%inid
         
         assert outid in self.proj_d[inid], 'missing requested op: %s to %s'%(inid, outid)
@@ -250,7 +252,7 @@ class QAlgos(object):
         #===========================================================================
         # #set parameter translation dictoinaries
         #===========================================================================
-        
+        assert isinstance(vlay,QgsVectorLayer)
             
         pred_d = {
                 'are within':6,
@@ -276,7 +278,7 @@ class QAlgos(object):
             'PREDICATE' : pred_l }
         
         log.debug('executing \'%s\' on \'%s\' with: \n     %s'
-            %(algo_nm, vlay.name(), ins_d))
+            %(algo_nm, vlay, ins_d))
             
         #===========================================================================
         # #execute

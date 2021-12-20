@@ -441,6 +441,7 @@ class Qproj(QAlgos, Basic):
  
         
         if dropZ and vlay_raw.wkbType()>=1000:
+            log.debug('dropping Z values')
             vlay1 = processing.run('native:dropmzvalues', 
                                    {'INPUT':vlay_raw, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
                                    #feedback=self.feedback, 

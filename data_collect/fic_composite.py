@@ -116,14 +116,17 @@ class ficSession(Qproj):
 
         self.fic_findx = findx #store the date field index
         self.date_fieldNm = date_fieldNm
-        self.fic_vdb = vlay
+        #self.fic_vdb = 
         self.mstore.addMapLayer(vlay)
         
-    def get_fic_polys(self, #extract fic polygons from date and aoi
+        return vlay
+        
+    def get_fromDB(self, #extract fic polygons from date and aoi
+                   vlay_db,
                    min_dt=datetime.datetime.strptime('2017-05-05', '%Y-%m-%d'),
                    max_dt=datetime.datetime.strptime('2017-05-07', '%Y-%m-%d'),
-                   reproject=False,
-                   aoi_vlay = None,
+                   #
+                   
                    logger=None,
                    ):
         
@@ -131,13 +134,13 @@ class ficSession(Qproj):
         # defaults
         #=======================================================================
         if logger is None: logger = self.logger
-        if aoi_vlay is None: aoi_vlay = self.aoi_vlay
         
-        log = logger.getChild('get_fic_polys')
+        
+        log = logger.getChild('get_fromDB')
         
         tdelta = max_dt-min_dt
         
-        mstore=QgsMapLayerStore() #build a new store
+        
         
         log.info('selecting from %s to %s (%i days)'%(
             min_dt.strftime('%Y-%m-%d'),
@@ -163,19 +166,55 @@ class ficSession(Qproj):
         #=======================================================================
         algo_nm = 'qgis:selectbyexpression'
         ins_d = { 'EXPRESSION' : exp_str,
-                  'INPUT' : self.fic_vdb, 
+                  'INPUT' : vlay_db, 
                  'METHOD' : 0, #new selection
                   }
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
         
-        assert self.fic_vdb.selectedFeatureCount() >0, 'failed to find any features within the date range'
-        log.info("found %i features within the date range"%self.fic_vdb.selectedFeatureCount())
+        assert vlay_db.selectedFeatureCount() >0, 'failed to find any features within the date range'
+        log.info("found %i features within the date range"%vlay_db.selectedFeatureCount())
+        
+        #=======================================================================
+        # #save selected features
+        #=======================================================================
+        
+        ofp = os.path.join(self.out_dir, 'FiC_%s_%s-%s_%s.gpkg'%(self.name,
+
+                    min_dt.strftime('%Y%m%d'), max_dt.strftime('%Y%m%d'),
+                    datetime.datetime.now().strftime('%m%d%H')
+                    ))
+                
+                
+        self.saveselectedfeatures(vlay_db, output=ofp, logger=log)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+ 
+        return ofp, {'fic_date_cnt': vlay_db.selectedFeatureCount(),'min_dt':min_dt, 'max_dt':max_dt}
         
         
+        
+        
+    def clean_fic(self,
+                  fic_raw_fp, #filepath to raw fic polys (single obesrvation)
+                  reproject=False,
+                  aoi_vlay = None,
+                  logger=None,
+                  ):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        mstore=QgsMapLayerStore() #build a new store
+        if aoi_vlay is None: aoi_vlay = self.aoi_vlay
+        if logger is None: logger = self.logger
+        
+        log = logger.getChild('clean_fic')
         #=======================================================================
         # spatial selection
         #=======================================================================
-        vlay_raw = self.selectbylocation(self.fic_vdb, aoi_vlay,
+        vlay_raw = self.selectbylocation(fic_raw_fp, aoi_vlay,
                                           method='subselection', result_type='layer')
         
         log.info('found %i feats within date range AND aoi'%(
@@ -209,11 +248,7 @@ class ficSession(Qproj):
         #=======================================================================
         # #setup outputs
         #=======================================================================
-        ofp = os.path.join(self.out_dir, 'FiC_%s_%ix_%s-%s_%s.gpkg'%(self.name,
-                     vlay_raw.dataProvider().featureCount(),
-                    min_dt.strftime('%Y%m%d'), max_dt.strftime('%Y%m%d'),
-                    datetime.datetime.now().strftime('%m%d%H')
-                    ))
+        ofp = os.path.join(self.out_dir, '%s_%i.gpkg'%(vlay_raw.name(), vlay_raw.dataProvider().featureCount()))
         if os.path.exists(ofp):
             log.warning('output file exists and overwwrite=%s\n    %s'%(self.overwrite, ofp))
             assert self.overwrite
@@ -228,9 +263,9 @@ class ficSession(Qproj):
         #=======================================================================
         # wrap
         #=======================================================================
-        meta_d = {'fic_date_cnt': self.fic_vdb.selectedFeatureCount(),
+        meta_d = { 
                   'fic_cnt':vlay_raw.dataProvider().featureCount(),
-                  'min_dt':min_dt, 'max_dt':max_dt
+ 
                   }
         log.info('finished extracting clipped polys to \n    %s'%ofp)
         mstore.removeAllMapLayers()
@@ -415,7 +450,7 @@ def run(
         wrkr.load_db()
         
         #3 polys
-        wrkr.get_fic_polys(min_dt=min_dt,max_dt=max_dt, reproject=True)
+        wrkr.get_fromDB(min_dt=min_dt,max_dt=max_dt, reproject=True)
         #max poly
         
         out_dir = wrkr.out_dir

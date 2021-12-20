@@ -238,6 +238,7 @@ class Session(TComs):
     
     def load_fic(self, #intellighent loading of FloodsInCanada
                  logger=None,
+                 fic_lib_fp = r'C:\LS\05_DATA\Canada\GOC\NRCan\FloodsInCanada\active\2021\gdb\1220\EGS_Flood_Product_Current.gdb',
                  **kwargs):
         
         #=======================================================================
@@ -254,12 +255,24 @@ class Session(TComs):
             
             from data_collect.fic_composite import ficSession
             
-            with ficSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
+            with ficSession(session=self, logger=logger, inher_d=self.childI_d,
+                            fic_lib_fp=fic_lib_fp) as wrkr:
             
-                #temporal and spaital selection
-                wrkr.load_db(logger=log)
-    
-                fp, meta_d = wrkr.get_fic_polys(logger=log, reproject=True, **kwargs)
+                #load from database and temporally select
+                if not 'fic_raw_fp' in self.fp_d:
+                    vlay_db = wrkr.load_db(logger=log)
+        
+                    fic_raw_fp, meta_d = wrkr.get_fromDB(vlay_db, logger=log, **kwargs)
+                    
+                    self.ofp_d['fic_raw_fp'] = fic_raw_fp
+                    
+                else:
+                    fic_raw_fp = self.fp_d['fic_raw_fp']
+                    meta_d=dict()
+                    
+                #clean
+                fp, d = wrkr.clean_fic(fic_raw_fp)
+                meta_d.update(d)
                 
                 self.meta_d.update({'load_fic':meta_d})
 
@@ -280,10 +293,19 @@ class Session(TComs):
         # #checks
         #=======================================================================
         vlay = self.vlay_load(fp, logger=log)
-        assert vlay.isValid()
-        assert vlay.wkbType()==6,'expected \'MultiPolygon\' on \'%s\' got: %s'%(vlay.name(), QgsWkbTypes().displayString(vlay.wkbType()))
-        assert vlay.dataProvider().featureCount()>0
-        assert vlay.crs()==self.qproj.crs(), 'crs mismatch'
+        
+        err_d=dict()
+        for i, (tbool, msg) in enumerate({
+            vlay.isValid():'vlay.isValid',
+            vlay.wkbType()==6:'expected \'MultiPolygon\' on \'%s\' got: %s'%(vlay.name(), QgsWkbTypes().displayString(vlay.wkbType())),
+            vlay.dataProvider().featureCount()>0: 'no features',
+            vlay.crs()==self.qproj.crs():'crs mismatch %s vs %s'%(vlay.crs(), self.qproj.crs()),
+            }.items()):
+            if not tbool: err_d[i] = msg
+            
+        if len(err_d)>0:
+            raise Error('failed %i vlay checks: \n    %s'%(len(err_d), list(err_d.values())))
+            
         
         
         #=======================================================================

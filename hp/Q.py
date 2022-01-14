@@ -441,6 +441,7 @@ class Qproj(QAlgos, Basic):
  
         
         if dropZ and vlay_raw.wkbType()>=1000:
+            log.debug('dropping Z values')
             vlay1 = processing.run('native:dropmzvalues', 
                                    {'INPUT':vlay_raw, 'OUTPUT':'TEMPORARY_OUTPUT', 'DROP_Z_VALUES':True},  
                                    #feedback=self.feedback, 
@@ -1925,7 +1926,7 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         
         #handle column slicing and Qnulls
         """if the requester worked... we probably  wouldnt have to do this"""
-        df = df_raw.loc[:, tuple(fieldn_l)].replace(NULL, np.nan)
+        df = df_raw.loc[:, tuple(fieldn_l)].replace([NULL], np.nan)
         
         feedback.setProgress(95)
         

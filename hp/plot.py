@@ -72,7 +72,7 @@ class Plotr(Basic):
     def __init__(self,
 
 
-                 impStyle_d=None,
+ 
                  
                  #init controls
                  init_plt_d = {}, #container of initilzied objects
@@ -89,12 +89,9 @@ class Plotr(Basic):
                     h_color = 'blue',
                     h_alpha = 0.1,
                     
-                    impactFmtFunc=None, #function for formatting the impact results
-                        
-                        #Option1: pass a raw function here
-                        #Option2: pass function to init_fmtFunc
-                        #Option3: use 'impactfmt_str' kwarg to have init_fmtFunc build
-                            #default for 'Model' classes (see init_model)
+                plot=True, #global control for enabling plotting
+                    
+ 
 
 
                  **kwargs
@@ -120,15 +117,16 @@ class Plotr(Basic):
         self.h_alpha    =h_alpha
         
         #init matplotlib
-        if len(init_plt_d)==0:
-            self.init_plt_d = self._init_plt() #setup matplotlib
-        else:
-            for k,v in init_plt_d.items():
-                setattr(self, k, v)
-                
-            self.init_plt_d = init_plt_d
-        
-
+        if plot:
+            if len(init_plt_d)==0:
+                self.init_plt_d = self._init_plt() #setup matplotlib
+            else:
+                for k,v in init_plt_d.items():
+                    setattr(self, k, v)
+                    
+                self.init_plt_d = init_plt_d
+            
+        self.plot=plot
             
 
         
@@ -344,7 +342,7 @@ class Plotr(Basic):
                 except:
                     fname = self.name
                     
-                fname =str('%s_%s'%(fname, datetime.datetime.now().strftime('%Y%m%d'))).replace(' ','')
+                fname =str('%s_%s'%(fname, self.layName_pfx)).replace(' ','')
                 
             out_fp = os.path.join(out_dir, '%s.%s'%(fname, fmt))
             

@@ -99,7 +99,7 @@ class Whitebox(object):
     
     def elevationAboveStream(self,
                              dem_fp,
-                             streams_fp,
+                             streams_fp, # Stream cells are designated in this raster as all non-zero values. 
                              out_fp=None,
                                   logger=None):
 
@@ -133,6 +133,7 @@ class Whitebox(object):
         log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(dem_fp)))
         self.__run__(args) #execute
         
+        log.info('finished on %s'%out_fp)
         return out_fp
     
     def fillMissingData(self,

@@ -62,15 +62,16 @@ class HANDses(TComs):
                    dist=100, #breach distance
                    logger=None,
                    ofp=None,
+                   out_dir=None,
                    ):
         
- 
+        if out_dir is None: out_dir=self.out_dir
         if logger is None: logger=self.logger
  
         
         
         
-        return Whitebox(out_dir=self.temp_dir, logger=logger
+        return Whitebox(out_dir=out_dir, logger=logger
                  ).breachDepressionsLeastCost(dem_fp, dist=dist, ofp=ofp)
     
     def hand(self,
@@ -103,7 +104,9 @@ class HANDses(TComs):
             ):
         
         """
-        TODO: add check on streams
+        TODO: 
+            check that streams and the dem have the same dimensions
+            add check on streams
         """
         #=======================================================================
         # defaults

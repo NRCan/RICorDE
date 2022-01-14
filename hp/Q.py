@@ -1112,6 +1112,8 @@ class Qproj(QAlgos, Basic):
                logger=None,
                clear_all=False, #clear all rasters from memory
                compress='none', #optional compression. #usually we are deleting calc results
+               
+               allow_empty=False,
                ):
         """
         see __rCalcEntry
@@ -1218,7 +1220,7 @@ class Qproj(QAlgos, Basic):
         mstore.removeAllMapLayers()
         
         #check and report
-        stats_d = self.rasterlayerstatistics(ofp)
+        stats_d = self.rasterlayerstatistics(ofp, allow_empty=allow_empty)
         
         log.debug('finished w/ \n    %s'%stats_d)
         return ofp
@@ -1381,6 +1383,7 @@ class Qproj(QAlgos, Basic):
                           )
         else:
             mask_rlay1 = mask_rlay
+            
         #===================================================================
         # build the raster calc entries
         #===================================================================
@@ -1546,7 +1549,7 @@ class Qproj(QAlgos, Basic):
  
         
         if not res_df['result'].all():
-            log.error('failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']]))
+            log.debug('failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']]))
             return False
         
         log.debug('passed %i tests'%len(res_df))

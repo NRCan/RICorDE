@@ -978,9 +978,10 @@ class QAlgos(object):
         #check result
         if np.isnan(res_d['MEAN']):
             
-            msg = 'got empty layer: %s'%rlay
+            msg = 'layer has no cells with value: %s'%rlay
             
-            assert allow_empty, msg
+            if not allow_empty:
+                raise Error(msg)
             logger.getChild('rasterlayerstatistics').error(msg)
 
       

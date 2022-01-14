@@ -49,6 +49,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
     
     inun3_mask_fp=None
     
+    plot=False
+    
     def __init__(self,
                  tag='HANDin',
                  
@@ -508,6 +510,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             #check montonoticy
             assert hval>hval_j
             hval_j=hval
+            
+            assert os.path.exists(wsl_fp), 'bad wsl_fp on %i'%(i, wsl_fp)
             #===================================================================
             # #get donut mask for this hval
             #===================================================================
@@ -535,31 +539,39 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             
             
             #get mask stats
+            assert os.path.exists(mask_fp)
             cell_cnt = self.rasterlayerstatistics(mask_fp, logger=log)['SUM']
             
             d={'hval':hval, 'mask_cell_cnt':cell_cnt,'wsl_fp':wsl_fp,'mask_fp':mask_fp,
                'error':np.nan}
+            
             log.info('    (%i/%i) hval=%.2f on %s got %i wet cells'%(
                 i, len(hwsl_fp_d)-1, hval, os.path.basename(wsl_fp), cell_cnt))
             #===================================================================
-            # check
+            # check cell co unt
             #===================================================================
-            if cell_cnt>0:
-                #apply to the wsl
-                wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
-                                          ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(
-                                              i, hval*100)))
-                
-                stats_d = self.rasterlayerstatistics(wsli_fp, logger=log)
-                
-                assert os.path.exists(wsli_fp)
-                
-                d = {**d, **{ 'wsl_maskd_fp':wsli_fp},**stats_d}
-            else:
+            if not cell_cnt>0:
                 """this shouldnt trip any more
                 if it does... need to switch to mask_build with a range"""
                 log.error('identified no hval=%.2f cells'%hval)
                 d['error'] = 'no wet cells'
+                
+            #===================================================================
+            # apply the donut mask
+            #===================================================================
+            else:
+ 
+                wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
+                                  ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(i, hval*100)),
+                                  allow_empty=True, #whether to allow an empty wsl. can happen for small masks
+                                  )
+                
+                stats_d = self.rasterlayerstatistics(wsli_fp, logger=log, allow_empty=True)
+                
+                assert os.path.exists(wsli_fp)                
+                d = {**d, **{ 'wsl_maskd_fp':wsli_fp},**stats_d}
+ 
+
 
             #wrap
             res_d[i] = d

@@ -508,6 +508,7 @@ class Session(TComs):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('rImax')
+        start =  datetime.datetime.now()
         
         ofp_d_old = copy.copy(self.afp_d)
         
@@ -584,7 +585,7 @@ class Session(TComs):
         
         self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
         
-        return
+        return datetime.datetime.now() - start
         
 
         
@@ -1160,6 +1161,7 @@ class Session(TComs):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('rHdMo')
+        start =  datetime.datetime.now()
         
         ofp_d_old = copy.copy(self.afp_d)
         #=======================================================================
@@ -1232,7 +1234,7 @@ class Session(TComs):
         
         self._log_datafiles(d=ofp_d, log=log)
         
-        return
+        return datetime.datetime.now() - start
     
         
     def build_hvgrid(self, #get gridded HAND values from some indundation

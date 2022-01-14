@@ -183,7 +183,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         
         self.hval_prec=hval_prec #used by run_wsl_mosaic()
         
-        
+        assert os.path.exists(hand_fp), 'bad hand_fp: %s'%hand_fp
         #=======================================================================
         # setup
         #=======================================================================
@@ -212,6 +212,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         else:
             hand1_fp = hand_fp
             
+        assert os.path.exists(hand1_fp), 'no layer found at %s'%hand1_fp
         #get total grid size
         hand_cell_cnt = self.rlay_get_cellCnt(hand1_fp)
         #=======================================================================

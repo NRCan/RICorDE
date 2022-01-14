@@ -28,7 +28,7 @@ class Basic(object): #simple base class
     def __init__(self, 
                  logger         = None,
                  out_dir        = None,
-                 work_dir       = r'C:\LS\09_REPOS\03_TOOLS\RICorDE',
+                 work_dir       = r'C:\LS\10_OUT\RICorDE',
                  mod_name       = 'Simp',
                  name           = 'SessionName', 
                  tag            = '',

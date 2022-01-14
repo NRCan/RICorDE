@@ -675,12 +675,14 @@ class Session(TComs):
             
  
             #raster to no-data edge polygon
+            assert os.path.exists(rlay1_fp)
             nd_vlay_fp1 = self.polygonizeGDAL(rlay1_fp, logger=log,
                                       output=os.path.join(self.temp_dir, 'hand_mask1.gpkg'),
                                       )
             
             #clean/dissolve
             """need to drop DN field"""
+            assert os.path.exists(nd_vlay_fp1), nd_vlay_fp1
             nd_vlay1= self.deletecolumn(nd_vlay_fp1, ['DN'], logger=log)
             
             #fix geometry
@@ -1645,7 +1647,7 @@ class Session(TComs):
  
     def __exit__(self, #destructor
                  *args,**kwargs):
-        
+        self.logger.debug('__exist___ \n \n \n \n')
         self._log_datafiles()
         
         

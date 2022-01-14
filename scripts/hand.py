@@ -66,15 +66,24 @@ class HANDses(TComs):
         
  
         if logger is None: logger=self.logger
- 
         
+        #check compression
+        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
         
-        
-        return Whitebox(out_dir=self.temp_dir, logger=logger
+        ofp = Whitebox(out_dir=self.out_dir, logger=logger
                  ).breachDepressionsLeastCost(dem_fp, dist=dist, ofp=ofp)
+                 
+        assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%dem_fp
+        
+        """
+        ofp=r'C:\LS\10_OUT\202103_InsCrve\outs\DR\20220114\wrk\filldep.tif'
+        
+        """
+        
+        return ofp
     
     def hand(self,
-                 dem_fp, #filepath to hydrocorrected dem
+                 dem_fp, #filepath to hydrocorrected dem... must be uncompressed!
                  stream_fp,
                  ofp=None,
                  logger=None,
@@ -88,7 +97,10 @@ class HANDses(TComs):
         if os.path.exists(ofp): 
             assert self.overwrite
             os.remove(ofp)
+            
         
+        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
+        #assert self.getRasterCompression(stream_fp) is None, 'streams have some compression: %s'%stream_fp
 
         
         return Whitebox(out_dir=self.out_dir, logger=logger

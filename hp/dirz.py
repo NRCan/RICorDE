@@ -8,8 +8,9 @@ Library of windows file/directory common operations
 
 
 # Import Python LIbraries 
+import qgis.core
 import os, time, shutil, logging,  re, copy
-
+from pathlib import Path
 import urllib.request as request
 from contextlib import closing
 
@@ -321,13 +322,18 @@ def url_retrieve(
     return ofp
     
     
-if __name__ == '__main__':
+def get_dir_size(dirpath,
+                 byteType='MB',
+                 prec=3,
+                 ):
     
-   
-
+    assert os.path.exists(dirpath)
+    root_directory = Path(dirpath)
     
-    print('finished %s'%__name__)
     
+    byte_cnt = sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file())
+    
+    return round(byte_cnt*{'MB':1e-12, 'GB':1e-9}[byteType],prec)
     
     
     

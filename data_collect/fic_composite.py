@@ -53,7 +53,7 @@ class ficSession(Qproj):
     
     def __init__(self, 
                  #location of FiC polygon database
-                 fic_lib_fp = r'C:\LS\05_DATA\Canada\GOC\NRCan\FloodsInCanada\EGS_Flood_Product_Archive.gdb',
+                 fic_lib_fp = r'C:\LS\05_DATA\Canada\GOC\NRCan\FloodsInCanada\archive\gdb\20210707\EGS_Flood_Product_Archive.gdb',
 
                  tag='fic',
                  #work_dir = os.path.dirname(os.path.dirname(__file__)),

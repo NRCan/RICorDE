@@ -282,11 +282,13 @@ class Session(TComs):
             with ficSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
             
                 #temporal and spaital selection
-                wrkr.load_db(logger=log)
+                vlay_db = wrkr.load_db(logger=log)
     
-                fp, meta_d = wrkr.get_fic_polys(logger=log, reproject=True, **kwargs)
+                raw_fp, d1 = wrkr.get_fromDB(vlay_db, logger=log,  **kwargs)
                 
-                self.meta_d.update({'load_fic':meta_d})
+                fp, d2 =wrkr.clean_fic(raw_fp, reproject=True)
+                
+                self.meta_d.update({'get_fromDB':{**d1, **d2}})
 
 
             #add and load
@@ -488,7 +490,7 @@ class Session(TComs):
     # Inundation Hydro Correction---------
     #===========================================================================
 
-    def run_imax(self, #get gridded hand values
+    def run_imax(self,
                   #input data
                      dem_fp=None,
                      nhn_fp=None,

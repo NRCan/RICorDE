@@ -9,7 +9,25 @@ setup to execute 1 workflow at a time (output 1 depth raster)
     see validate.py for calculating the performance of these outputs
     
 
-
+TODO:
+    merge main runner from InsCrve
+    switch to data file request/call dictionary
+        add metadata per-datafile for this
+        add function kwargs
+        
+    clean up the creation/use of temporary folders
+        
+    collapse all necessary hp and tcom scripts into a single hp.py
+    re-org folders
+        RICorDE
+            main #top-level callers
+            can_data
+            hand #pre-process DEM
+            imax #hydrauilc maximum
+            mosaic
+            hp #all common helpers
+            
+    parallelize
 
 
 '''

@@ -106,6 +106,8 @@ def session(tmp_path,
                  logger=logger, feedback=feedback,
                  
                    overwrite=True,
+                   write=write, #avoid writing prep layers
+                   exit_summary=False,
                    
                    **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inp_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
                    ) as ses:
@@ -229,7 +231,7 @@ def compare_layers(vtest, vtrue, #two containers of layers
         testStats_d = getRasterStatistics(vtest.source())
         trueStats_d = getRasterStatistics(vtrue.source())
         
-        df = pd.DataFrame.from_dict({'true':trueStats_d, 'test':testStats_d})
+        df = pd.DataFrame.from_dict({'true':trueStats_d, 'test':testStats_d}).round(3)
         
         assert df.eq(other=df['true'], axis=0).all().all()
         

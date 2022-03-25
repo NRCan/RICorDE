@@ -100,6 +100,7 @@ class Session(TComs, baseSession):
                  pwb_fp=None, #permanent water body filepath (raster or polygon)
                  inp_fp=None, #inundation filepath (raster or polygon)
              
+                 exit_summary=True,
                  
                  **kwargs):
         
@@ -124,7 +125,7 @@ class Session(TComs, baseSession):
         
         #attach inputs
         self.dem_fp, self.pwb_fp, self.inp_fp = dem_fp, pwb_fp, inp_fp
-            
+        self.exit_summary=exit_summary 
             
         
         super().__init__(tag=tag, 
@@ -343,7 +344,7 @@ class Session(TComs, baseSession):
                 ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
                 self.ofp_d[dkey] = ofp
             else:
-                ofp=None
+                ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
             
             rlay_fp = self.rasterize_inun(fp, logger=log, ref_lay=ref_lay, 
                                 ofp = ofp,
@@ -394,8 +395,10 @@ class Session(TComs, baseSession):
         """
         if write:
             out_dir = self.wrk_dir
+            
         else:
-            out_dir=None
+            out_dir=self.temp_dir
+ 
  
         
         with HANDses(session=self, logger=logger, out_dir = out_dir, inher_d=self.childI_d,
@@ -403,6 +406,7 @@ class Session(TComs, baseSession):
  
             """passing all filepathss for a clean kill"""
             fp = wrkr.run(dem_fp=dem_fp, pwb_fp = pwb_rlay_fp, 
+                          ofp = os.path.join(out_dir, '%s_%s.tif'%(self.layName_pfx, dkey)),
                           **kwargs)
             """
             wrkr.temp_dir
@@ -1440,59 +1444,61 @@ class Session(TComs, baseSession):
  
     def __exit__(self, #destructor
                  *args,**kwargs):
-        self.logger.debug('__exist___ \n \n \n \n')
-        self._log_datafiles()
+        self.logger.debug('__exit__ \n \n \n \n')
         
-        
-        #=======================================================================
-        # layerSummary
-        #=======================================================================
-        
-        self.set_layer_stats()
-        
-        #=======================================================================
-        # summary tab
-        #=======================================================================
-
-        for attn in self.childI_d['Session']:
-            self.meta_d[attn] = getattr(self, attn)
+        if self.exit_summary:
+            self._log_datafiles()
             
-        tdelta = datetime.datetime.now() - start
-        runtime = tdelta.total_seconds()/60.0
-        #self.meta_d.update(self.ofp_d) #this is on the layerSummary now
-        
-        self.meta_d = {**{'now':datetime.datetime.now(), 'runtime (mins)':runtime}, **self.meta_d}
-        
-
-        self.smry_d = {**{'_smry':pd.Series(self.meta_d, name='val').to_frame()},
-                        **self.smry_d}
-        
-        #=======================================================================
-        # write the summary xlsx
-        #=======================================================================
-
-        #get the filepath
-        ofp = os.path.join(self.out_dir, self.layName_pfx+'_calc_smry_%s.xls'%(
-            datetime.datetime.now().strftime('%H%M%S')))
-        if os.path.exists(ofp):
-            assert self.overwrite
-            os.remove(ofp)
+            
+            #=======================================================================
+            # layerSummary
+            #=======================================================================
+            
+            self.set_layer_stats()
+            
+            #=======================================================================
+            # summary tab
+            #=======================================================================
     
-        #write
-        try:
-            with pd.ExcelWriter(ofp) as writer:
-                for tabnm, df in self.smry_d.items():
-                    df.to_excel(writer, sheet_name=tabnm, index=True, header=True)
-                    
-            print('wrote %i summary sheets to \n    %s'%(len(self.smry_d), ofp))
+            for attn in self.childI_d['Session']:
+                self.meta_d[attn] = getattr(self, attn)
                 
-        except Exception as e:
-            print('failed to write summaries w/ \n    %s'%e)
+            tdelta = datetime.datetime.now() - start
+            runtime = tdelta.total_seconds()/60.0
+            #self.meta_d.update(self.ofp_d) #this is on the layerSummary now
+            
+            self.meta_d = {**{'now':datetime.datetime.now(), 'runtime (mins)':runtime}, **self.meta_d}
+            
+    
+            self.smry_d = {**{'_smry':pd.Series(self.meta_d, name='val').to_frame()},
+                            **self.smry_d}
+            
+            #=======================================================================
+            # write the summary xlsx
+            #=======================================================================
+    
+            #get the filepath
+            ofp = os.path.join(self.out_dir, self.layName_pfx+'_calc_smry_%s.xls'%(
+                datetime.datetime.now().strftime('%H%M%S')))
+            if os.path.exists(ofp):
+                assert self.overwrite
+                os.remove(ofp)
         
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        self.logger.info('finished in %.2f mins'%(runtime))
+            #write
+            try:
+                with pd.ExcelWriter(ofp) as writer:
+                    for tabnm, df in self.smry_d.items():
+                        df.to_excel(writer, sheet_name=tabnm, index=True, header=True)
+                        
+                print('wrote %i summary sheets to \n    %s'%(len(self.smry_d), ofp))
+                    
+            except Exception as e:
+                print('failed to write summaries w/ \n    %s'%e)
+        
+            #=======================================================================
+            # wrap
+            #=======================================================================
+            self.logger.info('finished in %.2f mins'%(runtime))
         super().__exit__(*args,**kwargs) #initilzie teh baseclass
         
 

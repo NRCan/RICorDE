@@ -70,7 +70,7 @@ class HANDses(TComs):
         #check compression
         assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
         
-        ofp = Whitebox(out_dir=self.out_dir, logger=logger
+        ofp = Whitebox(out_dir=self.temp_dir, logger=logger
                  ).breachDepressionsLeastCost(dem_fp, dist=dist, ofp=ofp)
                  
         assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%dem_fp

@@ -37,10 +37,10 @@ class TComs(Qproj):
                  smpl_fieldName='hand_1',
                  layName_pfx=None,
                  fp_d = {},
-                 work_dir = r'C:\LS\10_OUT\RICorDE',
+ 
              **kwargs):
         
-        super().__init__(work_dir=work_dir,**kwargs)
+        super().__init__(**kwargs)
         
         self.smpl_fieldName=smpl_fieldName
         
@@ -78,7 +78,7 @@ class TComs(Qproj):
                       ref_lay=None, #layer to use for reference
                       #compress=None, hard coded medium compression
                       
-                    fp_key=None, #key for checking if the layer is already built
+                    #fp_key=None, #key for checking if the layer is already built
                       ofp=None,
                       logger=None,
                       ):
@@ -88,76 +88,55 @@ class TComs(Qproj):
         if logger is None: logger=self.logger
         log=logger.getChild('rasterize_inun')
         
-        #if compress is None: compress=self.compress
-        #=======================================================================
-        # check build status
-        #=======================================================================
-        build=True
-        if not fp_key is None:
-            if fp_key in self.fp_d:
-                build=False
-                
-        #=======================================================================
-        # build
-        #=======================================================================
-        if build:
+ 
             
  
-            mstore = QgsMapLayerStore()
-            if isinstance(ref_lay, str):
-                ref_lay=self.rlay_load(ref_lay, logger=log)
-                mstore.addMapLayer(ref_lay)
-            
-            assert ref_lay.crs() == self.qproj.crs()
-            assert os.path.exists(rlay_fp)
-            assert os.path.exists(self.out_dir)
-            #=======================================================================
-            # #rasterize
-            #=======================================================================
-            if ofp is None:
-                """special default"""
-                ofp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(rlay_fp))[0]+'.tif')
-            
-            
-            #get reference values
-            rect = ref_lay.extent()
-            extent = '%s,%s,%s,%s'%(rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum())+ \
-                    ' [%s]'%ref_lay.crs().authid()
-                    
-            
-            #build pars
-            """want to match the dem exactly... so using a special implementation"""
-            pars_d = { 'BURN' : 1, 'NODATA' : 0,
-             'DATA_TYPE' : 5, 'UNITS' : 0, #pixels         
-             'EXTRA' : '', 'FIELD' : '', 'INVERT' : False, 
-             #'HEIGHT' : 14152, 'WIDTH' : 21807,
-             'HEIGHT' : ref_lay.height(), 'WIDTH' : ref_lay.width(), 'EXTENT' : extent, 
-             'INIT' : None, 
-             'INPUT' : rlay_fp,  'OUTPUT' : ofp, 
-             'OPTIONS' : 'COMPRESS=LZW', #lite compression for WhiteBoxx 
+        mstore = QgsMapLayerStore()
+        if isinstance(ref_lay, str):
+            ref_lay=self.rlay_load(ref_lay, logger=log)
+            mstore.addMapLayer(ref_lay)
+        
+        assert ref_lay.crs() == self.qproj.crs()
+        assert os.path.exists(rlay_fp)
+        assert os.path.exists(self.out_dir)
+        #=======================================================================
+        # #rasterize
+        #=======================================================================
+        if ofp is None:
+            """special default"""
+            ofp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(rlay_fp))[0]+'.tif')
+        
+        
+        #get reference values
+        rect = ref_lay.extent()
+        extent = '%s,%s,%s,%s'%(rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum())+ \
+                ' [%s]'%ref_lay.crs().authid()
+                
+        
+        #build pars
+        """want to match the dem exactly... so using a special implementation"""
+        pars_d = { 'BURN' : 1, 'NODATA' : 0,
+         'DATA_TYPE' : 5, 'UNITS' : 0, #pixels         
+         'EXTRA' : '', 'FIELD' : '', 'INVERT' : False, 
+         #'HEIGHT' : 14152, 'WIDTH' : 21807,
+         'HEIGHT' : ref_lay.height(), 'WIDTH' : ref_lay.width(), 'EXTENT' : extent, 
+         'INIT' : None, 
+         'INPUT' : rlay_fp,  'OUTPUT' : ofp, 
+         'OPTIONS' : 'COMPRESS=LZW', #lite compression for WhiteBoxx 
+
+           }
+        
+        #execute
+        algo_nm = 'gdal:rasterize'
+        log.debug('%s w/ \n    %s'%(algo_nm, pars_d))
+        ofp = processing.run(algo_nm, pars_d, feedback=self.feedback)['OUTPUT']
     
-               }
-            
-            #execute
-            algo_nm = 'gdal:rasterize'
-            log.debug('%s w/ \n    %s'%(algo_nm, pars_d))
-            ofp = processing.run(algo_nm, pars_d, feedback=self.feedback)['OUTPUT']
-        
-            #=======================================================================
-            # wrap
-            #=======================================================================
-            mstore.removeAllMapLayers()
-        
         #=======================================================================
-        # load
+        # wrap
         #=======================================================================
-        else:
-            ofp = self.fp_d[fp_key]
-            
-        if not fp_key is None:
-            log.info('got \"%s\': \n    %s'%(fp_key, ofp))
-        else:
-            log.debug('got %s'%ofp)
+        mstore.removeAllMapLayers()
+    
+ 
             
         
         return ofp

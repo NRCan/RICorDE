@@ -51,7 +51,7 @@ from hp.gdal import rlay_to_array
 #===============================================================================
 # logging
 #===============================================================================
-mod_logger = logging.getLogger(__name__)
+#mod_logger = logging.getLogger(__name__)
 
 
 #==============================================================================
@@ -121,7 +121,7 @@ class Qproj(QAlgos, Basic):
                  **kwargs):
 
         
-        mod_logger.debug('Qproj super')
+        #mod_logger.debug('Qproj super')
         
         super().__init__(
             inher_d = {**inher_d,
@@ -143,7 +143,7 @@ class Qproj(QAlgos, Basic):
             """
             #build a separate logger to capture algorhtihim feedback
             qlogger= get_new_file_logger('Qproj',
-                fp=os.path.join(self.work_dir, 'Qproj.log'))
+                fp=os.path.join(self.root_dir, 'Qproj.log'))
  
             feedback = MyFeedBackQ(logger=qlogger)
             
@@ -303,7 +303,8 @@ class Qproj(QAlgos, Basic):
         fileEncoding = "CP1250", 
         opts = QgsVectorFileWriter.SaveVectorOptions(), #empty options object
         overwrite=None,
-        logger=mod_logger):
+        logger=None
+        ):
         """
         help(QgsVectorFileWriter.SaveVectorOptions)
         QgsVectorFileWriter.SaveVectorOptions.driverName='GPKG'
@@ -318,6 +319,7 @@ class Qproj(QAlgos, Basic):
         #==========================================================================
         # defaults
         #==========================================================================
+        if logger is None: logger=self.logger
         log = logger.getChild('vlay_write')
         if overwrite is None: overwrite=self.overwrite
  
@@ -1026,7 +1028,7 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # defaults
         #=======================================================================
-        if logger is None: logger=mod_logger
+        if logger is None: logger=self.logger
         log=logger.getChild('vlay_rename_fields')
         
         #=======================================================================
@@ -1681,7 +1683,7 @@ class MyFeedBackQ(QgsProcessingFeedback):
     """
     
     def __init__(self,
-                 logger=mod_logger):
+                 logger=None):
         
         self.logger=logger.getChild('FeedBack')
         
@@ -1787,8 +1789,9 @@ def vlay_get_fdf( #pull all the feature data and place into a df
                     allow_none = False,
                     
                     #db_f = False,
-                    logger=mod_logger,
-                    feedback=MyFeedBackQ()):
+                    #logger=mod_logger,
+                    #feedback=None,
+                    ):
     """
     performance improvement
     
@@ -1999,7 +2002,7 @@ def vlay_get_geo( #get geometry dict from layer
         vlay,
         request = None, #additional requester (limiting fids). fieldn still required. additional flags added
         selected = False,
-        logger=mod_logger,
+        #logger=mod_logger,
         ):
     
     log = logger.getChild('vlay_get_geo')
@@ -2051,7 +2054,7 @@ def vlay_new_mlay(#create a new mlay
                       qfields,
                       feats_l,
 
-                      logger=mod_logger,
+                      #logger=mod_logger,
                       ):
         #=======================================================================
         # defaults
@@ -2114,7 +2117,8 @@ def field_new(fname,
               pytype=str, 
               driverName = 'SpatiaLite', #desired driver (to check for field name length limitations)
               fname_trunc = True, #whether to truncate field names tha texceed the limit
-              logger=mod_logger): #build a QgsField
+              #logger=mod_logger,
+              ): #build a QgsField
     
     #===========================================================================
     # precheck
@@ -2158,7 +2162,8 @@ def fields_build_new( #build qfields from different data containers
                     samp_d = None, #sample data from which to build qfields {fname: value}
                     fields_d = None, #direct data from which to build qfields {fname: pytype}
                     fields_l = None, #list of QgsField objects
-                    logger=mod_logger):
+                    #logger=mod_logger,
+                    ):
 
     log = logger.getChild('fields_build_new')
     #===========================================================================
@@ -2243,7 +2248,8 @@ def fields_build_new( #build qfields from different data containers
 
 
 def view(#view the vector data (or just a df) as a html frame
-        obj, logger=mod_logger,
+        obj, 
+        #logger=mod_logger,
         #**gfd_kwargs, #kwaqrgs to pass to vlay_get_fdatas() 'doesnt work well with the requester'
         ):
     
@@ -2258,7 +2264,7 @@ def view(#view the vector data (or just a df) as a html frame
     from hp.pd import view_web_df
     view_web_df(df)
     
-    logger.info('viewer closed')
+    #logger.info('viewer closed')
     
     return
 
@@ -2266,7 +2272,9 @@ def view(#view the vector data (or just a df) as a html frame
 # type conversions----------------
 #==============================================================================
 
-def np_to_pytype(npdobj, logger=mod_logger):
+def np_to_pytype(npdobj, 
+                 #logger=mod_logger
+                 ):
     
     if not isinstance(npdobj, np.dtype):
         raise Error('not passed a numpy type')
@@ -2286,7 +2294,8 @@ def np_to_pytype(npdobj, logger=mod_logger):
 def qtype_to_pytype( #convert object to the pythonic type taht matches the passed qtype code
         obj, 
         qtype_code, #qtupe code (qfield.type())
-        logger=mod_logger): 
+        #logger=mod_logger,
+        ): 
     
     if is_qtype_match(obj, qtype_code): #no conversion needed
         return obj 
@@ -2331,7 +2340,9 @@ def qtype_to_pytype( #convert object to the pythonic type taht matches the passe
             """
         raise IOError
     
-def ptype_to_qtype(py_type, logger=mod_logger): #get the qtype corresponding to the passed pytype
+def ptype_to_qtype(py_type, 
+                   #logger=mod_logger
+                   ): #get the qtype corresponding to the passed pytype
     """useful for buildign Qt objects
     
     really, this is a reverse 
@@ -2403,7 +2414,9 @@ def qisnull(obj):
     else:
         return False
     
-def is_qtype_match(obj, qtype_code, logger=mod_logger): #check if the object matches the qtype code
+def is_qtype_match(obj, qtype_code, 
+                   #logger=mod_logger,
+                   ): #check if the object matches the qtype code
     log = logger.getChild('is_qtype_match')
     
     #get pythonic type for this code

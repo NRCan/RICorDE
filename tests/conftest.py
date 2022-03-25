@@ -9,32 +9,31 @@ import os, shutil
 import pytest
 import numpy as np
 from qgis.core import QgsCoordinateReferenceSystem
-from ricorde.ses import Session
+#from ricorde.ses import Session
     
- 
-#===============================================================================
-# function.fixtures-------
-#===============================================================================
-@pytest.fixture(scope='function')
-def proj_d(request): #retrieve test dataset
-    name = request.param
-    #get data dir
-    base_dir = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data'
-    
-    #get filenames
-    rproj_lib = {
+rproj_lib = {
         'fred01':{
             'aoi_fp':'aoi01T_fred_20220325.geojson',
             'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
             'fic_fp':'inun_fred_aoi01T_0325.geojson',
             'nhn_fp':'pwater_fred_aoi01T_0325.geojson',     
             'crsid':'EPSG:3979', 
-            'name':name       
+            'name':'fred01'       
                 
                 },
     
         }
+
+#===============================================================================
+# function.fixtures-------
+#===============================================================================
+@pytest.fixture(scope='function')
+def proj_d(request): #retrieve test dataset
     
+    return get_proj_d(request.param)
+
+def get_proj_d(name):
+    base_dir = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data'
     rproj_d = rproj_lib[name].copy()
     
     proj_d = dict()
@@ -57,7 +56,7 @@ def proj_d(request): #retrieve test dataset
 @pytest.fixture(scope='function')
 #@pytest.mark.parametrize('proj_d',['fred01'], indirect=False) 
 def session(tmp_path,
-            work_dir, 
+            root_dir, 
             proj_d, #scope=function
             base_dir, write,logger, feedback,# (scope=session)
  
@@ -73,15 +72,27 @@ def session(tmp_path,
         
     
     
-    with Session(aoi_fp=proj_d['aoi_fp'], 
+    with Session( 
                  name='test', #probably a better way to propagate through this key
-                 fp_d={k:v for k,v in proj_d.items() if k in ['dem_fp', 'fic_fp', 'nhn_fp']}, 
-                 crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
-                 out_dir=out_dir, temp_dir=os.path.join(tmp_path, 'temp'),
+                 #fp_d={k:v for k,v in proj_d.items() if k in ['dem_fp', 'fic_fp', 'nhn_fp']}, 
+                 
+                 #aoi_fp=proj_d['aoi_fp'],
+                 
+                 
+                 
+                 out_dir=out_dir, 
+                 temp_dir=os.path.join(tmp_path, 'temp'),
+                 root_dir=root_dir, #testing default is the same as the session default for now
+                 
                  compress='none',  
+                 crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
+                 
                  logger=logger, feedback=feedback,
-                 work_dir=work_dir, #testing default is the same as the session default for now
-                   overwrite=True) as ses:
+                 
+                   overwrite=True,
+                   
+                   **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'fic_fp', 'nhn_fp', 'aoi_fp']}, #extract from the proj_d
+                   ) as ses:
         
         #assert len(ses.data_d)==0
         yield ses
@@ -90,9 +101,9 @@ def session(tmp_path,
 # session.fixtures----------
 #===============================================================================
 @pytest.fixture(scope='session')
-def work_dir():
-    from definitions import work_dir
-    return work_dir
+def root_dir():
+    from definitions import root_dir
+    return root_dir
 
 @pytest.fixture(scope='session')
 def write():
@@ -102,9 +113,9 @@ def write():
     return write
 
 @pytest.fixture(scope='session')
-def logger(work_dir):
+def logger(root_dir):
 
-    os.chdir(work_dir) #set this to the working directory
+    os.chdir(root_dir) #set this to the working directory
     print('working directory set to \"%s\''%os.getcwd())
 
     from hp.logr import BuildLogr

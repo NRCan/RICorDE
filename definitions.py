@@ -4,8 +4,8 @@ Created on Mar. 25, 2022
 @author: cefect
 '''
 import os
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+proj_dir = os.path.dirname(os.path.abspath(__file__))
 
-logcfg_file=os.path.join(ROOT_DIR, 'logger.conf')
+logcfg_file=os.path.join(proj_dir, 'logger.conf')
 
-work_dir=r'C:\LS\10_OUT\ricorde'
+root_dir=r'C:\LS\10_OUT\ricorde'

@@ -8,12 +8,12 @@ object oriented programming
 '''
 
 
-import os, sys, datetime, gc, copy
+import os, sys, datetime, gc, copy, pickle
 
 from hp.dirz import delete_dir
 
 from hp.exceptions import Error
-
+from qgis.core import QgsMapLayer
 
  
 
@@ -29,7 +29,7 @@ class Basic(object): #simple base class
                  
                  #directories
                  out_dir        = None,
-                 work_dir       = None,
+                 root_dir       = None,
                  temp_dir       = None,
                  
                  #labelling
@@ -56,7 +56,7 @@ class Basic(object): #simple base class
         #=======================================================================
         
         self.today_str = datetime.datetime.today().strftime('%Y%m%d')
-        self.work_dir = work_dir
+        self.root_dir = root_dir
         self.mod_name = mod_name
         self.tag = tag
         self.prec=prec
@@ -67,27 +67,29 @@ class Basic(object): #simple base class
         #setup inheritance handles
         self.inher_d = {**inher_d, #add all thosefrom parents 
                         **{'Basic':[ #add the basic
-                            'work_dir', 'mod_name', 'tag', 'overwrite']}, 
+                            'root_dir', 'mod_name', 'tag', 'overwrite']}, 
                         }
         self.session=session
         
         #=======================================================================
         # working directory
         #=======================================================================
-        if work_dir is None:
-            from definitions import work_dir
+        if root_dir is None:
+            from definitions import root_dir
         
-        assert os.path.exists(work_dir), work_dir
-        os.chdir(work_dir) #set this as the working directory (mostly used by the logger)
-        print('set working directory to %s'%work_dir)
+        assert os.path.exists(root_dir), root_dir
+        if not os.getcwd() == root_dir:
+            os.chdir(root_dir) #set this as the working directory (mostly used by the logger)
+            print('set  directory to %s'%root_dir)
+        self.root_dir=root_dir
         #=======================================================================
         # output directory
         #=======================================================================
         if out_dir is None:
             if not tag == '':
-                out_dir = os.path.join(work_dir, 'outs', tag, self.today_str)
+                out_dir = os.path.join(root_dir, 'outs', tag, self.today_str)
             else:
-                out_dir = os.path.join(work_dir, 'outs', self.today_str)
+                out_dir = os.path.join(root_dir, 'outs', self.today_str)
             
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
@@ -282,8 +284,7 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         #start meta
         self.dk_meta_d = {k:dict() for k in keys}
  
-            
-        
+ 
         #=======================================================================
         # defaults
         #=======================================================================
@@ -313,8 +314,14 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         #=======================================================================
         """
         self.data_d.keys()
+        self.mstore
         """
         if dkey in self.data_d:
+            #layers
+            if isinstance(self.data_d[dkey], QgsMapLayer):
+                #todo: check its in the store
+                return self.data_d[dkey]
+            
             try:
                 return copy.deepcopy(self.data_d[dkey])
             except Exception as e:
@@ -362,17 +369,21 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         # store
         #=======================================================================
         assert data is not None, '\'%s\' got None'%dkey
-        assert hasattr(data, '__len__'), '\'%s\' failed to retrieve some data'%dkey
+        
+        if isinstance(data, QgsMapLayer):
+            self.mstore.addMapLayer(data)
+        else:
+            assert hasattr(data, '__len__'), '\'%s\' failed to retrieve some data'%dkey
         self.data_d[dkey] = data
         
         tdelta = round((datetime.datetime.now() - start).total_seconds(), 1)
             
         self.dk_meta_d[dkey].update({
-            'tdelta (secs)':tdelta, 'dtype':type(data), 'len':len(data), 'method':method})
+            'tdelta (secs)':tdelta, 'dtype':type(data), 'method':method})
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('finished on \'%s\' w/ len=%i dtype=%s'%(dkey, len(data), type(data)))
+        log.info('finished on \'%s\' w/   dtype=%s'%(dkey,  type(data)))
         
         return data
     

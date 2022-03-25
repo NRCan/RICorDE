@@ -26,12 +26,20 @@ class Basic(object): #simple base class
     
     
     def __init__(self, 
-                 logger         = None,
+                 
                  out_dir        = None,
-                 work_dir       = r'C:\LS\10_OUT\RICorDE',
+                 work_dir       = None,
+
                  mod_name       = 'RICorDE',
                  name           = 'SessionName', 
                  tag            = '',
+                
+                #logging control 
+                logger         = None,
+                logcfg_file    = None,
+                 
+                 
+                 #general parameters
                  prec           = 2,
                  overwrite      = False, #file overwriting control
                  
@@ -63,9 +71,10 @@ class Basic(object): #simple base class
         #=======================================================================
         # working directory
         #=======================================================================
-        """needed by logger"""
-        os.chdir(work_dir) #set this to the working directory
-        print('working directory set to \"%s\''%os.getcwd())
+        if work_dir is None:
+            from definitions import work_dir
+        
+        assert os.path.exists(work_dir)
             
         #=======================================================================
         # output directory
@@ -85,8 +94,10 @@ class Basic(object): #simple base class
         # #setup the logger
         #=======================================================================
         if logger is None:
+ 
             from hp.logr import BuildLogr
-            lwrkr = BuildLogr()
+
+            lwrkr = BuildLogr(logcfg_file = logcfg_file)
             logger=lwrkr.logger
             lwrkr.duplicate(self.out_dir, 
                         basenm='%s_%s'%(tag, datetime.datetime.today().strftime('%m%d.%H.%M')))

@@ -7,7 +7,7 @@ usually best to call this before any standard imports
     some modules have auto loggers to the root loger
     calling 'logging.getLogger()' after these configure will erase these
 '''
-import os, logging, logging.config
+import os, logging, logging.config, pprint
 
 
 
@@ -16,7 +16,7 @@ class BuildLogr(object): #simple class to build a logger
     
     def __init__(self,
 
-            logcfg_file =r'C:\LS\09_REPOS\03_TOOLS\RICorDE\src\logger.conf',
+            logcfg_file =None,
             ):
         """
         creates a log file (according to the logger.conf parameters) in the passed working directory
@@ -25,18 +25,10 @@ class BuildLogr(object): #simple class to build a logger
         #===============================================================================
         # FILE SETUP
         #===============================================================================
-        #=======================================================================
-        # assert os.path.exists(work_dir), work_dir
-        # os.chdir(work_dir) #set this to the working directory
-        # print('working directory set to \"%s\''%os.getcwd())
-        # 
-        #=======================================================================
-        """"
-        spent 30mins trying to pass the log file location explciitly
-            cant get dynamic logger setup to work well with the config file
-            for this behavior, best to configure with a script
-            for now... just changing the directory 
-        """
+        if logcfg_file is None:
+            #todo: check if there is a definitions file
+            from definitions import logcfg_file #import from the definitions file
+ 
         assert os.path.exists(logcfg_file), 'No logger Config File found at: \n   %s'%logcfg_file
         assert logcfg_file.endswith('.conf')
         #===========================================================================
@@ -44,18 +36,63 @@ class BuildLogr(object): #simple class to build a logger
         #===========================================================================
         
         logger = logging.getLogger() #get the root logger
-        logging.config.fileConfig(logcfg_file,
+        
+        #load the configuration file
+        """
+        relative to os.getcwd()
+        usually creates 2 fileloggers (in wd) and 1 console logger 
+        """
+        logging.config.fileConfig(logcfg_file, 
  
                                   #disable_existing_loggers=True,
-                                  ) #load the configuration file
-        'usually adds a log file to the working directory/_outs/root.log'
+                                  ) 
+        
         logger.info('root logger initiated and configured from file: %s'%(logcfg_file))
         
  
+ 
         
         self.logger = logger
+        self.log_handlers()
         
+    def log_handlers(self, #convenience to readout handler info
+                     logger=None):
+        if logger is None:
+            logger=self.logger
+            
+        #=======================================================================
+        # #collect handler info
+        #=======================================================================
+        res_lib = dict()
+        for handler in logger.handlers:
+            
+            htype = type(handler).__name__
+            
+            d = {'htype':htype}
+            
+            if 'FileHandler' in htype:
+                d['filename'] = handler.baseFilename
+            
+            
+            
+            res_lib[handler.get_name()] = d
+            
+        #=======================================================================
+        # #log
+        #=======================================================================
+        #get fancy string
+        txt = pprint.pformat(res_lib, width=30, indent=0, compact=True, sort_dicts =False)
         
+        for c in ['{', '}']: 
+            txt = txt.replace(c, '') #clear some unwanted characters..
+        
+        logger.info('logger configured w/ %i handlers\n%s'%(len(res_lib), txt))
+        
+        return res_lib
+        
+ 
+                
+ 
         
     def duplicate(self, #duplicate the root logger to a diretory
                   out_dir, #directory to place the new logger

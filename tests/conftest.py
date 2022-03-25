@@ -70,12 +70,14 @@ def session(tmp_path,
     if write:
         #retrieves a directory specific to the test... useful for writing compiled true data
         out_dir = os.path.join(base_dir, os.path.basename(tmp_path)) 
+        
+    
     
     with Session(aoi_fp=proj_d['aoi_fp'], 
                  name='test', #probably a better way to propagate through this key
                  fp_d={k:v for k,v in proj_d.items() if k in ['dem_fp', 'fic_fp', 'nhn_fp']}, 
                  crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
-                 out_dir=out_dir,
+                 out_dir=out_dir, temp_dir=os.path.join(tmp_path, 'temp'),
                  compress='none',  
                  logger=logger, feedback=feedback,
                  #work_dir=work_dir, use the default

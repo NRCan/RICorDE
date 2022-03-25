@@ -1158,6 +1158,8 @@ class Qproj(QAlgos, Basic):
             ofp1=ofp
         else:
             ofp1 = os.path.join(self.temp_dir,layname+'_raw.tif')
+            
+        assert os.path.exists(os.path.dirname(ofp1)), os.path.dirname(ofp1)
         #=======================================================================
         # assemble parameters
         #=======================================================================

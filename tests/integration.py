@@ -14,11 +14,13 @@ import pytest, copy
 
 @pytest.mark.parametrize('hval_prec',[0.4]) #feeds through the session (see conftest.py) 
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_one(session, hval_prec):
+def test_one(session, hval_prec, true_dir):
     
     session.afp_d = copy.copy(session.fp_d)
     #adjust for hydrauilc maximum
     session.run_imax()
+    
+    session.afp_d
     
     #get depths mosaic
     session.run_hdep_mosaic(hval_prec=hval_prec)

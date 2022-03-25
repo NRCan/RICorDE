@@ -11,11 +11,9 @@ import numpy as np
 from qgis.core import QgsCoordinateReferenceSystem
 from ricorde.ses import Session
     
+ 
 #===============================================================================
-# fixtures-----
-#===============================================================================
-#===============================================================================
-# function
+# function.fixtures-------
 #===============================================================================
 @pytest.fixture(scope='function')
 def proj_d(request): #retrieve test dataset
@@ -67,29 +65,31 @@ def session(tmp_path,
  
     np.random.seed(100)
     
-    #get working directory
-    wrk_dir = None
+    #configure output
+    out_dir=tmp_path
     if write:
-        wrk_dir = os.path.join(base_dir, os.path.basename(tmp_path))
+        #retrieves a directory specific to the test... useful for writing compiled true data
+        out_dir = os.path.join(base_dir, os.path.basename(tmp_path)) 
     
     with Session(aoi_fp=proj_d['aoi_fp'], 
                  name='test', #probably a better way to propagate through this key
                  fp_d={k:v for k,v in proj_d.items() if k in ['dem_fp', 'fic_fp', 'nhn_fp']}, 
                  crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
-                 out_dir=tmp_path,
+                 out_dir=out_dir,
                  compress='none',  
                  logger=logger, feedback=feedback,
+                 #work_dir=work_dir, use the default
                    overwrite=True) as ses:
         
         #assert len(ses.data_d)==0
         yield ses
  
 #===============================================================================
-# session
+# session.fixtures----------
 #===============================================================================
 @pytest.fixture(scope='session')
 def write():
-    write=False
+    write=True
     if write:
         print('WARNING!!! runnig in write mode')
     return write
@@ -117,7 +117,10 @@ def feedback(logger):
 
 @pytest.fixture(scope='session')
 def base_dir():
-    base_dir = r'C:\LS\09_REPOS\02_JOBS\2112_Agg\cef\tests\hyd\data\compiled'
+    
+    #'C:\\LS\\09_REPOS\\03_TOOLS\\RICorDE\\tests\\data\\compiled'
+    base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'compiled')
+ 
     assert os.path.exists(base_dir)
     return base_dir
 

@@ -55,12 +55,15 @@ class TComs(Qproj):
         #=======================================================================
         # #temporary directory
         #=======================================================================
-        self.temp_dir = os.path.join(self.out_dir, 'temp_%s_%s'%(
-            self.__class__.__name__, datetime.datetime.now().strftime('%M%S')))
-        if os.path.exists(self.temp_dir):
-            delete_dir(self.temp_dir)
-
-        if not os.path.exists(self.temp_dir):os.makedirs(self.temp_dir)
+#===============================================================================
+#         self.temp_dir = os.path.join(self.out_dir, 'temp_%s_%s'%(
+#             self.__class__.__name__, datetime.datetime.now().strftime('%M%S')))
+#         if os.path.exists(self.temp_dir):
+#             delete_dir(self.temp_dir)
+# 
+#         if not os.path.exists(self.temp_dir):
+#             os.makedirs(self.temp_dir)
+#===============================================================================
         
         if len(fp_d)>0:
             self.logger.info('init w/ %i preloaded datasets: \n    %s'%(

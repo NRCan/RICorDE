@@ -27,9 +27,12 @@ class Basic(object): #simple base class
     
     def __init__(self, 
                  
+                 #directories
                  out_dir        = None,
                  work_dir       = None,
-
+                 temp_dir       = None,
+                 
+                 #labelling
                  mod_name       = 'RICorDE',
                  name           = 'SessionName', 
                  tag            = '',
@@ -74,7 +77,7 @@ class Basic(object): #simple base class
         if work_dir is None:
             from definitions import work_dir
         
-        assert os.path.exists(work_dir)
+        assert os.path.exists(work_dir), work_dir
             
         #=======================================================================
         # output directory
@@ -89,6 +92,23 @@ class Basic(object): #simple base class
             os.makedirs(out_dir)
             
         self.out_dir = out_dir
+        
+        #=======================================================================
+        # #temporary directory
+        #=======================================================================
+        """not removing this automatically"""
+        if temp_dir is None:
+ 
+            temp_dir = os.path.join(self.out_dir, 'temp_%s_%s'%(
+                self.__class__.__name__, datetime.datetime.now().strftime('%M%S')))
+            
+            if os.path.exists(temp_dir):
+                delete_dir(temp_dir)
+ 
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+            
+        self.temp_dir = temp_dir
         
         #=======================================================================
         # #setup the logger

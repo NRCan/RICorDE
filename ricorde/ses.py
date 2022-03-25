@@ -252,16 +252,12 @@ class Session(TComs, baseSession):
         #=======================================================================
         #rasterize NHN polys
         nhn_rlay = self.retrieve('pwb_rlay')
-        
-        #=======================================================================
-        # nhn_rlay_fp = self.rasterize_inun(nhn_fp, ref_lay=dem_fp,
-        #                                   fp_key='nhn_rlay_fp', logger=log)
-        #=======================================================================
+ 
         
         #get the hand layer
         hand_rlay = self.retrieve('hand_rlay')        
-        #hand_fp = self.build_hand(dem_fp=dem_fp, stream_fp=nhn_rlay_fp, logger=log)
-        
+ 
+        raise Error('stopped here')
         #=======================================================================
         # add minimum water bodies to FiC inundation
         #=======================================================================

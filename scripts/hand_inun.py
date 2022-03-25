@@ -49,6 +49,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
     
     inun3_mask_fp=None
     
+    plot=False
+    
     def __init__(self,
                  tag='HANDin',
                  
@@ -183,7 +185,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         
         self.hval_prec=hval_prec #used by run_wsl_mosaic()
         
-        
+        assert os.path.exists(hand_fp), 'bad hand_fp: %s'%hand_fp
         #=======================================================================
         # setup
         #=======================================================================
@@ -212,6 +214,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         else:
             hand1_fp = hand_fp
             
+        assert os.path.exists(hand1_fp), 'no layer found at %s'%hand1_fp
         #get total grid size
         hand_cell_cnt = self.rlay_get_cellCnt(hand1_fp)
         #=======================================================================
@@ -507,6 +510,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             #check montonoticy
             assert hval>hval_j
             hval_j=hval
+            
+            assert os.path.exists(wsl_fp), 'bad wsl_fp on %i'%(i, wsl_fp)
             #===================================================================
             # #get donut mask for this hval
             #===================================================================
@@ -534,31 +539,39 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             
             
             #get mask stats
+            assert os.path.exists(mask_fp)
             cell_cnt = self.rasterlayerstatistics(mask_fp, logger=log)['SUM']
             
             d={'hval':hval, 'mask_cell_cnt':cell_cnt,'wsl_fp':wsl_fp,'mask_fp':mask_fp,
                'error':np.nan}
+            
             log.info('    (%i/%i) hval=%.2f on %s got %i wet cells'%(
                 i, len(hwsl_fp_d)-1, hval, os.path.basename(wsl_fp), cell_cnt))
             #===================================================================
-            # check
+            # check cell co unt
             #===================================================================
-            if cell_cnt>0:
-                #apply to the wsl
-                wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
-                                          ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(
-                                              i, hval*100)))
-                
-                stats_d = self.rasterlayerstatistics(wsli_fp, logger=log)
-                
-                assert os.path.exists(wsli_fp)
-                
-                d = {**d, **{ 'wsl_maskd_fp':wsli_fp},**stats_d}
-            else:
+            if not cell_cnt>0:
                 """this shouldnt trip any more
                 if it does... need to switch to mask_build with a range"""
                 log.error('identified no hval=%.2f cells'%hval)
                 d['error'] = 'no wet cells'
+                
+            #===================================================================
+            # apply the donut mask
+            #===================================================================
+            else:
+ 
+                wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
+                                  ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(i, hval*100)),
+                                  allow_empty=True, #whether to allow an empty wsl. can happen for small masks
+                                  )
+                
+                stats_d = self.rasterlayerstatistics(wsli_fp, logger=log, allow_empty=True)
+                
+                assert os.path.exists(wsli_fp)                
+                d = {**d, **{ 'wsl_maskd_fp':wsli_fp},**stats_d}
+ 
+
 
             #wrap
             res_d[i] = d
@@ -835,6 +848,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                          key_sfx='', 
                          fp_key=None,
                          sample_spacing=None,  #spacing between sampling points
+                         plot=True,
                          logger=None,
                          ):
         """
@@ -868,7 +882,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         log.debug('on %s'%os.path.basename(rToSamp_fp))
         meta_d = {'smpl_fieldName':self.smpl_fieldName, 'sample_spacing':sample_spacing}
         #=======================================================================
-        # get the points
+        # get the sampling points
         #=======================================================================
         
         smpts_fp, d = self.get_smpl_pts(inun_fp=inun_fp,
@@ -879,11 +893,32 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         
         meta_d.update({'get_smpl_pts':d})
         
-        #raw samples along edges of inun2
+        #=======================================================================
+        # #sample the raster
+        #=======================================================================
         smpls_fp = self.get_samples(smpts_fp=smpts_fp, hand_fp=rToSamp_fp, logger=log,
                                      fp_key = fp_key)
         
+        #=======================================================================
+        # get stats
+        #=======================================================================
+        if plot:
+            self.plot_samples(smpls_fp)
+        
+        
         return smpls_fp, meta_d
+    
+    def plot_samples(self, #helper for plotting the histogram of the samples
+                     fp,
+                     logger=None,
+                     ):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('plot_samples')
+        
 
     def get_samples(self,
                     smpts_fp='', 
@@ -987,6 +1022,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
                     vmin=0.0, #minimum HAND value to allow
                     vmax=100.0,
                     prec=3,
+                    plot=None,
                     logger=None,
                     ):
         """
@@ -996,6 +1032,9 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         min/max typically calculated by get_sample_bounds() using quartiles of the initial sample
         
         see note on get_edge_samples()
+        
+        TODO:
+            merge w/ Session.get_sample_bounds
         """
         
         #=======================================================================
@@ -1003,6 +1042,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('cap_samples')
+        if plot is None:
+            plot=self.plot
         
         fp_key = 'smpls2C_fp'
         
@@ -1062,6 +1103,16 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             res_vlay = self.vlay_new_df(df, geo_d=geo_d, logger=log)
             
             self.vlay_write(res_vlay,ofp,  logger=log)
+            
+            #===================================================================
+            # plot
+            #===================================================================
+            if plot:
+                self.plot_hand_vals(sraw, 
+                                    title='cap_samples',
+                            xval_lines_d={'max':vmax,'min':vmin}, 
+                                label=os.path.basename(smpls_fp),logger=log)
+                
             
             #===================================================================
             # meta

@@ -3,7 +3,7 @@ Created on Jul. 17, 2021
 
 @author: cefect
 
-common methods for the depths workflow 1
+common methods for RiCORDE
 '''
 
 #===============================================================================
@@ -13,7 +13,7 @@ import os, datetime, copy
 import processing
 
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, QgsRasterLayer
-
+from osgeo import gdal
 
 from hp.exceptions import Error
 from hp.dirz import delete_dir
@@ -37,7 +37,7 @@ class TComs(Qproj):
                  smpl_fieldName='hand_1',
                  layName_pfx=None,
                  fp_d = {},
-                 work_dir = r'C:\LS\03_TOOLS\RICorDE',
+                 work_dir = r'C:\LS\10_OUT\RICorDE',
              **kwargs):
         
         super().__init__(work_dir=work_dir,**kwargs)
@@ -476,6 +476,31 @@ class TComs(Qproj):
         assert self.rlay_check_match(rlay_fp, out_fp, logger=logger), 'new layer failed to match'
         
         return out_fp
+    
+    def getRasterMetadata(self,
+                             fp):
+        assert os.path.exists(fp)
+        
+        dataset = gdal.OpenEx(fp)
+ 
+        md = copy.copy(dataset.GetMetadata('IMAGE_STRUCTURE'))
+        
+        del dataset
+        
+        return md
+    
+    def getRasterCompression(self, fp):
+        md = self.getRasterMetadata(fp)
+        
+        if not 'COMPRESSION' in md:
+            return None
+        else:
+            return md['COMPRESSION']
+        
+ 
+        
+        
+        
         
         
         
@@ -491,6 +516,7 @@ class TComs(Qproj):
                        d = None,
                        ):
         if log is None: log=self.logger
+        
         if d is None:
         
             #print each datafile
@@ -511,7 +537,7 @@ class TComs(Qproj):
     def __exit__(self, #destructor
                  *args,**kwargs):
         
-        delete_dir(self.temp_dir)
+        #delete_dir(self.temp_dir)
         
         super().__exit__(*args,**kwargs) #initilzie teh baseclass
     

@@ -27,7 +27,7 @@ mod_logger = logging.getLogger(__name__)
 
 class Whitebox(object):
     
-    exe_fp = r'C:\LS\06_SOFT\whitebox\20210520\WBT\whitebox_tools.exe'
+    exe_fp = r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe'
     
     def __init__(self,
                  out_dir=None,
@@ -42,7 +42,7 @@ class Whitebox(object):
 
 
     def breachDepressionsLeastCost(self,
-                                   dem_fp, #file path to fill
+                                   dem_fp, #file path to fill. MUST BE UNCOMPRESSED!
                                    dist=100, #pixe distance to fill
                                    ofp = None, #outpath
                                    logger=None,
@@ -57,18 +57,23 @@ class Whitebox(object):
         
         if ofp is None: 
             ofp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(dem_fp))[0]+'_hyd.tif')
-
+            
+        if os.path.exists(ofp):
+            assert self.overwrite
+            os.remove(ofp)
         #=======================================================================
         # configure        
         #=======================================================================
         args = [self.exe_fp,
                 '--run={}'.format(tool_nm),
-                '--dem={}'.format(dem_fp),
+                '--dem=\'{}\''.format(dem_fp),
                 '--dist=%i'%dist,
                 '--min_dist=\'True\'',
                 '--fill=\'True\'',
-                '--output={}'.format(ofp),
-                '-v'
+                '--compress_raster=\'False\'',
+                '--output=\'{}\''.format(ofp),
+
+                #'-v'
                 ]
         
         log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(dem_fp)))

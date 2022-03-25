@@ -282,11 +282,13 @@ class Session(TComs):
             with ficSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
             
                 #temporal and spaital selection
-                wrkr.load_db(logger=log)
+                vlay_db = wrkr.load_db(logger=log)
     
-                fp, meta_d = wrkr.get_fic_polys(logger=log, reproject=True, **kwargs)
+                raw_fp, d1 = wrkr.get_fromDB(vlay_db, logger=log,  **kwargs)
                 
-                self.meta_d.update({'load_fic':meta_d})
+                fp, d2 =wrkr.clean_fic(raw_fp, reproject=True)
+                
+                self.meta_d.update({'get_fromDB':{**d1, **d2}})
 
 
             #add and load
@@ -488,7 +490,7 @@ class Session(TComs):
     # Inundation Hydro Correction---------
     #===========================================================================
 
-    def run_imax(self, #get gridded hand values
+    def run_imax(self,
                   #input data
                      dem_fp=None,
                      nhn_fp=None,
@@ -508,6 +510,7 @@ class Session(TComs):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('rImax')
+        start =  datetime.datetime.now()
         
         ofp_d_old = copy.copy(self.afp_d)
         
@@ -584,7 +587,7 @@ class Session(TComs):
         
         self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
         
-        return
+        return datetime.datetime.now() - start
         
 
         
@@ -675,12 +678,14 @@ class Session(TComs):
             
  
             #raster to no-data edge polygon
+            assert os.path.exists(rlay1_fp)
             nd_vlay_fp1 = self.polygonizeGDAL(rlay1_fp, logger=log,
                                       output=os.path.join(self.temp_dir, 'hand_mask1.gpkg'),
                                       )
             
             #clean/dissolve
             """need to drop DN field"""
+            assert os.path.exists(nd_vlay_fp1), nd_vlay_fp1
             nd_vlay1= self.deletecolumn(nd_vlay_fp1, ['DN'], logger=log)
             
             #fix geometry
@@ -1158,6 +1163,7 @@ class Session(TComs):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('rHdMo')
+        start =  datetime.datetime.now()
         
         ofp_d_old = copy.copy(self.afp_d)
         #=======================================================================
@@ -1230,7 +1236,7 @@ class Session(TComs):
         
         self._log_datafiles(d=ofp_d, log=log)
         
-        return
+        return datetime.datetime.now() - start
     
         
     def build_hvgrid(self, #get gridded HAND values from some indundation
@@ -1645,7 +1651,7 @@ class Session(TComs):
  
     def __exit__(self, #destructor
                  *args,**kwargs):
-        
+        self.logger.debug('__exist___ \n \n \n \n')
         self._log_datafiles()
         
         

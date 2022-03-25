@@ -38,7 +38,7 @@ from hp.gdal import GeoDataBase, get_layer_gdb_dir
 class NHNses(Qproj):
     
     ##layer and field name with NHN index info
-    index_fp = r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\_ins\NHN_INDEX_20_0714.gpkg'
+    index_fp = r'C:\LS\10_OUT\202103_InsCrve\ins\NHN_INDEX_20_0714.gpkg'
  
     ftp_base_url = r'https://ftp.maps.canada.ca/pub/nrcan_rncan/vector/geobase_nhn_rhn/gdb_en'
     

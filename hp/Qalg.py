@@ -978,9 +978,10 @@ class QAlgos(object):
         #check result
         if np.isnan(res_d['MEAN']):
             
-            msg = 'got empty layer: %s'%rlay
+            msg = 'layer has no cells with value: %s'%rlay
             
-            assert allow_empty, msg
+            if not allow_empty:
+                raise Error(msg)
             logger.getChild('rasterlayerstatistics').error(msg)
 
       
@@ -1274,7 +1275,7 @@ class QAlgos(object):
         #=======================================================================
         algo_nm = 'qgis:deletecolumn'
         if logger is None: logger=self.logger
-        #log = logger.getChild('createspatialindex')
+        log = logger.getChild('deletecolumn')
 
         
         assert isinstance(fields_l, list)
@@ -1293,7 +1294,7 @@ class QAlgos(object):
                  'INPUT' : main_input,
                     'OUTPUT' : output }
         
-        #log.debug('executing \'%s\' with ins_d: \n    %s'%(algo_nm, ins_d))
+        log.debug('executing \'%s\' with ins_d: \n    %s'%(algo_nm, ins_d))
         
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
         
@@ -1892,7 +1893,7 @@ class QAlgos(object):
 
         algo_nm = 'gdal:polygonize'
         
-        ins_d = { 'BAND' : 1, 'EIGHT_CONNECTEDNESS' : True, 
+        ins_d = { 'BAND' : 1, 'EIGHT_CONNECTEDNESS' : False, 
                  'EXTRA' : '', 'FIELD' : 'DN', 
                  'INPUT' : rlay, 
                  'OUTPUT' : output }

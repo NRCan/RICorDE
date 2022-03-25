@@ -27,7 +27,7 @@ from hp.Q import Qproj, QgsRasterLayer, QgsCoordinateReferenceSystem, QgsMapLaye
  
 from hp.whitebox import Whitebox
 
-from scripts.tcoms import TComs
+from ricorde.tcoms import TComs
 
 #===============================================================================
 # vars

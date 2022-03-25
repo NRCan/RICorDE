@@ -41,7 +41,7 @@ start =  datetime.datetime.now()
 print('start at %s'%start)
  
  
-from scripts.ses import Session, QgsCoordinateReferenceSystem, force_open_dir
+from ricorde.ses import Session, QgsCoordinateReferenceSystem, force_open_dir
 
 
 #from memory_profiler import profile

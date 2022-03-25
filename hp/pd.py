@@ -2539,9 +2539,9 @@ def search_str_fr_list( #find where items have all the items in the search_l
 
     #loop through and find search results for each string
     for search_str, row in df_bool.iterrows():
-        if search_type is 'contains':
+        if search_type == 'contains':
             boolcol = ser.astype(str).str.contains(search_str, case=case, **kwargs)
-        elif search_type is 'match':
+        elif search_type == 'match':
             boolcol = ser.astype(str).str.match(search_str, case=case, **kwargs)
         else:
             raise IOError

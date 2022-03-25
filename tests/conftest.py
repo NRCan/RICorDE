@@ -111,11 +111,7 @@ def logger():
 def feedback(logger):
     from hp.Q import MyFeedBackQ
     return MyFeedBackQ(logger=logger)
-    
  
-    
-
-
 
 @pytest.fixture(scope='session')
 def base_dir():
@@ -138,4 +134,23 @@ def true_dir(write, tmp_path, base_dir):
             
     return true_dir
     
+#===============================================================================
+# helper funcs-------
+#===============================================================================
+def search_fp(dirpath, ext, pattern): #get a matching file with extension and beginning
+    assert os.path.exists(dirpath), 'searchpath does not exist: %s'%dirpath
+    fns = [e for e in os.listdir(dirpath) if e.endswith(ext)]
     
+    result= None
+    for fn in fns:
+        if pattern in fn:
+            result = os.path.join(dirpath, fn)
+            break
+        
+    if result is None:
+        raise IOError('failed to find a match for \'%s\' in %s'%(pattern, dirpath))
+    
+    assert os.path.exists(result), result
+        
+        
+    return result

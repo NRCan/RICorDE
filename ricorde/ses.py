@@ -5,12 +5,8 @@ Created on Mar. 27, 2021
 
 workflows for deriving gridded depth estimates from inundation polygons and DEMs
 
-setup to execute 1 workflow at a time (output 1 depth raster)
-    see validate.py for calculating the performance of these outputs
-    
-2021-07-20: revised to gridded-hand values with mosaiced DEPTHS
-    see branch '20210720_hva_grid'
-
+ 
+ 
 
 #===============================================================================
 # passing layers vs. filepaths
@@ -46,7 +42,8 @@ better organize outputs
     temps should be a single folder
     intermediaries a second
     only the main depths output lands at the top level
-    
+
+add tests
 
 
 '''

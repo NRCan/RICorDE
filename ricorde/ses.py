@@ -327,6 +327,9 @@ class Session(TComs):
                    logger=None,
                    resolution=2,
                  **kwargs):
+        """
+        TODO: need to separate HRDEM (canada) from passing a dem_fp
+        """
         
         #=======================================================================
         # defaults
@@ -610,7 +613,7 @@ class Session(TComs):
         # build
         #=======================================================================
         if not fp_key in self.fp_d:
-            from scripts.hand import HANDses as SubSession
+            from ricorde.hand import HANDses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
                 """passing all filepathss for a clean kill"""

@@ -180,6 +180,7 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if not aoi_fp is None:
             self.aoi_fp=aoi_fp
+            assert os.path.exists(aoi_fp)
             self.load_aoi(aoi_fp, set_proj_crs=aoi_set_proj_crs)
         
         if not aoi_vlay is None:
@@ -394,6 +395,7 @@ class Qproj(QAlgos, Basic):
         
         
         #file
+        assert not file_path is None
         assert os.path.exists(file_path), file_path
         fname, ext = os.path.splitext(os.path.split(file_path)[1])
         assert not ext in ['tif'], 'passed invalid filetype: %s'%ext

@@ -21,7 +21,7 @@ import os, datetime
 
 from hp.whitebox import Whitebox
  
-from scripts.tcoms import TComs
+from ricorde.tcoms import TComs
 
 """doesn't seem to be working... need to stick with QGIS algos
 import whitebox

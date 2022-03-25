@@ -840,7 +840,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             
             log.info('building \'%s\' w/ %s %s'%(fp_key, args, kwargs))
-            from scripts.hand_inun import HIses as SubSession
+            from ricorde.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -974,7 +974,7 @@ class Session(TComs):
             ofp = os.path.join(self.out_dir, self.layName_pfx+'_hrun_imax_%03d.tif'%(hval*100))
             
             
-            from scripts.tcoms import TComs as SubSession
+            from ricorde.tcoms import TComs as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1261,7 +1261,7 @@ class Session(TComs):
         #=======================================================================
         if not fp_key in self.fp_d:
             log.info('building \'%s\' w/ %s %s'%(fp_key, args, kwargs))
-            from scripts.hand_inun import HIses as SubSession
+            from ricorde.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1304,7 +1304,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('building HAND inundation set \n \n')
             
-            from scripts.hand_inun import HIses as SubSession
+            from ricorde.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1345,7 +1345,7 @@ class Session(TComs):
         if not fp_key in self.fp_d:
             log.info('building HAND wsl set')
             
-            from scripts.hand_inun import HIses as SubSession
+            from ricorde.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=log, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:
@@ -1398,7 +1398,7 @@ class Session(TComs):
             
             
             
-            from scripts.hand_inun import HIses as SubSession
+            from ricorde.hand_inun import HIses as SubSession
             
             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
                             fp_d=self.fp_d) as wrkr:

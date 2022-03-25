@@ -1,0 +1,161 @@
+<!DOCTYPE qgis-layer-definition>
+<qlr>
+  <layer-tree-group checked="Qt::Checked" expanded="1" name="">
+    <customproperties>
+      <Option/>
+    </customproperties>
+    <layer-tree-layer checked="Qt::Checked" legend_exp="" patch_size="-1,-1" expanded="1" providerKey="gdal" name="dem_fred_aoi01T_1x1_0325" source="./dem_fred_aoi01T_1x1_0325.tif" legend_split_behavior="0" id="dem_fred_aoi01T_1x1_0325_3982eaa2_7565_433e_b285_41dc036cd6c1">
+      <customproperties>
+        <Option/>
+      </customproperties>
+    </layer-tree-layer>
+  </layer-tree-group>
+  <maplayers>
+    <maplayer autoRefreshEnabled="0" styleCategories="AllStyleCategories" hasScaleBasedVisibilityFlag="0" refreshOnNotifyMessage="" minScale="1e+08" autoRefreshTime="0" type="raster" legendPlaceholderImage="" maxScale="0" refreshOnNotifyEnabled="0">
+      <extent>
+        <xmin>2157109</xmin>
+        <ymin>145538</ymin>
+        <xmax>2157618</xmax>
+        <ymax>146844</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-66.61571543969927234</xmin>
+        <ymin>45.92417991064266403</ymin>
+        <xmax>-66.60269662546217262</xmax>
+        <ymax>45.93659367398706905</ymax>
+      </wgs84extent>
+      <id>dem_fred_aoi01T_1x1_0325_3982eaa2_7565_433e_b285_41dc036cd6c1</id>
+      <datasource>./dem_fred_aoi01T_1x1_0325.tif</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>dem_fred_aoi01T_1x1_0325</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCRS["NAD83(CSRS) / Canada Atlas Lambert",BASEGEOGCRS["NAD83(CSRS)",DATUM["NAD83 Canadian Spatial Reference System",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4617]],CONVERSION["Canada Atlas Lambert",METHOD["Lambert Conic Conformal (2SP)",ID["EPSG",9802]],PARAMETER["Latitude of false origin",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8821]],PARAMETER["Longitude of false origin",-95,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8822]],PARAMETER["Latitude of 1st standard parallel",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8823]],PARAMETER["Latitude of 2nd standard parallel",77,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8824]],PARAMETER["Easting at false origin",0,LENGTHUNIT["metre",1],ID["EPSG",8826]],PARAMETER["Northing at false origin",0,LENGTHUNIT["metre",1],ID["EPSG",8827]]],CS[Cartesian,2],AXIS["(E)",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["(N)",north,ORDER[2],LENGTHUNIT["metre",1]],USAGE[SCOPE["Transformation of coordinates at 5m level of accuracy."],AREA["Canada - onshore and offshore - Alberta; British Columbia; Manitoba; New Brunswick; Newfoundland and Labrador; Northwest Territories; Nova Scotia; Nunavut; Ontario; Prince Edward Island; Quebec; Saskatchewan; Yukon."],BBOX[38.21,-141.01,86.46,-40.73]],ID["EPSG",3979]]</wkt>
+          <proj4>+proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs</proj4>
+          <srsid>27402</srsid>
+          <srid>3979</srid>
+          <authid>EPSG:3979</authid>
+          <description>NAD83(CSRS) / Canada Atlas Lambert</description>
+          <projectionacronym>lcc</projectionacronym>
+          <ellipsoidacronym>EPSG:7019</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type></type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt></wkt>
+            <proj4></proj4>
+            <srsid>0</srsid>
+            <srid>0</srid>
+            <authid></authid>
+            <description></description>
+            <projectionacronym></projectionacronym>
+            <ellipsoidacronym></ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider>gdal</provider>
+      <noData>
+        <noDataList bandNo="1" useSrcNoData="1"/>
+      </noData>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <metadataUrls/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+        <Private>0</Private>
+      </flags>
+      <temporal fetchMode="0" mode="0" enabled="0">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <customproperties>
+        <Option/>
+      </customproperties>
+      <pipe-data-defined-properties>
+        <Option type="Map">
+          <Option type="QString" value="" name="name"/>
+          <Option name="properties"/>
+          <Option type="QString" value="collection" name="type"/>
+        </Option>
+      </pipe-data-defined-properties>
+      <pipe>
+        <provider>
+          <resampling zoomedInResamplingMethod="nearestNeighbour" maxOversampling="2" enabled="false" zoomedOutResamplingMethod="nearestNeighbour"/>
+        </provider>
+        <rasterrenderer classificationMax="50" band="1" nodataColor="" type="singlebandpseudocolor" classificationMin="0" opacity="0.4" alphaBand="-1">
+          <rasterTransparency/>
+          <minMaxOrigin>
+            <limits>None</limits>
+            <extent>WholeRaster</extent>
+            <statAccuracy>Estimated</statAccuracy>
+            <cumulativeCutLower>0.02</cumulativeCutLower>
+            <cumulativeCutUpper>0.98</cumulativeCutUpper>
+            <stdDevFactor>2</stdDevFactor>
+          </minMaxOrigin>
+          <rastershader>
+            <colorrampshader colorRampType="INTERPOLATED" classificationMode="1" clip="0" minimumValue="0" maximumValue="50" labelPrecision="4">
+              <colorramp type="gradient" name="[source]">
+                <Option type="Map">
+                  <Option type="QString" value="217,248,217,255" name="color1"/>
+                  <Option type="QString" value="255,255,255,255" name="color2"/>
+                  <Option type="QString" value="0" name="discrete"/>
+                  <Option type="QString" value="gradient" name="rampType"/>
+                  <Option type="QString" value="0.15;29,198,0,255:0.495192;255,127,0,255:0.75;228,26,28,255:0.9;150,150,150,255" name="stops"/>
+                </Option>
+                <prop k="color1" v="217,248,217,255"/>
+                <prop k="color2" v="255,255,255,255"/>
+                <prop k="discrete" v="0"/>
+                <prop k="rampType" v="gradient"/>
+                <prop k="stops" v="0.15;29,198,0,255:0.495192;255,127,0,255:0.75;228,26,28,255:0.9;150,150,150,255"/>
+              </colorramp>
+              <item value="0" label="0.0000" color="#d9f8d9" alpha="255"/>
+              <item value="7.5" label="7.5000" color="#1dc600" alpha="255"/>
+              <item value="24.759600000000002" label="24.7596" color="#ff7f00" alpha="255"/>
+              <item value="37.5" label="37.5000" color="#e41a1c" alpha="255"/>
+              <item value="45" label="45.0000" color="#969696" alpha="255"/>
+              <item value="50" label="50.0000" color="#ffffff" alpha="255"/>
+              <rampLegendSettings useContinuousLegend="1" minimumLabel="" direction="0" orientation="2" suffix="" maximumLabel="" prefix="">
+                <numericFormat id="basic">
+                  <Option type="Map">
+                    <Option type="QChar" value="" name="decimal_separator"/>
+                    <Option type="int" value="6" name="decimals"/>
+                    <Option type="int" value="0" name="rounding_type"/>
+                    <Option type="bool" value="false" name="show_plus"/>
+                    <Option type="bool" value="true" name="show_thousand_separator"/>
+                    <Option type="bool" value="false" name="show_trailing_zeros"/>
+                    <Option type="QChar" value="" name="thousand_separator"/>
+                  </Option>
+                </numericFormat>
+              </rampLegendSettings>
+            </colorrampshader>
+          </rastershader>
+        </rasterrenderer>
+        <brightnesscontrast brightness="0" contrast="0" gamma="1"/>
+        <huesaturation colorizeOn="0" colorizeGreen="128" colorizeRed="255" saturation="0" grayscaleMode="0" colorizeStrength="100" invertColors="0" colorizeBlue="128"/>
+        <rasterresampler maxOversampling="2"/>
+        <resamplingStage>resamplingFilter</resamplingStage>
+      </pipe>
+      <blendMode>0</blendMode>
+    </maplayer>
+  </maplayers>
+</qlr>

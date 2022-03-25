@@ -30,7 +30,7 @@ from hp.Q import Qproj, QgsVectorLayer, view, vlay_get_fdf, QgsMapLayerStore, \
 from qgis.analysis import QgsRasterCalculatorEntry
 from hp.gdal import rlay_to_array
 
-from scripts.tcoms import TComs
+from ricorde.tcoms import TComs
 
 
 

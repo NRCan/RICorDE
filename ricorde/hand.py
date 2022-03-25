@@ -108,10 +108,11 @@ class HANDses(TComs):
                  
     def run(self,
             dem_fp='',
-            stream_fp='',
+            pwb_fp='',
             compress=None,
             logger=None,
             ofp = None,
+            write=None,
             ):
         
         """
@@ -125,15 +126,20 @@ class HANDses(TComs):
         if compress is None:
             compress=self.compress
             
+
+            
+        if write is None: write=self.write
+        
         #filepaths
         if ofp is None:
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_HAND.tif')
+            if write:
+                ofp = os.path.join(self.out_dir, self.layName_pfx+'_HAND.tif')
+            else:
+                ofp = os.path.join(self.temp_dir, self.layName_pfx+'_HAND.tif')
             
         if os.path.exists(ofp):
             assert self.overwrite
             os.remove(ofp)
-            
-
         
         #=======================================================================
         # algo
@@ -142,9 +148,12 @@ class HANDses(TComs):
         dem_hyd_fp = self.hydro_correct(dem_fp=dem_fp, logger=log)
 
         #get HAND
-        if not compress=='none': hand1_fp = None
-        else: hand1_fp = ofp
-        hand1_fp = self.hand(dem_hyd_fp, stream_fp, ofp=hand1_fp, logger=log)
+        if not compress=='none': 
+            hand1_fp = None
+        else: 
+            hand1_fp = ofp
+            
+        hand1_fp = self.hand(dem_hyd_fp, pwb_fp, ofp=hand1_fp, logger=log)
         
 
         #=======================================================================
@@ -164,7 +173,7 @@ class HANDses(TComs):
         # wrap
         #=======================================================================
  
-        log.debug('finished on %s'%ofp)
+        log.info('finished on %s'%ofp)
             
         return ofp
 

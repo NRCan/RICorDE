@@ -87,8 +87,8 @@ class Session(TComs, baseSession):
  
     afp_d = {}
     #special inheritance parameters for this session
-    childI_d = {'Session':['aoi_vlay', 'out_dir', 'name', 'layName_pfx', 'fp_d', 'dem_psize',
-                           'hval_prec', 'temp_dir']}
+    childI_d = {'Session':['aoi_vlay', 'name', 'layName_pfx', 'fp_d', 'dem_psize',
+                           'hval_prec', ]}
     
     smry_d = dict() #container of frames summarizing some calcs
     meta_d = dict() #1d summary data (goes on the first page of the smry_d)_
@@ -100,7 +100,7 @@ class Session(TComs, baseSession):
                  pwb_fp=None, #permanent water body filepath (raster or polygon)
                  inp_fp=None, #inundation filepath (raster or polygon)
              
- 
+                 
                  **kwargs):
         
         #=======================================================================
@@ -115,8 +115,15 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build': lambda **kwargs:self.build_pwb_rlay(pwb_fp, **kwargs),
                 },
+            'hand_rlay':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build': lambda **kwargs:self.build_hand(**kwargs),
+                }
              
             }
+        
+        #attach inputs
+        self.dem_fp, self.pwb_fp, self.inp_fp = dem_fp, pwb_fp, inp_fp
             
             
         
@@ -135,7 +142,7 @@ class Session(TComs, baseSession):
         """
         self.out_dir
         """
-            
+        
 
             
  
@@ -250,8 +257,9 @@ class Session(TComs, baseSession):
         #                                   fp_key='nhn_rlay_fp', logger=log)
         #=======================================================================
         
-        #get the hand layer        
-        hand_fp = self.build_hand(dem_fp=dem_fp, stream_fp=nhn_rlay_fp, logger=log)
+        #get the hand layer
+        hand_rlay = self.retrieve('hand_rlay')        
+        #hand_fp = self.build_hand(dem_fp=dem_fp, stream_fp=nhn_rlay_fp, logger=log)
         
         #=======================================================================
         # add minimum water bodies to FiC inundation
@@ -304,12 +312,14 @@ class Session(TComs, baseSession):
     def build_pwb_rlay(self, #build permanent water raster
                         fp,
                         dkey=None,
+                        write=None,
                         ):
         
         #=======================================================================
         # defaults
         #=======================================================================
         log = self.logger.getChild('build_pwb_rlay')
+        if write is None: write=self.write
         assert dkey == 'pwb_rlay'
         
         assert not fp is None
@@ -328,9 +338,15 @@ class Session(TComs, baseSession):
             #load the reference layer
             ref_lay = self.retrieve('dem_rlay', logger=log)
  
+            #build the raster
+            if write:
+                ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+                self.ofp_d[dkey] = ofp
+            else:
+                ofp=None
             
             rlay_fp = self.rasterize_inun(fp, logger=log, ref_lay=ref_lay, 
-                                ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey)),
+                                ofp = ofp,
                                 )
         #=======================================================================
         # load the layer
@@ -340,7 +356,12 @@ class Session(TComs, baseSession):
 
         
     def build_hand(self, #load or build the HAND layer
-                   *args,
+                   dkey=None,
+                   
+                   dem_fp=None,
+                   pwb_rlay_fp=None,
+                   
+                   write=None,
                    logger=None,
                   **kwargs
                  ):
@@ -349,35 +370,55 @@ class Session(TComs, baseSession):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.hand')
-        
-        fp_key = 'hand_fp'
-        
-
-        #=======================================================================
-        # build
-        #=======================================================================
-        if not fp_key in self.fp_d:
-            from ricorde.hand import HANDses as SubSession
-            
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d) as wrkr:
-                """passing all filepathss for a clean kill"""
-                fp = wrkr.run(*args, **kwargs) 
-            
-            self.ofp_d[fp_key] = fp
-            log.info('built hand layer at %s'%fp)
-            
+        log=logger.getChild('build_hand')
+        assert dkey == 'hand_rlay'
+        if dem_fp is None: dem_fp=self.dem_fp
+        if write is None: write=self.write
         #=======================================================================
         # retrieve
         #=======================================================================
-        else:
-            
-            fp = self.fp_d[fp_key]
-            log.info('loading HAND layer from %s'%fp)
-            
+        if pwb_rlay_fp is None:
+            pwb_rlay = self.retrieve('pwb_rlay')
+            pwb_rlay_fp = pwb_rlay.source()
  
         
-        return fp
+
+        #=======================================================================
+        # build sub session
+        #=======================================================================
+        from ricorde.hand import HANDses
+        
+        """using a pretty complicated inheritance parameter passing
+        seems to be working... but I wouldnt do this again
+        see oop.Session.inherit
+        """
+        if write:
+            out_dir = self.wrk_dir
+        else:
+            out_dir=None
+ 
+        
+        with HANDses(session=self, logger=logger, out_dir = out_dir, inher_d=self.childI_d,
+                     temp_dir = os.path.join(self.temp_dir, 'HANDses')) as wrkr:
+ 
+            """passing all filepathss for a clean kill"""
+            fp = wrkr.run(dem_fp=dem_fp, pwb_fp = pwb_rlay_fp, 
+                          **kwargs)
+            """
+            wrkr.temp_dir
+            """
+            
+            wrkr.logger.debug('finished')
+            
+        #=======================================================================
+        # wrap 
+        #=======================================================================
+        
+        if write:
+            self.ofp_d[dkey] = fp
+            
+ 
+        return self.rlay_load(fp, logger=log)
     
     
     def build_nd_bndry(self, #get the no-data boundary of the HAND-ray (as a vector)

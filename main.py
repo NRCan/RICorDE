@@ -131,7 +131,7 @@ def dev_test(
                    ) as wrkr:
         
         #ref_lay = wrkr.retrieve('dem_rlay')
-        nhn_rlay = wrkr.retrieve('pwb_rlay')
+        wrkr.retrieve('hand_rlay')
         #wrkr.run_imax()
         
         out_dir = wrkr.out_dir
@@ -156,6 +156,6 @@ if __name__ =="__main__":
     #===========================================================================
     # wrap
     #===========================================================================
-    force_open_dir(od)
+    #force_open_dir(od)
     tdelta = datetime.datetime.now() - start
     print('finished in %s'%tdelta)

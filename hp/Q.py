@@ -125,7 +125,7 @@ class Qproj(QAlgos, Basic):
         
         super().__init__(
             inher_d = {**inher_d,
-                **{'Qproj':['qap', 'qproj', 'vlay_drivers', 'feedback']}},
+                **{'Qproj':['qap', 'qproj', 'vlay_drivers', 'feedback', 'compress']}},
             
             **kwargs) #initilzie teh baseclass
         

@@ -37,10 +37,15 @@ class TComs(Qproj):
                  smpl_fieldName='hand_1',
                  layName_pfx=None,
                  fp_d = {},
+                 write=True,
+                 inher_d={},
  
              **kwargs):
         
-        super().__init__(**kwargs)
+        super().__init__(
+            inher_d = {**inher_d,
+                            **{'TComs':['write']}},
+            **kwargs)
         
         self.smpl_fieldName=smpl_fieldName
         
@@ -52,18 +57,7 @@ class TComs(Qproj):
         self.fp_d = fp_d
         self.ofp_d = dict()
         
-        #=======================================================================
-        # #temporary directory
-        #=======================================================================
-#===============================================================================
-#         self.temp_dir = os.path.join(self.out_dir, 'temp_%s_%s'%(
-#             self.__class__.__name__, datetime.datetime.now().strftime('%M%S')))
-#         if os.path.exists(self.temp_dir):
-#             delete_dir(self.temp_dir)
-# 
-#         if not os.path.exists(self.temp_dir):
-#             os.makedirs(self.temp_dir)
-#===============================================================================
+        self.write=write
         
         if len(fp_d)>0:
             self.logger.info('init w/ %i preloaded datasets: \n    %s'%(
@@ -520,7 +514,7 @@ class TComs(Qproj):
     def __exit__(self, #destructor
                  *args,**kwargs):
         
-        #delete_dir(self.temp_dir)
+        delete_dir(self.temp_dir)
         
         super().__exit__(*args,**kwargs) #initilzie teh baseclass
     

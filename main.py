@@ -17,7 +17,7 @@ TODO:
         
     clean up the creation/use of temporary folders
         
-    collapse all necessary hp and tcom scripts into a single hp.py
+    collapse all necessary hp and tcom ricorde into a single hp.py
     re-org folders
         RICorDE
             main #top-level callers

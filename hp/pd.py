@@ -3033,7 +3033,7 @@ def tlike_uq_vals( #get list of unique values in tlike sets
         ):
     """
     NOTE: if you already have a valt_d built for this set,
-        just copy/paste the unique value scripts from below
+        just copy/paste the unique value ricorde from below
     
     """
     if isinstance(tlike_raw, list):

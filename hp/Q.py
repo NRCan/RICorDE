@@ -197,7 +197,7 @@ class Qproj(QAlgos, Basic):
                    crs=None,
                   gui = False): 
         """
-        WARNING: need to hold this app somewhere. call in the module you're working in (scripts)
+        WARNING: need to hold this app somewhere. call in the module you're working in (ricorde)
         
         """
         log = self.logger.getChild('_init_qgis')

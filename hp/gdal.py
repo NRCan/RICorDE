@@ -173,6 +173,7 @@ def get_nodata_val(rlay_fp):
 
 
 def rlay_to_array(rlay_fp, dtype=np.dtype('float32')):
+    """context managger?"""
     #get raw data
     ds = gdal.Open(rlay_fp)
     band = ds.GetRasterBand(1)
@@ -185,9 +186,33 @@ def rlay_to_array(rlay_fp, dtype=np.dtype('float32')):
     
     ar_raw[ar_raw==ndval]=np.nan
     
+    del ds
+    del band
+    
     return ar_raw
 
+def getRasterMetadata(fp):
+    assert os.path.exists(fp)
     
+    dataset = gdal.OpenEx(fp)
+    
+    md = copy.copy(dataset.GetMetadata('IMAGE_STRUCTURE'))
+    
+    del dataset
+    
+    return md
+
+def getRasterStatistics(fp):
+    ds = gdal.Open(fp)
+ 
+    band = ds.GetRasterBand(1)
+    d = dict()
+    d['min'], d['max'], d['mean'], d['stddev'] = band.GetStatistics(True, True)
+ 
+    
+    del ds
+    
+    return d
     
     
             

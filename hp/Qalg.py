@@ -1904,6 +1904,18 @@ class QAlgos(object):
         
         return res_d['OUTPUT']
     
+    def convertformat(self,
+                      input,
+                      output = 'TEMPORARY_OUTPUT', #defaults to a gpkg
+                      ):
+        algo_nm = 'gdal:convertformat'
+        ins_d = { 'INPUT' : input, 'OPTIONS' : '', 'OUTPUT' : output}
+        
+        
+        res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
+        
+        return res_d['OUTPUT']
+    
     #===========================================================================
     # GRASS--------
     #===========================================================================

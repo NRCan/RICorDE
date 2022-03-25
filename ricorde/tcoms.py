@@ -97,7 +97,8 @@ class TComs(Qproj):
             mstore.addMapLayer(ref_lay)
         
         assert ref_lay.crs() == self.qproj.crs()
-        assert os.path.exists(rlay_fp)
+        if isinstance(rlay_fp, str): 
+            assert os.path.exists(rlay_fp)
         assert os.path.exists(self.out_dir)
         #=======================================================================
         # #rasterize

@@ -112,6 +112,7 @@ class Session(TComs, baseSession):
                 'build':lambda **kwargs:self.rlay_load(dem_fp, **kwargs),
                 },
             'pwb_rlay':{ #permanent waterbodies (raster)
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build': lambda **kwargs:self.build_pwb_rlay(pwb_fp, **kwargs),
                 },
              
@@ -317,7 +318,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # passed a raster
         #=======================================================================
-        if QgsRasterLayer.isValidRasterFileName(fp):
+        if fp.endswith('tif'):
             rlay_fp = fp
         
         #=======================================================================
@@ -326,6 +327,7 @@ class Session(TComs, baseSession):
         else:
             #load the reference layer
             ref_lay = self.retrieve('dem_rlay', logger=log)
+ 
             
             rlay_fp = self.rasterize_inun(fp, logger=log, ref_lay=ref_lay, 
                                 ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey)),

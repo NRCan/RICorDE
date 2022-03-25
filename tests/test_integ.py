@@ -16,6 +16,9 @@ from tests.conftest import search_fp, retrieve_data
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_integ_full(session, hval_prec, true_dir):
     
+    #===========================================================================
+    # generate test set
+    #===========================================================================
     session.afp_d = copy.copy(session.fp_d)
     #adjust for hydrauilc maximum
     session.run_imax()
@@ -25,6 +28,9 @@ def test_integ_full(session, hval_prec, true_dir):
     #get depths mosaic
     session.run_hdep_mosaic(hval_prec=hval_prec)
     
+    #===========================================================================
+    # compare
+    #===========================================================================
     for dkey, fp in session.afp_d.items():
         if dkey in session.fp_d: continue #ignore loaded data
         #=======================================================================

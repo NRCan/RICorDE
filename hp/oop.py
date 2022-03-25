@@ -225,10 +225,246 @@ class Basic(object): #simple base class
                 #print('failed to delete \n    %s \n    %s'%(fp, e))
         
         
+class Session(Basic): #analysis with flexible loading of intermediate results
+    """typically we only instance this once
+        but tests will instance multiple times
+        so beware of setting containers here"""
+
+    
+    
+    
+    def __init__(self, 
+                 bk_lib=dict(),         #kwargs for builder calls {dkey:kwargs}
+                 compiled_fp_d = dict(), #container for compiled (intermediate) results {dkey:filepath}
+                 data_retrieve_hndls=None, #data retrival handles
+                             #default handles for building data sets {dkey: {'compiled':callable, 'build':callable}}
+                            #all callables are of the form func(**kwargs)
+                            #see self._retrieve2()
+                            
+                wrk_dir=None, #output for working/intermediate files
+                write=True,
+
+                **kwargs):
+        
+        assert isinstance(data_retrieve_hndls, dict), 'must past data retrival handles'
         
         
+        super().__init__(**kwargs)
+        
+        self.data_d = dict() #datafiles loaded this session
+    
+        self.ofp_d = dict() #output filepaths generated this session
+        
+        
+        #=======================================================================
+        # retrival handles---------
+        #=======================================================================
+                    
+            
+        self.data_retrieve_hndls=data_retrieve_hndls
+        
+        #check keys
+        keys = self.data_retrieve_hndls.keys()
+        if len(keys)>0:
+            l = set(bk_lib.keys()).difference(keys)
+            assert len(l)==0, 'keymismatch on bk_lib \n    %s'%l
+            
+            l = set(compiled_fp_d.keys()).difference(keys)
+            assert len(l)==0, 'keymismatch on compiled_fp_d \n    %s'%l
+            
+            
+        #attach    
+        self.bk_lib=bk_lib
+        self.compiled_fp_d = compiled_fp_d
+        self.write=write
+        
+        
+        #start meta
+        self.dk_meta_d = {k:dict() for k in keys}
+ 
+            
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if wrk_dir is None:
+            wrk_dir = os.path.join(self.out_dir, 'working')
+        
+        if not os.path.exists(wrk_dir):
+            os.makedirs(wrk_dir)
+            
+        self.wrk_dir = wrk_dir
+        
+        
+    def retrieve(self, #flexible 3 source data retrival
+                 dkey,
+                 *args,
+                 logger=None,
+                 **kwargs
+                 ):
+        
+        if logger is None: logger=self.logger
+        log = logger.getChild('retrieve')
+        
+
+        start = datetime.datetime.now()
+        #=======================================================================
+        # 1.alredy loaded
+        #=======================================================================
+        """
+        self.data_d.keys()
+        """
+        if dkey in self.data_d:
+            try:
+                return copy.deepcopy(self.data_d[dkey])
+            except Exception as e:
+                log.warning('failed to get a copy of \"%s\' w/ \n    %s'%(dkey, e))
+                return self.data_d[dkey]
+            
+        
+        #=======================================================================
+        # retrieve handles
+        #=======================================================================
+        log.info('loading %s'%dkey)
                 
+        assert dkey in self.data_retrieve_hndls, dkey
         
+        hndl_d = self.data_retrieve_hndls[dkey]
+        
+        #=======================================================================
+        # 2.compiled provided
+        #=======================================================================
+ 
+        if dkey in self.compiled_fp_d and 'compiled' in hndl_d:
+            data = hndl_d['compiled'](fp=self.compiled_fp_d[dkey], dkey=dkey)
+            method='loaded pre-compiled from %s'%self.compiled_fp_d[dkey]
+        #=======================================================================
+        # 3.build from scratch
+        #=======================================================================
+        else:
+            assert 'build' in hndl_d, 'no build handles for %s'%dkey
+            
+            #retrieve builder kwargs
+            if dkey in self.bk_lib:
+                bkwargs=self.bk_lib[dkey].copy()
+                bkwargs.update(kwargs) #function kwargs take precident
+                kwargs = bkwargs
+                """
+                clearer to the user
+                also gives us more control for calls within calls
+                """
+
+            data = hndl_d['build'](*args, dkey=dkey, **kwargs)
+            
+            method='built w/ %s'%kwargs
+            
+        #=======================================================================
+        # store
+        #=======================================================================
+        assert data is not None, '\'%s\' got None'%dkey
+        assert hasattr(data, '__len__'), '\'%s\' failed to retrieve some data'%dkey
+        self.data_d[dkey] = data
+        
+        tdelta = round((datetime.datetime.now() - start).total_seconds(), 1)
+            
+        self.dk_meta_d[dkey].update({
+            'tdelta (secs)':tdelta, 'dtype':type(data), 'len':len(data), 'method':method})
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        log.info('finished on \'%s\' w/ len=%i dtype=%s'%(dkey, len(data), type(data)))
+        
+        return data
+    
+    def load_pick(self,
+                  fp=None, 
+                  dkey=None,
+                  ):
+        
+        assert os.path.exists(fp), 'bad fp for \'%s\' \n    %s'%(dkey, fp)
+        
+        with open(fp, 'rb') as f:
+            data = pickle.load(f)
+            
+        return data
+    
+    def write_pick(self, 
+                   data, 
+                   out_fp,
+                   overwrite=None,
+                   protocol = 3, # added in Python 3.0. It has explicit support for bytes
+                   logger=None):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('write_pick')
+        if overwrite is None: overwrite=self.overwrite
+        
+        #=======================================================================
+        # checks
+        #=======================================================================
+        
+        if os.path.exists(out_fp):
+            assert overwrite, out_fp
+            
+        assert out_fp.endswith('.pickle')
+            
+        log.debug('writing to %s'%out_fp)
+        
+        with open(out_fp,  'wb') as f:
+            pickle.dump(data, f, protocol)
+        
+        log.info('wrote %i to %s'%(len(data), out_fp))
+            
+        
+        return out_fp
+        
+    def _get_meta(self, #get a dictoinary of metadat for this model
+                 ):
+        
+        d = super()._get_meta()
+        
+        if len(self.data_d)>0:
+            d['data_d.keys()'] = list(self.data_d.keys())
+            
+        if len(self.ofp_d)>0:
+            d['ofp_d.keys()'] = list(self.ofp_d.keys())
+            
+        if len(self.compiled_fp_d)>0:
+            d['compiled_fp_d.keys()'] = list(self.compiled_fp_d.keys())
+            
+        if len(self.bk_lib)>0:
+            d['bk_lib'] = copy.deepcopy(self.bk_lib)
+            
+        return d
+    
+    def __exit__(self, #destructor
+                 *args, **kwargs):
+        
+        print('oop.Session.__exit__ (%s)'%self.__class__.__name__)
+        
+        #=======================================================================
+        # log major containers
+        #=======================================================================
+        if len(self.data_d)>0:
+            print('    data_d.keys(): %s'%(list(self.data_d.keys())))
+            self.data_d = dict() #not necessiary any more
+        
+        if len(self.ofp_d)>0:
+            print('    ofp_d (%i):'%len(self.ofp_d))
+            for k,v in self.ofp_d.items():
+                print('        \'%s\':r\'%s\','%(k,v))
+            print('\n')
+            self.ofp_d = dict()
+              
+              
+        
+        
+        super().__exit__(*args, **kwargs)
+    
+    
     
     
     

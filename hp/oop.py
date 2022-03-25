@@ -78,7 +78,8 @@ class Basic(object): #simple base class
             from definitions import work_dir
         
         assert os.path.exists(work_dir), work_dir
-            
+        os.chdir(work_dir) #set this as the working directory (mostly used by the logger)
+        print('set working directory to %s'%work_dir)
         #=======================================================================
         # output directory
         #=======================================================================

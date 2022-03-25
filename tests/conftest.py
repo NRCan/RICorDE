@@ -25,7 +25,7 @@ def proj_d(request): #retrieve test dataset
     rproj_lib = {
         'fred01':{
             'aoi_fp':'aoi01T_fred_20220325.geojson',
-            'dem_fp':'dem_fred_aoi01T_1x1_0325.tif',
+            'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
             'fic_fp':'inun_fred_aoi01T_0325.geojson',
             'nhn_fp':'pwater_fred_aoi01T_0325.geojson',     
             'crsid':'EPSG:3979', 
@@ -57,7 +57,7 @@ def proj_d(request): #retrieve test dataset
 @pytest.fixture(scope='function')
 #@pytest.mark.parametrize('proj_d',['fred01'], indirect=False) 
 def session(tmp_path,
-            #wrk_base_dir=None, 
+            work_dir, 
             proj_d, #scope=function
             base_dir, write,logger, feedback,# (scope=session)
  
@@ -80,7 +80,7 @@ def session(tmp_path,
                  out_dir=out_dir, temp_dir=os.path.join(tmp_path, 'temp'),
                  compress='none',  
                  logger=logger, feedback=feedback,
-                 #work_dir=work_dir, use the default
+                 work_dir=work_dir, #testing default is the same as the session default for now
                    overwrite=True) as ses:
         
         #assert len(ses.data_d)==0
@@ -90,6 +90,11 @@ def session(tmp_path,
 # session.fixtures----------
 #===============================================================================
 @pytest.fixture(scope='session')
+def work_dir():
+    from definitions import work_dir
+    return work_dir
+
+@pytest.fixture(scope='session')
 def write():
     write=True
     if write:
@@ -97,10 +102,9 @@ def write():
     return write
 
 @pytest.fixture(scope='session')
-def logger():
-    out_dir = r'C:\LS\10_OUT\2112_Agg\outs\tests'
-    if not os.path.exists(out_dir): os.makedirs(out_dir)
-    os.chdir(out_dir) #set this to the working directory
+def logger(work_dir):
+
+    os.chdir(work_dir) #set this to the working directory
     print('working directory set to \"%s\''%os.getcwd())
 
     from hp.logr import BuildLogr
@@ -154,3 +158,10 @@ def search_fp(dirpath, ext, pattern): #get a matching file with extension and be
         
         
     return result
+
+
+def retrieve_data(dkey, fp, ses): #load some compiled result off the session (using the dkey)
+    assert dkey in ses.data_retrieve_hndls
+    hndl_d = ses.data_retrieve_hndls[dkey]
+    
+    return hndl_d['compiled'](fp=fp, dkey=dkey)

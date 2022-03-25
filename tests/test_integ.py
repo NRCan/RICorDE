@@ -38,5 +38,5 @@ def test_integ_full(session, hval_prec, true_dir):
         
         true_fp = search_fp(true_dir, ext, search_str) #find the data file.
         assert os.path.exists(true_fp), 'failed to find match for %s'%dkey
-        true = retrieve_data(dkey, true_fp, session)
+        #true = retrieve_data(dkey, true_fp, session)
         

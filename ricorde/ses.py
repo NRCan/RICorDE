@@ -113,8 +113,8 @@ class Session(TComs, baseSession):
                 'build':lambda **kwargs:self.rlay_load(dem_fp, **kwargs),
                 },
             'pwb_rlay':{ #permanent waterbodies (raster)
-                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
-                'build': lambda **kwargs:self.build_pwb_rlay(pwb_fp, **kwargs),
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
+                'build': lambda **kwargs:self.build_pwb_rlay(pwb_fp, **kwargs), #rasters or gpkg
                 },
             'hand_rlay':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
@@ -143,57 +143,9 @@ class Session(TComs, baseSession):
         """
         self.out_dir
         """
-        
-
-            
  
-        
-
     
-    def check_streams(self, #coverage checks against the NHN water bodies
-                      streams_fp,
-                      aoi_fp,
-                      min_ratio=0.001, #minimum stream_area/aoi_area
-                      logger=None):
-        
-        #=======================================================================
-        # defaults
-        #=======================================================================
-        if logger is None: logger=self.logger
-        log=logger.getChild('check_strams')
-        
-        #=======================================================================
-        # layer checks
-        #=======================================================================
-        vlay = self.vlay_load(streams_fp, logger=log)
-        assert vlay.crs() == self.qproj.crs()
-        log.debug('on %s'%streams_fp)
-        #=======================================================================
-        # get areas
-        #=======================================================================
-        """streams is already clipped to aoi"""
-        streams_area = self.vlay_poly_tarea(streams_fp)
-        aoi_area = self.vlay_poly_tarea(aoi_fp)
-        
-        #=======================================================================
-        # check threshold
-        #=======================================================================
-        ratio = streams_area/aoi_area
-        
-        if ratio<min_ratio:
-            raise Error('streams (%s) coverage  less than min (%.3f<%.3f)'%(
-                os.path.basename(streams_fp), ratio, min_ratio))
-        else:
-            log.debug('coverage = %.2f'%ratio)
 
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        self.mstore.addMapLayer(vlay)
-        self.mstore.removeMapLayers([vlay])
-        
-        log.debug('finished')
-        return
     
 
         
@@ -345,10 +297,21 @@ class Session(TComs, baseSession):
             rlay_fp = self.rasterize_inun(fp, logger=log, ref_lay=ref_lay, 
                                 ofp = ofp,
                                 )
+            
+            log.info('\'%s\' saved to \n    %s'%(dkey, rlay_fp))
         #=======================================================================
         # load the layer
         #=======================================================================
-        return self.rlay_load(rlay_fp, logger=log)
+        rlay= self.rlay_load(rlay_fp, logger=log)
+        
+        
+        self.check_pwb(rlay)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        log.info('finished on %s'%rlay.name())
+        return rlay
         
 
         
@@ -1305,7 +1268,56 @@ class Session(TComs, baseSession):
         
         return dep3_fp
         
+    #===============================================================================
+    # CHECKS-----
+    #===============================================================================
+    def check_pwb(self, #coverage checks against the NHN water bodies
+                      rlay=None,
+                      aoi_vlay=None,
+                      min_ratio=0.001, #minimum stream_area/aoi_area
+                      logger=None):
         
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('check_pwb')
+        
+        if rlay is None:
+            rlay = self.retrieve('pwb_rlay')
+            
+        if aoi_vlay is None:
+            aoi_vlay=self.aoi_vlay
+        
+ 
+        log.debug('on %s'%rlay.name())
+        assert rlay.crs() == self.qproj.crs()
+        
+        #=======================================================================
+        # get areas
+        #=======================================================================
+        """streams is already clipped to aoi"""
+        streams_area = self.mask_get_area(rlay)
+        aoi_area = self.vlay_poly_tarea(aoi_vlay)
+        
+        #=======================================================================
+        # check threshold
+        #=======================================================================
+        ratio = streams_area/aoi_area
+        
+        if ratio<min_ratio:
+            raise Error('perm water body (%s) coverage  less than min (%.3f<%.3f)'%(
+                rlay.name(), ratio, min_ratio))
+        else:
+            log.debug('coverage = %.2f'%ratio)
+
+        #=======================================================================
+        # wrap
+        #=======================================================================
+ 
+        
+        log.debug('finished')
+        return
     
     def get_delta(self, #subtract two rasters
                   top_fp,
@@ -1434,7 +1446,7 @@ class Session(TComs, baseSession):
         
         self.smry_d = {**{'layerSummary':df}, **self.smry_d}
                 
-            
+        
             
         
  

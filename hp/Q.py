@@ -1428,6 +1428,39 @@ class Qproj(QAlgos, Basic):
         
         return ofp
     
+    def mask_check(self, #check if a rlay is a mask
+                   rlay,
+                   stats_d = None,
+                   ):
+        
+        if stats_d is None:
+            stats_d = self.rasterlayerstatistics(rlay)
+            
+        ser = pd.Series({k:v for k,v in stats_d.items() if k in ['MAX', 'MEAN', 'MIN']}, dtype=float)
+ 
+        bx = ser==1.0
+        
+        assert bx.all(), 'got non-mask values on \'%s\' \n    %s'%(rlay.name(), ser[bx].to_dict())
+        
+ 
+    
+    def mask_get_area(self, #get the area of the a mask rlay
+                  rlay,
+ 
+                  ):
+        
+ 
+        
+        stats_d = self.rasterlayerstatistics(rlay)
+        
+        self.mask_check(rlay, stats_d=stats_d)
+        
+        #pixel size
+        pixel_area = rlay.rasterUnitsPerPixelY() * rlay.rasterUnitsPerPixelX()
+        
+        
+        return stats_d['SUM']*pixel_area
+    
     def get_resolution(self,  
                        rlay):
         #setup

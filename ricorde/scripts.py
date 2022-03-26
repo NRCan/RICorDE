@@ -116,9 +116,14 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
                 'build': lambda **kwargs:self.build_pwb_rlay(pwb_fp, **kwargs), #rasters or gpkg
                 },
-            'hand_rlay':{
+            'HAND':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build': lambda **kwargs:self.build_hand(**kwargs),
+                },
+            'HAND_mask':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_hand_mask(**kwargs),
+                
                 }
              
             }
@@ -209,10 +214,11 @@ class Session(TComs, baseSession):
         #get the hand layer
         hand_rlay = self.retrieve('hand_rlay')        
  
-        raise Error('stopped here')
+         
         #=======================================================================
         # add minimum water bodies to FiC inundation
         #=======================================================================
+
         #nodata boundary of hand layer (polygon)
         ndb_fp = self.build_nd_bndry(hand_fp=hand_fp, logger=log)
         
@@ -331,7 +337,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('build_hand')
-        assert dkey == 'hand_rlay'
+        assert dkey == 'HAND'
         if dem_fp is None: dem_fp=self.dem_fp
         if write is None: write=self.write
         #=======================================================================
@@ -384,10 +390,12 @@ class Session(TComs, baseSession):
         return self.rlay_load(fp, logger=log)
     
     
-    def build_nd_bndry(self, #get the no-data boundary of the HAND-ray (as a vector)
-                  hand_fp='',
+    def build_hand_mask(self, #get the no-data boundary of the HAND rlay (as a vector)
+                dkey=None,
+                  hand_rlay=None,
                   #stream_fp='',
                   logger=None,
+                  write=None,
                   ):
         
         """
@@ -397,85 +405,90 @@ class Session(TComs, baseSession):
         # defautls
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('build_nd_bndry')
+        log=logger.getChild('build_hand_mask')
+        if write is None: write=self.write
         
+        assert dkey=='HAND_mask'
+        
+        if hand_rlay is None:
+            hand_rlay = self.retrieve('HAND')
  
-        fp_key = 'ndb_fp'
+        #===================================================================
+        # #setup
+        #===================================================================
+        log.info('building \'%s\' on \'%s\''%(dkey, hand_rlay.name()))
         
         #=======================================================================
-        # build
+        # ofp = os.path.join(self.out_dir, self.layName_pfx+'_ndb.gpkg')
+        # if os.path.exists(ofp):
+        #     assert self.overwrite
+        #     os.remove(ofp)
         #=======================================================================
-        if not fp_key in self.fp_d:
-            #===================================================================
-            # #setup
-            #===================================================================
-            log.info('building noDataBoundary for \'%s\''%os.path.basename(hand_fp))
-            
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_ndb.gpkg')
-            if os.path.exists(ofp):
-                assert self.overwrite
-                os.remove(ofp)
-                
-            #===================================================================
-            # merge back in streams
-            #===================================================================
-            #rlay0 = self.mergeraster([hand_fp, stream_fp], logger=log)
-            
-            
-            #convert raster to binary
-            """NOTE: HAND layers have zero values on the streams
-                so the binary polygon has multiple features still"""
-            rlay1_fp = self.mask_build(hand_fp, zero_shift=True, logger=log, 
-                                       ofp=os.path.join(self.temp_dir, 'hand_mask1.tif'))
-            
- 
-            #raster to no-data edge polygon
-            assert os.path.exists(rlay1_fp)
-            nd_vlay_fp1 = self.polygonizeGDAL(rlay1_fp, logger=log,
-                                      output=os.path.join(self.temp_dir, 'hand_mask1.gpkg'),
-                                      )
-            
-            #clean/dissolve
-            """need to drop DN field"""
-            assert os.path.exists(nd_vlay_fp1), nd_vlay_fp1
-            nd_vlay1= self.deletecolumn(nd_vlay_fp1, ['DN'], logger=log)
-            
-            #fix geometry
-            nd_vlay2_fp = self.fixgeo(nd_vlay1, logger=log, 
-                                      output=os.path.join(self.temp_dir, 'nd_vlay2_fixgeo.gpkg'))
-             
-
-            """these seem to still be neeeded"""
-            #delete all the holes
-            nd_vlay4 = self.deleteholes(nd_vlay2_fp, hole_area=0, logger=log,
-                                        output=os.path.join(self.temp_dir, 'nd_vlay4_deleteholes.gpkg'))
-            
-            #fix geometry
-            """needed a second time for some polys"""
-            nd_vlay5 = self.fixgeo(nd_vlay4, logger=log, 
-                                      output=os.path.join(self.temp_dir, 'nd_vlay5_fixgeo.gpkg'))
-            
-            #dissolve
-            _ = self.dissolve(nd_vlay5, output=ofp, logger=log)
-            
-            #wrap
-            self.mstore.addMapLayers([nd_vlay1])
-            self.mstore.removeMapLayers([nd_vlay1])
-            
-            self.ofp_d[fp_key]= ofp
-            
-            
+        if write:
+            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
         else:
-            ofp = self.fp_d[fp_key]
+            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+            
+        #===================================================================
+        # merge back in streams
+        #===================================================================
+        #rlay0 = self.mergeraster([hand_fp, stream_fp], logger=log)
+        
+        
+        #convert raster to binary
+        """NOTE: HAND layers have zero values on the streams
+            using zero_shift"""
+        rlay1_fp = self.mask_build(hand_rlay, zero_shift=True, logger=log, 
+                                   #ofp=os.path.join(self.temp_dir, 'hand_mask1.tif'),
+                                   ofp = ofp
+                                   )
+        
+        
+        #=======================================================================
+        # #raster to no-data edge polygon
+        # assert os.path.exists(rlay1_fp)
+        # nd_vlay_fp1 = self.polygonizeGDAL(rlay1_fp, logger=log,
+        #                           output=os.path.join(self.temp_dir, 'hand_mask1.gpkg'),
+        #                           )
+        # 
+        # #clean/dissolve
+        # """need to drop DN field"""
+        # assert os.path.exists(nd_vlay_fp1), nd_vlay_fp1
+        # nd_vlay1= self.deletecolumn(nd_vlay_fp1, ['DN'], logger=log)
+        # 
+        # #fix geometry
+        # nd_vlay2_fp = self.fixgeo(nd_vlay1, logger=log, 
+        #                           output=os.path.join(self.temp_dir, 'nd_vlay2_fixgeo.gpkg'))
+        #  
+        # 
+        # """these seem to still be neeeded"""
+        # #delete all the holes
+        # nd_vlay4 = self.deleteholes(nd_vlay2_fp, hole_area=0, logger=log,
+        #                             output=os.path.join(self.temp_dir, 'nd_vlay4_deleteholes.gpkg'))
+        # 
+        # #fix geometry
+        # """needed a second time for some polys"""
+        # nd_vlay5 = self.fixgeo(nd_vlay4, logger=log, 
+        #                           output=os.path.join(self.temp_dir, 'nd_vlay5_fixgeo.gpkg'))
+        # 
+        # #dissolve
+        # _ = self.dissolve(nd_vlay5, output=ofp, logger=log)
+        # 
+        # #wrap
+        # self.mstore.addMapLayers([nd_vlay1])
+        # self.mstore.removeMapLayers([nd_vlay1])
+        #=======================================================================
+        
+        self.ofp_d[dkey]= ofp
             
  
         #=======================================================================
         # wrap
         #=======================================================================
  
-        log.info('got \'%s\': \n    %s'%(fp_key, ofp))
+        #log.info('got \'%s\': \n    %s'%(fp_key, ofp))
         
-        return ofp
+        return self.rlay_load(ofp, logger=log)
     
     
     def build_inun1(self, #merge NHN and FiC and crop to DEM extents

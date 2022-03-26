@@ -198,7 +198,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # downsample the hand layer
         #=======================================================================
-        hres = self.get_resolution(hand_fp)
+        hres = self.rlay_get_resolution(hand_fp)
 
         if resolution is None:
             resolution=hres
@@ -322,8 +322,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # downsampling DEM
         #=======================================================================
-        hres = self.get_resolution(fp)
-        dres = self.get_resolution(dem_fp)
+        hres = self.rlay_get_resolution(fp)
+        dres = self.rlay_get_resolution(dem_fp)
  
 
         #reproject with new resolution
@@ -1222,14 +1222,14 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             # fix resolution
             #===================================================================
             """v.surf.idw isnt generating the correct resolution
-            ores = self.get_resolution(interp_raw_fp)"""
+            ores = self.rlay_get_resolution(interp_raw_fp)"""
             log.info('warpreproject resolution=%.4f on  %s'%(resolution, interp_raw_fp))
             self.warpreproject(interp_raw_fp, 
                                resolution=resolution, nodata_val=-9999,
                                output=ofp, logger=log)
             
             
-            ores = self.get_resolution(ofp)
+            ores = self.rlay_get_resolution(ofp)
             assert ores  == resolution
             
             meta_d = {'distP':distP, 'interp_resolution':resolution}

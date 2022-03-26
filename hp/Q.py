@@ -1232,13 +1232,14 @@ class Qproj(QAlgos, Basic):
         return ofp
     
     def mask_build(self, #get a mask from a raster with data
-                   rlay,
+                   obj,
                    logger=None,
                    layname=None,
                    zero_shift=False, #necessary for preserving zero values
                    thresh=None, #optional threshold value with which to build raster
                    thresh_type='lower', #specify whether threshold is a lower or an upper bound
                    rval=None, #make a mask from a specific value
+                   nullType='native', 
                    ofp=None, **kwargs):
         
         #=======================================================================
@@ -1247,12 +1248,23 @@ class Qproj(QAlgos, Basic):
         if logger is None: logger=self.logger
         log=logger.getChild('mask_invert')
         
+
+        
+        log.debug('on %s w/ zero_shift=%s, thresh=%s'%(
+            obj, zero_shift, thresh))
+        
+        if not nullType=='native':
+            raise IOError('not implemented')
+        #=======================================================================
+        # setup
+        #=======================================================================
+        mstore = QgsMapLayerStore()
+        rlay = self._rlay_get(obj, logger=log, mstore=mstore)
+            
         rcentry = self._rCalcEntry(rlay)
 
         if layname is None: layname='%s_mask'%rcentry.raster.name()
         
-        log.debug('on %s w/ zero_shift=%s, thresh=%s'%(
-            rlay, zero_shift, thresh))
         #=======================================================================
         # build formula--
         #=======================================================================
@@ -1303,8 +1315,17 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # get
         #=======================================================================
-        return self.rcalc1(rlay, formula, [rcentry], logger=log,ofp=ofp,
+        ofp =  self.rcalc1(rlay, formula, [rcentry], logger=log,ofp=ofp,
                            layname=layname, **kwargs)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        self.mask_check(ofp, nullType=nullType)
+        mstore.removeAllMapLayers()
+        
+        
+        return ofp
  
      
     def mask_invert(self, #take a mask layer, and invert it
@@ -1350,7 +1371,8 @@ class Qproj(QAlgos, Basic):
     def mask_apply(self, #apply a mask to a la yer
                    rlay, #layer to mask
                    mask_rlay, #mask raseter
-                        #1=dont mask; 0 or nan = mask 
+                        #1=dont mask; 
+                        #0 or nan = mask 
                    invert_mask=False,
                    layname=None,
                    logger=None,
@@ -1428,19 +1450,153 @@ class Qproj(QAlgos, Basic):
         
         return ofp
     
+    def mask_combine(self,
+                     rlay_l, #list of raster objects to merge (filepaths or rlays)
+                     ref_lay = None, #layer to use as reference
+                     layname=None,
+                     logger=None,
+                     **kwargs):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('mask_combine')
+        mstore = QgsMapLayerStore()
+        
+        if layname is None: 
+            layname = 'mask_combine_%i'%len(rlay_l)
+            
+
+        #===================================================================
+        # build the raster calc entries
+        #===================================================================
+        log.debug('building %i entries'%len(rlay_l))
+
+ 
+ 
+        rcentry_d = dict()
+        
+        for i, obj in enumerate(rlay_l):
+            log = logger.getChild('mask_combine.%i'%i)
+            log.debug('on %s'%obj)
+
+            #get stats
+            stats_d = self.rasterlayerstatistics(obj)
+            nullType = self.mask_get_type(obj, stats_d=stats_d)
+            
+            #convert to zero type
+            if not nullType=='zeros':
+            
+                """if the mask is a null type... the null values wont add
+                """
+                obj_filld = self.fillnodata(obj, fval=0, logger=log, 
+                                output=os.path.join(self.temp_dir, 'mask_combine_%i_filld.tif'%(i))) #filepath
+                stats_d=None
+            else:
+                obj_filld = obj
+            
+            
+            #retrieve
+            rlay_filld = self._rlay_get(obj_filld, mstore=mstore,  logger=log)
+            
+ 
+            #check
+            self.mask_check(rlay_filld, nullType='zeros', stats_d=stats_d)
+            
+            #build entry
+            rcentry_d[i] = self._rCalcEntry(rlay_filld, logger=log)
+            
+        #=======================================================================
+        # check
+        #=======================================================================
+        #check all the referenes are unique
+        ref_l = [obj.ref for obj in rcentry_d.values()]
+        assert len(ref_l)==len(set(ref_l))
+            
+        log=logger.getChild('mask_combine')
+        if ref_lay is None:
+            ref_lay = rcentry_d[0].raster
+            
+        #===================================================================
+        # build formula (sum all)-----
+        #===================================================================
+        
+ 
+        first = True
+        formula = ''
+        for i, rcentry in rcentry_d.items():
+            new_str = '\"{}\"'.format(rcentry.ref)
+            if not first:
+                new_str = ' + '+new_str
+            else:
+                first=False
+                
+            formula = formula + new_str
+
+         
+        # execute
+        sumAll_fp = self.rcalc1(ref_lay, formula,
+                          list(rcentry_d.values()),
+                          layname='%s_sumAll'%layname,
+                          logger=log)
+        
+        
+        log.debug('finished sum all on w/ %s'%sumAll_fp)
+        
+        #=======================================================================
+        # divide by self
+        #=======================================================================
+        ofp = self.mask_build(sumAll_fp,layname=layname, **kwargs)
+        
+ 
+        mstore.removeAllMapLayers()
+        return ofp
+    
     def mask_check(self, #check if a rlay is a mask
                    rlay,
                    stats_d = None,
+                   nullType='native', #how to consider the null tyupes on teh mask
                    ):
         
+        #=======================================================================
+        # retrieve actuasl
+        #=======================================================================
         if stats_d is None:
             stats_d = self.rasterlayerstatistics(rlay)
-            
-        ser = pd.Series({k:v for k,v in stats_d.items() if k in ['MAX', 'MEAN', 'MIN']}, dtype=float)
  
-        bx = ser==1.0
+            
+        ser = pd.Series({k:v for k,v in stats_d.items() if k in ['MAX', 'MEAN', 'MIN', 'RANGE','SUM_OF_SQUARES', 'STD_DEV' ]}, dtype=float, name='actual')
         
-        assert bx.all(), 'got non-mask values on \'%s\' \n    %s'%(rlay.name(), ser[bx].to_dict())
+        #=======================================================================
+        # build exepectations
+        #=======================================================================
+        if nullType=='native':
+            d = {'MAX': 1.0, 'MEAN': 1.0, 'MIN': 1.0,'RANGE': 0.0, 'STD_DEV': 0.0, 'SUM_OF_SQUARES': 0.0}
+        elif nullType=='zeros':
+            d = {'MAX': 1.0, 'MIN': 0.0,'RANGE': 1.0}
+        else:
+            raise IOError('unrecognized')
+        
+        chk_ser = pd.Series(d, name='expected')
+        
+        #=======================================================================
+        # assemble
+        #=======================================================================
+        df = ser.to_frame().join(chk_ser).dropna(how='any', axis=0)
+ 
+        bx = ~df.iloc[:, 0].eq(df.iloc[:, 1])
+        
+        #=======================================================================
+        # check
+        #=======================================================================
+ 
+        
+        if bx.any():
+            return False, '\'%s\' failed %i/%i checks (nullType=%s)\n    %s'%(
+                rlay, bx.sum(), len(bx), nullType, df.loc[bx, :])
+        return True, ''
+        
+ 
         
  
     
@@ -1461,7 +1617,21 @@ class Qproj(QAlgos, Basic):
         
         return stats_d['SUM']*pixel_area
     
-    def get_resolution(self,  
+    def mask_get_type(self, rlay, stats_d=None): #check the mask type
+        if stats_d is None:
+            stats_d = self.rasterlayerstatistics(rlay)
+            
+        assert stats_d['MAX']==1
+        
+        if stats_d['MIN']==0:
+            return 'zeros'
+        elif stats_d['MIN']==1:
+            return 'native'
+        else:
+            raise ValueError('not a mask?\n    %s'%stats_d)
+        
+    
+    def rlay_get_resolution(self,  
                        rlay):
         #setup
         mstore=QgsMapLayerStore()
@@ -1568,10 +1738,16 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # run tests
         #=======================================================================
+        
+        """
+        rlay1.extent()
+        """
+        
+        
         log.debug('testing %s vs %s'%(rlay1.name(), rlay2.name()))
         res_d = dict()
         for i, testName in enumerate([
-            'width', 'height', 'rasterUnitsPerPixelY', 'rasterUnitsPerPixelX', 'crs'
+            'width', 'height', 'rasterUnitsPerPixelY', 'rasterUnitsPerPixelX', 'crs', 'extent'
             ]):
             
         
@@ -1588,20 +1764,24 @@ class Qproj(QAlgos, Basic):
  
         
         if not res_df['result'].all():
-            log.debug('failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']]))
-            return False
+            msg = 'failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']])
+            log.debug(msg)
+            return False, msg
         
         log.debug('passed %i tests'%len(res_df))
-        return True
+        return True, ''
 
 
             
         
         
         
-    def _rlay_get(self, rlay, **kwargs): #retrieve raster from filepath or rasterobject
+    def _rlay_get(self, rlay,mstore=None, **kwargs): #retrieve raster from filepath or rasterobject
         if isinstance(rlay, str):
-            return self.rlay_load(rlay, **kwargs)
+            res =  self.rlay_load(rlay, **kwargs)
+            if not mstore is None:                
+                mstore.addMapLayer(res)
+            return res
  
         elif isinstance(rlay, QgsRasterLayer):
             return rlay

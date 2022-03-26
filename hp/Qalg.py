@@ -1039,7 +1039,7 @@ class QAlgos(object):
             mstore.addMapLayer(extent_layer)
         
         if resolution is None:
-            resolution = self.get_resolution(extent_layer)
+            resolution = self.rlay_get_resolution(extent_layer)
             
         """because this algo is resolution based, can result in a row/column mismatch"""
         assert round(resolution, 2)==resolution, 'got overly precise resolution: %s'%str(resolution)
@@ -2057,7 +2057,43 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
         
         return res_d
-    
+
+    def rBuffer(self, #buffer a raster
+                       rlay,
+                       dist=10,
+                       output = 'TEMPORARY_OUTPUT',
+                       logger=None,
+                       ):
+        """
+        for buffered mask layers... the buffered cells have a value of 2
+        """
+ 
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log = logger.getChild('rBuffer')
+
+        algo_nm = 'grass7:r.buffer'
+ 
+        #=======================================================================
+        # pars
+        #=======================================================================
+ 
+        
+        ins_d = { '-z' : False, #ignore zeros instead of nulls
+                  'GRASS_RASTER_FORMAT_META' : '', 'GRASS_RASTER_FORMAT_OPT' : '', 'GRASS_REGION_CELLSIZE_PARAMETER' : 0, 'GRASS_REGION_PARAMETER' : None, 
+                  'distances' : str(int(dist)), 
+                  'input' : rlay, 
+                 'output' : output, 
+                 'units' : 0, #meteres
+                  }
+        
+        log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
+        
+        res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
+        
+        return res_d['output']
     #===========================================================================
     # WHITEBOX------
     #===========================================================================

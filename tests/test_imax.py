@@ -54,8 +54,8 @@ def test_hand(session, true_dir, pwb_rlay, write, base_dir):
     compare_layers(test_rlay, true_rlay, test_data=True)
     
     
-@pytest.mark.dev
-@pytest.mark.parametrize('hand_fp',[r'test_hand_fred01_test_pwb_fred0\working\test_tag_0326_HAND.tif'] ) #from test_pwb
+
+@pytest.mark.parametrize('hand_fp',[r'test_hand_fred01_test_pwb_fred0\working\test_tag_0326_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_hand_mask(session, true_dir, hand_fp, write, base_dir):
     
@@ -63,6 +63,34 @@ def test_hand_mask(session, true_dir, hand_fp, write, base_dir):
     session.compiled_fp_d['HAND'] = os.path.join(base_dir, hand_fp)
     
     dkey = 'HAND_mask'
+    test_rlay = session.retrieve(dkey, write=write)
+
+    #===========================================================================
+    # load true
+    #===========================================================================
+    true_fp = search_fp(os.path.join(true_dir, 'working'), '.tif', dkey) #find the data file.
+    assert os.path.exists(true_fp), 'failed to find match for %s'%dkey
+    
+    true_rlay = retrieve_data(dkey, true_fp, session)
+    
+    #===========================================================================
+    # compare
+    #===========================================================================
+    compare_layers(test_rlay, true_rlay, test_data=True)
+    
+@pytest.mark.dev
+@pytest.mark.parametrize('hand_fp',[r'test_hand_fred01_test_pwb_fred0\working\test_tag_0326_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('handM_fp',[r'test_hand_mask_fred01_test_han0\working\test_tag_0326_HAND_mask.tif'] ) #from test_hand_mask
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_inun1(session, true_dir, hand_fp, handM_fp, write, base_dir):
+    
+    #set the compiled references
+    session.compiled_fp_d.update({
+        'HAND':os.path.join(base_dir, hand_fp),
+        'HAND_mask':os.path.join(base_dir, handM_fp)
+        })
+    
+    dkey = 'inun1'
     test_rlay = session.retrieve(dkey, write=write)
 
     #===========================================================================

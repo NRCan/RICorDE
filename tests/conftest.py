@@ -20,16 +20,24 @@ from hp.Q import vlay_get_fdf
 from hp.gdal import getRasterStatistics, rlay_to_array, getRasterMetadata
     
 rproj_lib = {
-        'fred01':{
+        'fred01':{ #raster inputs (a bit faster)
             'aoi_fp':'aoi01T_fred_20220325.geojson',
             'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
-            'inp_fp':'inun_fred_aoi01T_0325.geojson',
-            'pwb_fp':'pwater_fred_aoi01T_0325.geojson',     
+            'inun_fp':'test_tag_0326_inun_rlay.tif',
+            'pwb_fp':'test_tag_0326_pwb_rlay.tif',     
             'crsid':'EPSG:3979', 
-            'name':'fred01'       
+       
                 
                 },
+        'fred02':{ #vector layers
+            'aoi_fp':'aoi01T_fred_20220325.geojson',
+            'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
+            'inun_fp':'inun_fred_aoi01T_0325.geojson',
+            'pwb_fp':'pwater_fred_aoi01T_0325.geojson',     
+            'crsid':'EPSG:3979', 
     
+                
+                },
         }
 
 @pytest.fixture(scope='session')
@@ -57,7 +65,7 @@ def proj_d(request): #retrieve test dataset
 def get_proj_d(name):
     base_dir = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data'
     rproj_d = rproj_lib[name].copy()
-    
+    rproj_d['name'] = name
     proj_d = dict()
     
     for k,v in rproj_d.items():
@@ -124,7 +132,7 @@ def session(tmp_path,
                    write=write, #avoid writing prep layers
                    exit_summary=False,
                    
-                   **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inp_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
+                   **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
                    ) as ses:
         
         #assert len(ses.data_d)==0

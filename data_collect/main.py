@@ -269,7 +269,7 @@ class Session(TComs, baseSession):
         assert rlay.crs() == self.qproj.crs(), 'passed dem \'%s\' doesnt match  the proj crs'%(rlay.name())
         
         #resolution
-        raw_res = self.get_resolution(rlay)
+        raw_res = self.rlay_get_resolution(rlay)
         assert raw_res == float(resolution), 'resolution failed to match (%s vs %s)'%(raw_res, resolution)
  
  

@@ -14,3 +14,8 @@ class Error(Exception):
     """Base class for exceptions in this module."""
     def __init__(self, msg):
         mod_logger.error(msg)
+
+def assert_func(func):
+    if __debug__: # true if Python was not started with an -O option
+        result, msg = func()
+        assert result, msg

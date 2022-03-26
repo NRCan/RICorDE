@@ -167,7 +167,11 @@ def get_nodata_val(rlay_fp):
     assert os.path.exists(rlay_fp)
     ds = gdal.Open(rlay_fp)
     band = ds.GetRasterBand(1)
-    return band.GetNoDataValue()
+    nodataval =  band.GetNoDataValue()
+    
+    del ds
+    del band
+    return nodataval
     
     
 

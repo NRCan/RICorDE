@@ -59,7 +59,7 @@ start =  datetime.datetime.now()
  
 
 
-from hp.exceptions import Error
+from hp.exceptions import Error, assert_func
 from hp.dirz import force_open_dir
  
 from hp.plot import Plotr #only needed for plotting sessions
@@ -98,7 +98,7 @@ class Session(TComs, baseSession):
                  aoi_fp = None, #optional area of interest polygon filepath
                  dem_fp=None, #dem rlay filepath
                  pwb_fp=None, #permanent water body filepath (raster or polygon)
-                 inp_fp=None, #inundation filepath (raster or polygon)
+                 inun_fp=None, #inundation filepath (raster or polygon)
              
                  exit_summary=True,
                  
@@ -114,7 +114,11 @@ class Session(TComs, baseSession):
                 },
             'pwb_rlay':{ #permanent waterbodies (raster)
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
-                'build': lambda **kwargs:self.build_pwb_rlay(pwb_fp, **kwargs), #rasters or gpkg
+                'build': lambda **kwargs:self.build_rlay(pwb_fp, **kwargs), #rasters or gpkg
+                },
+            'inun_rlay':{ #flood inundation observation
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
+                'build': lambda **kwargs:self.build_rlay(inun_fp, **kwargs), #rasters or gpkg
                 },
             'HAND':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
@@ -123,13 +127,16 @@ class Session(TComs, baseSession):
             'HAND_mask':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_hand_mask(**kwargs),
-                
-                }
+                },
+            'inun1':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_inun1(**kwargs),
+                },
              
             }
         
         #attach inputs
-        self.dem_fp, self.pwb_fp, self.inp_fp = dem_fp, pwb_fp, inp_fp
+        self.dem_fp, self.pwb_fp, self.inun_fp = dem_fp, pwb_fp, inun_fp
         self.exit_summary=exit_summary 
             
         
@@ -218,9 +225,11 @@ class Session(TComs, baseSession):
         #=======================================================================
         # add minimum water bodies to FiC inundation
         #=======================================================================
+        
 
         #nodata boundary of hand layer (polygon)
-        ndb_fp = self.build_nd_bndry(hand_fp=hand_fp, logger=log)
+        hand_mask = self.retrieve('hand_mask')
+        #ndb_fp = self.build_nd_bndry(hand_fp=hand_fp, logger=log)
         
         #merge, crop, and clean
         inun1_fp = self.build_inun1(fic_fp=fic_fp,nhn_fp=nhn_fp,ndb_fp=ndb_fp,
@@ -264,21 +273,26 @@ class Session(TComs, baseSession):
         
         return datetime.datetime.now() - start
     
-    def build_pwb_rlay(self, #build permanent water raster
+    def build_rlay(self, #build raster from some water polygon
                         fp,
                         dkey=None,
                         write=None,
+                        ref_lay=None,
                         ):
         
         #=======================================================================
         # defaults
         #=======================================================================
-        log = self.logger.getChild('build_pwb_rlay')
+        log = self.logger.getChild('build_rlay.%s'%dkey)
         if write is None: write=self.write
-        assert dkey == 'pwb_rlay'
+        assert dkey in ['pwb_rlay', 'inun_rlay']
         
         assert not fp is None
         assert os.path.exists(fp), fp
+        
+        #load the reference layer
+        if ref_lay is None:
+            ref_lay = self.retrieve('dem_rlay', logger=log)
         
         #=======================================================================
         # passed a raster
@@ -290,8 +304,7 @@ class Session(TComs, baseSession):
         # polygon
         #=======================================================================
         else:
-            #load the reference layer
-            ref_lay = self.retrieve('dem_rlay', logger=log)
+
  
             #build the raster
             if write:
@@ -310,8 +323,17 @@ class Session(TComs, baseSession):
         #=======================================================================
         rlay= self.rlay_load(rlay_fp, logger=log)
         
+        #=======================================================================
+        # checks
+        #=======================================================================
+        assert_func(lambda:  self.rlay_check_match(rlay, ref_lay, logger=log))
         
-        self.check_pwb(rlay)
+        assert_func(lambda:  self.mask_check(rlay))
+        
+        
+        
+        if dkey == 'pwb_rlay':
+            assert_func(lambda: self.check_pwb(rlay))
         
         #=======================================================================
         # wrap
@@ -492,13 +514,22 @@ class Session(TComs, baseSession):
     
     
     def build_inun1(self, #merge NHN and FiC and crop to DEM extents
-              fic_fp='',
-              nhn_fp='',
-              ndb_fp='', #no data boundary of hand layer (as a vector polygon)
-              hole_size=None, #size of hole to delete
+            
+            
+            #layer inputs
+            pwb_rlay = None,
+            inun_rlay=None,
+            HAND_mask=None,
+ 
+              
+              
+              #parameters
               buff_dist=None, #buffer to apply to nhn
-              simp_dist=None,
+ 
+              
+              #misc
               logger=None,
+              write=None, dkey = None,
               ):
         """
         consider making this a separate worker class
@@ -512,76 +543,88 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('b.inun1')
-        
- 
-        fp_key = 'inun1_fp'
-        
+        assert dkey == 'inun1'
+        if write is None: write=self.write
         
         
+        if buff_dist is  None:
+            buff_dist = self.dem_psize*2
+        
+        #output
+        if write:
+            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+        else:
+            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+         
+        if os.path.exists(ofp):
+            assert self.overwrite
+            os.remove(ofp)
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if pwb_rlay is None:
+            pwb_rlay = self.retrieve('pwb_rlay')
+        
+        if inun_rlay is None:
+            inun_rlay = self.retrieve('inun_rlay')
+            
+        if HAND_mask is None:
+            HAND_mask=self.retrieve('HAND_mask')
         #=======================================================================
         # build
         #=======================================================================
-        if not fp_key in self.fp_d:
-            log.info('building \'%s\' from %s'%(fp_key, os.path.basename(fic_fp)))
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_inun1.gpkg')
-            
-            if os.path.exists(ofp):
-                assert self.overwrite
-                os.remove(ofp)
-                
-            mstore = QgsMapLayerStore()
-            #===================================================================
-            # buffer
-            #===================================================================
-            """nice to add a tiny buffer to the waterbodies to ensure no zero hand values"""
-            if buff_dist is  None:
-                buff_dist = self.dem_psize*2
-                
  
+        log.info('building \'%s\' from \n    %s'%(dkey,{'pwb_rlay':pwb_rlay.name(), 'inun_rlay':inun_rlay.name()}))
+
             
-            vbuff_fp = self.buffer(nhn_fp, dist=buff_dist, logger=log, dissolve=True,
-                                output=os.path.join(self.temp_dir, '%s_buffer'%os.path.basename(nhn_fp)))
  
-            #=======================================================================
-            # merge the layers
-            #=======================================================================
-            vlay1_fp = self.mergevectorlayers([fic_fp, vbuff_fp], logger=log,
-                                           output=os.path.join(self.temp_dir, 'inun1_merge.gpkg'))
+        #===================================================================
+        # buffer
+        #===================================================================
+        """nice to add a tiny buffer to the waterbodies to ensure no zero hand values"""
+
+        #raw buffer (buffered cells have value=2)
+        pwb_buff1_fp = self.rBuffer(pwb_rlay, logger=log, dist=buff_dist,
+                                    output = os.path.join(self.temp_dir, '%s_buff1.tif'%pwb_rlay.name()))
+        
+        #convert to a mask again
+        pwb_buff2_fp = self.mask_build(pwb_buff1_fp, logger=log)
+        
  
-            
-            #===================================================================
-            # crop to dem extents
-            #===================================================================
-            vlay2 = self.clip(vlay1_fp, ndb_fp, logger=log)
-            
-            #===================================================================
-            # clean
-            #===================================================================
- 
-            #clean
-            self.clean_inun_vlay(vlay2, output=ofp, logger=log, mstore=mstore,
-                                 simp_dist=simp_dist, hole_size=hole_size)
- 
-            #===================================================================
-            # #wrap
-            #===================================================================
-            mstore.removeAllMapLayers()
-            self.ofp_d[fp_key] = ofp
- 
-            
-        else:
-            
-            ofp = self.fp_d[fp_key]
-            log.info('retrieving from %s'%ofp)
+        
+        #=======================================================================
+        # merge inundation and pwb
+        #=======================================================================
+        inun1_1_fp = self.mask_combine([pwb_buff2_fp, inun_rlay], logger=log,
+                                     ofp = os.path.join(self.temp_dir, 'inun1_1.tif'))
         
 
+        #===================================================================
+        # crop to HAND extents
+        #===================================================================
+        self.mask_apply(inun1_1_fp, HAND_mask, logger=log, ofp=ofp)
  
+        rlay = self.rlay_load(ofp, logger=log)
+        
         #=======================================================================
-        # wrap
+        # check
         #=======================================================================
-        log.info('got \'%s\': \n    %s'%(fp_key, ofp))
+        assert_func(lambda:  self.rlay_check_match(rlay,HAND_mask, logger=log))
+        
+        assert_func(lambda:  self.mask_check(rlay))
+        
+        #===================================================================
+        # #wrap
+        #===================================================================
+ 
+        self.ofp_d[dkey] = ofp
+        
+        
+ 
+        log.info('for \'%s\' built: \n    %s'%(dkey, ofp))
 
-        return ofp
+        return rlay
     
     def build_samples1(self, #get the hydrauilc maximum inundation from sampled HAND values
                 *args,
@@ -1317,20 +1360,14 @@ class Session(TComs, baseSession):
         # check threshold
         #=======================================================================
         ratio = streams_area/aoi_area
-        
+        log.debug('coverage = %.2f'%ratio)
         if ratio<min_ratio:
-            raise Error('perm water body (%s) coverage  less than min (%.3f<%.3f)'%(
-                rlay.name(), ratio, min_ratio))
+            return False, 'perm water body (%s) coverage  less than min (%.3f<%.3f)'%(
+                rlay.name(), ratio, min_ratio)
         else:
-            log.debug('coverage = %.2f'%ratio)
+            return True, ''
 
-        #=======================================================================
-        # wrap
-        #=======================================================================
  
-        
-        log.debug('finished')
-        return
     
     def get_delta(self, #subtract two rasters
                   top_fp,

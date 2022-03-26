@@ -138,9 +138,7 @@ class Qproj(QAlgos, Basic):
         # setup qgis
         #=======================================================================
         if feedback is None:
-            """
-            self.logger.info('test')
-            """
+ 
             #build a separate logger to capture algorhtihim feedback
             qlogger= get_new_file_logger('Qproj',
                 fp=os.path.join(self.root_dir, 'Qproj.log'))
@@ -1764,7 +1762,9 @@ class Qproj(QAlgos, Basic):
  
         
         if not res_df['result'].all():
-            msg = 'failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']])
+            with pd.option_context('display.max_rows', None,'display.max_columns', None,'display.width',1000):
+ 
+                msg = 'failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']])
             """
             view(res_df)
             """

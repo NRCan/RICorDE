@@ -10,7 +10,7 @@ setup to execute 1 workflow at a time (output 1 depth raster)
     
 
 TODO:
-    merge main runner from InsCrve
+ 
     switch to data file request/call dictionary
         add metadata per-datafile for this
         add function kwargs
@@ -41,7 +41,7 @@ start =  datetime.datetime.now()
 print('start at %s'%start)
  
  
-from ricorde.ses import Session, QgsCoordinateReferenceSystem, force_open_dir
+from ricorde.scripts import Session, QgsCoordinateReferenceSystem, force_open_dir
 
 
 #from memory_profiler import profile
@@ -108,12 +108,12 @@ def run(#main runner
 def dev_test(
         tName = 'fred01',
         proj_d = {
-            'aoi_fp': 'C:\\LS\\09_REPOS\\03_TOOLS\\RICorDE\\tests\\data\\fred01\\aoi01T_fred_20220325.geojson', 
-                  'dem_fp': 'C:\\LS\\09_REPOS\\03_TOOLS\\RICorDE\\tests\\data\\fred01\\dem_fred_aoi01T_2x2_0325.tif', 
-                  'inp_fp': 'C:\\LS\\09_REPOS\\03_TOOLS\\RICorDE\\tests\\data\\fred01\\inun_fred_aoi01T_0325.geojson',
-                   'pwb_fp': 'C:\\LS\\09_REPOS\\03_TOOLS\\RICorDE\\tests\\data\\fred01\\pwater_fred_aoi01T_0325.geojson',
-                    'crsid': 'EPSG:3979', 
-                    'name': 'fred01'}
+            'aoi_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\aoi01T_fred_20220325.geojson', 
+            'dem_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_dem.tif', 
+            'inun_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_inun_rlay.tif',
+            'pwb_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_pwb_rlay.tif',
+            'crsid': 'EPSG:3979', 
+            'name': 'fred01'}
 
         ):
     
@@ -126,13 +126,13 @@ def dev_test(
                  compress='none',  
                  crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
                    overwrite=True,
-            **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inp_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
+            **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
                    
                    ) as wrkr:
         
         #ref_lay = wrkr.retrieve('dem_rlay')
-        wrkr.retrieve('hand_rlay')
-        #wrkr.run_imax()
+        #wrkr.retrieve('hand_rlay')
+        wrkr.run_imax()
         
         out_dir = wrkr.out_dir
         

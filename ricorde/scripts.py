@@ -133,6 +133,9 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_inun1(**kwargs),
                 },
+            'isamp1':{
+                'build':lambda **kwargs:self.build_samples1(**kwargs),
+                }
              
             }
         
@@ -191,36 +194,19 @@ class Session(TComs, baseSession):
         log=logger.getChild('rImax')
         start =  datetime.datetime.now()
         
-        ofp_d_old = copy.copy(self.afp_d)
-        
-        if sample_spacing is None:
-            sample_spacing = self.dem_psize*5
-        
-        #=======================================================================
-        # datafile ssetup
-        #=======================================================================
-        
-        #fp_d = self.afp_d #mash pre-built and newly built datasets
-        
-        #=======================================================================
-        # if dem_fp is None: dem_fp=fp_d['dem_fp']
-        # if nhn_fp is None: nhn_fp=fp_d['nhn_fp']
-        # if fic_fp is  None: fic_fp=fp_d['fic_fp']
-        #=======================================================================
+        #ofp_d_old = copy.copy(self.afp_d)
         
  
-        
-        """clear everything from run_get_data"""
-        self.mstore.removeAllMapLayers() 
         #=======================================================================
         # #get the HAND layer
         #=======================================================================
+        log.info('building HAND layer')
         #rasterize NHN polys
-        nhn_rlay = self.retrieve('pwb_rlay')
+        nhn_rlay = self.retrieve('pwb_rlay', logger=log)
  
         
         #get the hand layer
-        hand_rlay = self.retrieve('hand_rlay')        
+        hand_rlay = self.retrieve('HAND', logger=log)        
  
          
         #=======================================================================
@@ -229,20 +215,21 @@ class Session(TComs, baseSession):
         
 
         #nodata boundary of hand layer (polygon)
-        hand_mask = self.retrieve('hand_mask')
-        #ndb_fp = self.build_nd_bndry(hand_fp=hand_fp, logger=log)
+        hand_mask = self.retrieve('HAND_mask')
+ 
         
-        #merge, crop, and clean
-        inun1_fp = self.build_inun1(fic_fp=fic_fp,nhn_fp=nhn_fp,ndb_fp=ndb_fp,
-              logger=log)
-        
-        
+        inun1_rlay = self.retrieve('inun1')
         #=======================================================================
         # get hydrauilc maximum
         #=======================================================================
+        return
+        isamp1_vlay=self.retrieve('isamp1')
+        
         #get initial edge samples
-        smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
-                                        ndb_fp=ndb_fp, sample_spacing=sample_spacing)
+        #=======================================================================
+        # smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
+        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
+        #=======================================================================
         
         #get bounds
         hv_max, hv_min = self.get_sample_bounds(smpls1_fp, qhigh=qhigh, qlow=qlow,logger=log)
@@ -423,7 +410,7 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         assert dkey in ['pwb_rlay', 'inun_rlay']
         
-        assert not fp is None
+        assert not fp is None, dkey
         assert os.path.exists(fp), fp
         
         #load the reference layer
@@ -489,7 +476,9 @@ class Session(TComs, baseSession):
                    logger=None,
                   **kwargs
                  ):
-        
+        """
+        TODO: metadata?
+        """
         #=======================================================================
         # defaults
         #=======================================================================
@@ -511,6 +500,8 @@ class Session(TComs, baseSession):
 
 
         dem_fp = dem_rlay.source() 
+        
+        log.info('on %s'%{'pwb_rlay_fp':pwb_rlay_fp, 'dem_fp':dem_fp})
         #=======================================================================
         # build sub session
         #=======================================================================
@@ -520,20 +511,22 @@ class Session(TComs, baseSession):
         seems to be working... but I wouldnt do this again
         see oop.Session.inherit
         """
+        
         if write:
-            out_dir = self.wrk_dir
-            
+            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
         else:
-            out_dir=self.temp_dir
- 
+            """warning: the subsession will delete its temp_dir"""
+            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
  
         
-        with HANDses(session=self, logger=logger, out_dir = out_dir, inher_d=self.childI_d,
-                     temp_dir = os.path.join(self.temp_dir, 'HANDses')) as wrkr:
+        with HANDses(session=self, logger=logger,  inher_d=self.childI_d,  feedback=self.feedback,
+                     temp_dir = os.path.join(self.temp_dir, 'HANDses'), 
+                     write=write, #otherwise
+                     ) as wrkr:
  
             """passing all filepathss for a clean kill"""
             fp = wrkr.run(dem_fp=dem_fp, pwb_fp = pwb_rlay_fp, 
-                          ofp = os.path.join(out_dir, '%s_%s.tif'%(self.layName_pfx, dkey)),
+                          ofp=ofp, #easier to control at this level
                           **kwargs)
             """
             wrkr.temp_dir
@@ -640,13 +633,17 @@ class Session(TComs, baseSession):
               logger=None,
               write=None, dkey = None,
               ):
+ 
         """
-        consider making this a separate worker class
-        
-        TODO: switch this to all raster based
-        
+        currently setup for inun1 as a vectorlayer
+            see note on hand_inun.Session.get_edge_samples()
+            
+        just spent a few hours re-coding the inun1 so it returns a raster
+            I prefer working with rasters here
+            
+        Id like to see some real data before deciding how to proceed 
+            
         """
-        
         #=======================================================================
         # defaults
         #=======================================================================
@@ -746,41 +743,88 @@ class Session(TComs, baseSession):
 
         return rlay
     
-    def build_samples1(self, #get the hydrauilc maximum inundation from sampled HAND values
-                *args,
-              logger=None,
+    def build_samples1(self, #sapmle the HAND layer using inun1 edges
+            #inputs
+            hand_rlay=None,
+            handM_rlay=None,
+            inun1_rlay=None,
+            
+            
+            #parameters
+            sample_spacing=None,       
+                
+              #generals
+              dkey=None,
+              logger=None,write=None,
               **kwargs):
-        
+        """
+        (rToSamp_fp=hand_fp, 
+        inun_fp=inun1_fp,
+        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
+        """
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.hmax')
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+        assert dkey=='isamp1'
  
-        fp_key = 'smpls1_fp'
+ 
+        
+        if sample_spacing is None:
+            sample_spacing = self.dem_psize*5
+            
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if hand_rlay is None:
+            hand_rlay=self.retrieve('HAND')
+            
+        rToSamp_fp = hand_rlay.source()
+
+            
+        if handM_rlay is None:
+            handM_rlay = self.retrieve('HAND_mask')
+
+        if inun1_rlay is None:
+            inun1_rlay=self.retreive('inun1')
+            
+        
         
         #=======================================================================
-        # build
+        # build a subsession
         #=======================================================================
-        if not fp_key in self.fp_d:
+ 
             
-            log.info('building \'%s\' w/ %s %s'%(fp_key, args, kwargs))
-            from ricorde.hand_inun import HIses as SubSession
-            
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d,
-                            fp_d=self.fp_d) as wrkr:
-            
-                ofp, meta_d = wrkr.get_edge_samples(*args,fp_key=fp_key, **kwargs)
-                
-            self.ofp_d[fp_key] = ofp
-            self.meta_d.update({'get_edge_samples':meta_d})
-            
-            assert self.smpl_fieldName == meta_d['smpl_fieldName']
-        #=======================================================================
-        # load
-        #=======================================================================
+        log.info('building \'%s\' w/ %s %s'%(dkey,  kwargs))
+        
+        from ricorde.hand_inun import HIses
+        
+        #filepaths
+        if write:
+            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
         else:
-            ofp = self.fp_d[fp_key]
+            """warning: the subsession will delete its temp_dir"""
+            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+        
+        #init
+        with HIses(session=self, logger=logger, inher_d=self.childI_d,
+                   temp_dir = os.path.join(self.temp_dir, 'HANDses'), 
+                   write=write) as wrkr:
+        
+            ofp, meta_d = wrkr.get_edge_samples(
+                rToSamp_fp=rToSamp_fp,
+                 **kwargs)
+            
+        
+        
+        
+        self.ofp_d[dkey] = ofp
+        self.meta_d.update({dkey:meta_d})
+        
+        assert self.smpl_fieldName == meta_d['smpl_fieldName']
+ 
             
 
             

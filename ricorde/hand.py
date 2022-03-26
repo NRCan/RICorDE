@@ -66,7 +66,8 @@ class HANDses(TComs):
         
  
         if logger is None: logger=self.logger
-        
+        log = logger.getChild('hydro_correct')
+        log.debug('on %s w/ dist=%i'%(os.path.basename(dem_fp), dist))
         #check compression
         assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
         
@@ -75,21 +76,23 @@ class HANDses(TComs):
                  
         assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%dem_fp
         
-        """
-        ofp=r'C:\LS\10_OUT\202103_InsCrve\outs\DR\20220114\wrk\filldep.tif'
-        
-        """
+ 
         
         return ofp
     
-    def hand(self,
+    def get_hand(self,
                  dem_fp, #filepath to hydrocorrected dem... must be uncompressed!
-                 stream_fp,
+                 pwb_fp,
                  ofp=None,
                  logger=None,
                  ):
- 
+        #=======================================================================
+        # defai;ts
+        #=======================================================================
         if logger is None: logger=self.logger
+        log = logger.getChild('get_hand')
+        log.info('on %s'%{'dem':os.path.basename(dem_fp), 'pwb':os.path.basename(pwb_fp)})
+        
         if ofp is None:
             ofp = os.path.join(self.temp_dir, '%s_%s_HAND_%s.tif'%(
                 self.name, self.tag,  datetime.datetime.now().strftime('%m%d')))
@@ -97,14 +100,17 @@ class HANDses(TComs):
         if os.path.exists(ofp): 
             assert self.overwrite
             os.remove(ofp)
-            
+        
+        #=======================================================================
+        # precheck
+        #=======================================================================
         
         assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
         #assert self.getRasterCompression(stream_fp) is None, 'streams have some compression: %s'%stream_fp
 
         
         return Whitebox(out_dir=self.out_dir, logger=logger
-                 ).elevationAboveStream(dem_fp, stream_fp, out_fp=ofp)
+                 ).elevationAboveStream(dem_fp, pwb_fp, out_fp=ofp)
                  
     def run(self,
             dem_fp='',
@@ -153,7 +159,7 @@ class HANDses(TComs):
         else: 
             hand1_fp = ofp
             
-        hand1_fp = self.hand(dem_hyd_fp, pwb_fp, ofp=hand1_fp, logger=log)
+        hand1_fp = self.get_hand(dem_hyd_fp, pwb_fp, ofp=hand1_fp, logger=log)
         
 
         #=======================================================================
@@ -172,7 +178,7 @@ class HANDses(TComs):
             #=======================================================================
         # wrap
         #=======================================================================
- 
+        assert os.path.exists(ofp)
         log.info('finished on %s'%ofp)
             
         return ofp

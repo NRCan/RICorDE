@@ -63,12 +63,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # attach
         #=======================================================================
-        
-        
-        
-
  
-    
     #===========================================================================
     # RUNERS-----------
     #===========================================================================
@@ -867,7 +862,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             
         Regardless, some unexpected extremes will show up in the edge values
             becuase of the vertical/value variance in the dem
-            i.e. some min/max filtering will always be required
+            i.e. some min/max filtering may always be required
         """
         
         #=======================================================================

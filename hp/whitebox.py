@@ -40,7 +40,8 @@ class Whitebox(object):
         self.logger=logger.getChild('wbt')
         self.overwrite =overwrite
 
-
+        assert os.path.exists(self.exe_fp), 'bad exe: \n    %s'%self.exe_fp
+        
     def breachDepressionsLeastCost(self,
                                    dem_fp, #file path to fill. MUST BE UNCOMPRESSED!
                                    dist=100, #pixe distance to fill
@@ -48,6 +49,7 @@ class Whitebox(object):
                                    logger=None,
         
                                    ):
+        """can be very slow"""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -73,25 +75,24 @@ class Whitebox(object):
                 '--compress_raster=\'False\'',
                 '--output=\'{}\''.format(ofp),
 
-                #'-v'
+                '-v'
                 ]
         
         log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(dem_fp)))
-        log.debug(args)
+        #log.debug(args)
         #subprocess.Popen(args)
         #=======================================================================
         # execute
         #=======================================================================
-        result = subprocess.run(args, 
-                                capture_output=True,text=True,
-                                #stderr=sys.STDOUT, stdout=PIPE,
-                                ) #spawn process in explorer
+        self.__run__(args) #execute
+        #=======================================================================
+        # result = subprocess.run(args, #spawn process in explorer
+        #                         capture_output=True,text=True,
+        #                         #stderr=sys.STDOUT, stdout=PIPE,
+        #                         ) 
+        #=======================================================================
         
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        log.debug(result.stdout)
-        log.info('finished w/ %s'%ofp)
+ 
         
         
         return ofp
@@ -353,6 +354,8 @@ class Whitebox(object):
 
         
     def __run__(self, args, logger=None):
+        """I think this only returns info upon completion?
+        check the verbose flag also"""
         #=======================================================================
         # setup
         #=======================================================================
@@ -368,7 +371,7 @@ class Whitebox(object):
         #=======================================================================
         # #handle result
         #=======================================================================
-        #failed
+
         log.debug('finished w/ returncode=%i \n    %s'%(result.returncode, result.stdout))
         
         if not result.returncode==0: 

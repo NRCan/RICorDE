@@ -8,8 +8,8 @@ integration tests
 import pytest, copy, os
 from tests.conftest import search_fp, retrieve_data
 #===============================================================================
-# from ricorde.ses import Session as Session
-# from ricorde.ses import force_open_dir, QgsCoordinateReferenceSystem
+# from ricorde.scripts import Session as Session
+# from ricorde.scripts import force_open_dir, QgsCoordinateReferenceSystem
 #===============================================================================
 
 @pytest.mark.parametrize('hval_prec',[0.4]) #feeds through the session (see conftest.py) 

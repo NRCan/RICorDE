@@ -1765,6 +1765,9 @@ class Qproj(QAlgos, Basic):
         
         if not res_df['result'].all():
             msg = 'failed %i/%i tests: \n\n%s'%(len(res_df) - res_df['result'].sum(), len(res_df), res_df[~res_df['result']])
+            """
+            view(res_df)
+            """
             log.debug(msg)
             return False, msg
         

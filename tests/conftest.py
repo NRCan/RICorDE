@@ -22,7 +22,7 @@ from hp.gdal import getRasterStatistics, rlay_to_array, getRasterMetadata
 rproj_lib = {
         'fred01':{ #raster inputs (a bit faster)
             'aoi_fp':'aoi01T_fred_20220325.geojson',
-            'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
+            'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
             'inun_fp':'test_tag_0326_inun_rlay.tif',
             'pwb_fp':'test_tag_0326_pwb_rlay.tif',     
             'crsid':'EPSG:3979', 
@@ -45,7 +45,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=True
+    write=False
     #===========================================================================
     # write key
     #===========================================================================

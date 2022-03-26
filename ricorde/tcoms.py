@@ -26,7 +26,7 @@ from hp.whitebox import Whitebox
 
 class TComs(Qproj):
     
-    dem_psize=1.0 #pixel size of dem
+    dem_psize=None #pixel size of dem
     hval_prec=1
     
     #adding placeholders for runs w/o aois

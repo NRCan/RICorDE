@@ -15,7 +15,7 @@ class Error(Exception):
     def __init__(self, msg):
         mod_logger.error(msg)
 
-def assert_func(func):
+def assert_func(func, msg=''):
     if __debug__: # true if Python was not started with an -O option
-        result, msg = func()
-        assert result, msg
+        result, msgf = func()
+        assert result, msg+': '+msgf

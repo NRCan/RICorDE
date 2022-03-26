@@ -109,8 +109,9 @@ class Session(TComs, baseSession):
         #=======================================================================
  
         data_retrieve_hndls = {
-            'dem_rlay':{
-                'build':lambda **kwargs:self.rlay_load(dem_fp, **kwargs),
+            'dem':{
+                'compiled':lambda **kwargs:self.load_dem(**kwargs), #only rasters
+                'build':lambda **kwargs:self.build_dem(**kwargs),
                 },
             'pwb_rlay':{ #permanent waterbodies (raster)
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
@@ -273,6 +274,141 @@ class Session(TComs, baseSession):
         
         return datetime.datetime.now() - start
     
+    
+    def build_dem(self, #checks and reprojection on the DEM
+                  dem_fp=None,
+                  
+                  #parameters
+                  dem_psize=None,
+                  
+                  #gen
+                  dkey=None,
+                  write=None,
+                  ):
+        """
+        user can pass a pixel size, or we reproject to the nearest integer
+        """
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        log = self.logger.getChild('build_rlay.%s'%dkey)
+        if write is None: write=self.write
+        assert dkey =='dem'
+        if dem_fp is None: dem_fp=self.dem_fp
+        
+        if not dem_psize is  None:
+            assert isinstance(dem_psize, int), 'got bad pixel size request on the dem (%s)'%dem_psize
+            
+ 
+            
+
+            
+        mstore=QgsMapLayerStore()
+        #=======================================================================
+        # load
+        #=======================================================================
+        rlay_raw= self.rlay_load(dem_fp, logger=log)
+        
+        
+        #=======================================================================
+        # config resolution
+        #=======================================================================
+        psize_raw = self.rlay_get_resolution(rlay_raw)
+        
+        #get new pixel size
+        if not dem_psize is None: #use passed
+            assert dem_psize>=psize_raw
+            new_psize = float(dem_psize)
+        else:
+            new_psize = round(psize_raw, 0)
+        
+        #=======================================================================
+        # reproject-----
+        #=======================================================================
+        if not psize_raw == new_psize:
+            #===================================================================
+            # defaults
+            #===================================================================
+            log.info('reprojecting DEM (%s) to match pixel size (from %.6f to %.1f)'%(rlay_raw.name(), psize_raw, new_psize))
+            mstore.addMapLayer(rlay_raw)
+            
+            if write:
+                ofp = os.path.join(self.wrk_dir, '%s_%ix%i_%s.tif'%(self.layName_pfx,int(new_psize), int(new_psize), dkey))
+                
+            else:
+                ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+            
+            #===================================================================
+            # reproject
+            #===================================================================
+            self.warpreproject(rlay_raw, crsOut=self.qproj.crs(), resolution=new_psize, 
+                               compression=self.compress, nodata_val=-9999, output=ofp, logger=log)
+            
+            #===================================================================
+            # wrap
+            #===================================================================
+            self.ofp_d[dkey] = ofp
+            rlay = self.rlay_load(ofp, logger=log)
+            
+            log.info('finished building \'%s\' w/ \n    %s'%(dkey, ofp))
+
+
+            
+        else:
+            rlay=rlay_raw
+
+        #use loader to attach common parameters
+        """for consistency between compiled loads and builds"""
+        self.load_dem(rlay=rlay, logger=log, dkey=dkey)
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        mstore.removeAllMapLayers()
+        
+        return rlay
+    
+    def load_dem(self,
+                 fp=None,
+                 rlay=None, 
+                 logger=None,
+                 dkey=None,
+                 write=None,
+                 ):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log = logger.getChild('load_dem')
+        if write is None: write=self.write
+        assert dkey=='dem'
+ 
+        #=======================================================================
+        # load
+        #=======================================================================
+        if rlay is None:
+            if fp is None:
+                fp = self.dem_fp
+            
+            rlay = self.rlay_load(fp, logger=log)
+            
+        assert isinstance(rlay, QgsRasterLayer), type(rlay)
+        #=======================================================================
+        # attach parameters
+        #=======================================================================
+        dem_psize = self.rlay_get_resolution(rlay)
+        
+        assert round(dem_psize, 0)==dem_psize
+        
+        self.dem_psize = int(dem_psize)
+        
+        log.info('loaded %s w/ dem_psize=%.2f'%(rlay.name(), dem_psize))
+        
+        return rlay 
+ 
+        
+        
+                  
+    
     def build_rlay(self, #build raster from some water polygon
                         fp,
                         dkey=None,
@@ -292,7 +428,7 @@ class Session(TComs, baseSession):
         
         #load the reference layer
         if ref_lay is None:
-            ref_lay = self.retrieve('dem_rlay', logger=log)
+            ref_lay = self.retrieve('dem', logger=log)
         
         #=======================================================================
         # passed a raster
@@ -326,9 +462,9 @@ class Session(TComs, baseSession):
         #=======================================================================
         # checks
         #=======================================================================
-        assert_func(lambda:  self.rlay_check_match(rlay, ref_lay, logger=log))
+        assert_func(lambda:  self.rlay_check_match(rlay, ref_lay, logger=log), msg=dkey)
         
-        assert_func(lambda:  self.mask_check(rlay))
+        assert_func(lambda:  self.mask_check(rlay), msg=dkey)
         
         
         
@@ -346,8 +482,8 @@ class Session(TComs, baseSession):
     def build_hand(self, #load or build the HAND layer
                    dkey=None,
                    
-                   dem_fp=None,
-                   pwb_rlay_fp=None,
+                   dem_rlay=None,
+                   pwb_rlay=None,
                    
                    write=None,
                    logger=None,
@@ -360,17 +496,21 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         log=logger.getChild('build_hand')
         assert dkey == 'HAND'
-        if dem_fp is None: dem_fp=self.dem_fp
+        #if dem_fp is None: dem_fp=self.dem_fp
         if write is None: write=self.write
         #=======================================================================
         # retrieve
         #=======================================================================
-        if pwb_rlay_fp is None:
+        if pwb_rlay is None:
             pwb_rlay = self.retrieve('pwb_rlay')
-            pwb_rlay_fp = pwb_rlay.source()
+        pwb_rlay_fp = pwb_rlay.source()
  
         
+        if dem_rlay is None:
+            dem_rlay = self.retrieve('dem')
 
+
+        dem_fp = dem_rlay.source() 
         #=======================================================================
         # build sub session
         #=======================================================================
@@ -402,14 +542,16 @@ class Session(TComs, baseSession):
             wrkr.logger.debug('finished')
             
         #=======================================================================
-        # wrap 
+        # check 
         #=======================================================================
+        rlay = self.rlay_load(fp, logger=log)
         
-        if write:
-            self.ofp_d[dkey] = fp
+        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))
+        
+        if write:self.ofp_d[dkey] = fp
             
  
-        return self.rlay_load(fp, logger=log)
+        return rlay
     
     
     def build_hand_mask(self, #get the no-data boundary of the HAND rlay (as a vector)
@@ -440,68 +582,34 @@ class Session(TComs, baseSession):
         #===================================================================
         log.info('building \'%s\' on \'%s\''%(dkey, hand_rlay.name()))
         
-        #=======================================================================
-        # ofp = os.path.join(self.out_dir, self.layName_pfx+'_ndb.gpkg')
-        # if os.path.exists(ofp):
-        #     assert self.overwrite
-        #     os.remove(ofp)
-        #=======================================================================
+ 
         if write:
             ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
         else:
             ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
             
-        #===================================================================
-        # merge back in streams
-        #===================================================================
-        #rlay0 = self.mergeraster([hand_fp, stream_fp], logger=log)
+ 
         
         
-        #convert raster to binary
+        #=======================================================================
+        # #convert raster to binary
+        #=======================================================================
         """NOTE: HAND layers have zero values on the streams
             using zero_shift"""
-        rlay1_fp = self.mask_build(hand_rlay, zero_shift=True, logger=log, 
+        self.mask_build(hand_rlay, zero_shift=True, logger=log, 
                                    #ofp=os.path.join(self.temp_dir, 'hand_mask1.tif'),
                                    ofp = ofp
                                    )
+ 
+        rlay = self.rlay_load(ofp, logger=log)
         
-        
+ 
         #=======================================================================
-        # #raster to no-data edge polygon
-        # assert os.path.exists(rlay1_fp)
-        # nd_vlay_fp1 = self.polygonizeGDAL(rlay1_fp, logger=log,
-        #                           output=os.path.join(self.temp_dir, 'hand_mask1.gpkg'),
-        #                           )
-        # 
-        # #clean/dissolve
-        # """need to drop DN field"""
-        # assert os.path.exists(nd_vlay_fp1), nd_vlay_fp1
-        # nd_vlay1= self.deletecolumn(nd_vlay_fp1, ['DN'], logger=log)
-        # 
-        # #fix geometry
-        # nd_vlay2_fp = self.fixgeo(nd_vlay1, logger=log, 
-        #                           output=os.path.join(self.temp_dir, 'nd_vlay2_fixgeo.gpkg'))
-        #  
-        # 
-        # """these seem to still be neeeded"""
-        # #delete all the holes
-        # nd_vlay4 = self.deleteholes(nd_vlay2_fp, hole_area=0, logger=log,
-        #                             output=os.path.join(self.temp_dir, 'nd_vlay4_deleteholes.gpkg'))
-        # 
-        # #fix geometry
-        # """needed a second time for some polys"""
-        # nd_vlay5 = self.fixgeo(nd_vlay4, logger=log, 
-        #                           output=os.path.join(self.temp_dir, 'nd_vlay5_fixgeo.gpkg'))
-        # 
-        # #dissolve
-        # _ = self.dissolve(nd_vlay5, output=ofp, logger=log)
-        # 
-        # #wrap
-        # self.mstore.addMapLayers([nd_vlay1])
-        # self.mstore.removeMapLayers([nd_vlay1])
+        # check
         #=======================================================================
+        assert_func(lambda:  self.rlay_check_match(rlay,hand_rlay, logger=log))
         
-        self.ofp_d[dkey]= ofp
+        assert_func(lambda:  self.mask_check(rlay))
             
  
         #=======================================================================
@@ -509,8 +617,9 @@ class Session(TComs, baseSession):
         #=======================================================================
  
         #log.info('got \'%s\': \n    %s'%(fp_key, ofp))
+        if write:self.ofp_d[dkey] = ofp
         
-        return self.rlay_load(ofp, logger=log)
+        return rlay
     
     
     def build_inun1(self, #merge NHN and FiC and crop to DEM extents
@@ -547,8 +656,7 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         
         
-        if buff_dist is  None:
-            buff_dist = self.dem_psize*2
+
         
         #output
         if write:
@@ -560,6 +668,13 @@ class Session(TComs, baseSession):
             assert self.overwrite
             os.remove(ofp)
         
+        #buff_dist
+        if not isinstance(buff_dist, int):
+            assert buff_dist is None
+            if self.dem_psize is None:
+                self.retrieve('dem')
+            assert isinstance(self.dem_psize, int), 'got bad type on dem_psize: %s'%type(self.dem_psize)
+            buff_dist = self.dem_psize*2
         #=======================================================================
         # retrieve
         #=======================================================================
@@ -571,6 +686,9 @@ class Session(TComs, baseSession):
             
         if HAND_mask is None:
             HAND_mask=self.retrieve('HAND_mask')
+            
+ 
+
         #=======================================================================
         # build
         #=======================================================================
@@ -588,6 +706,8 @@ class Session(TComs, baseSession):
         pwb_buff1_fp = self.rBuffer(pwb_rlay, logger=log, dist=buff_dist,
                                     output = os.path.join(self.temp_dir, '%s_buff1.tif'%pwb_rlay.name()))
         
+        assert_func(lambda:  self.rlay_check_match(pwb_buff1_fp,HAND_mask, logger=log))
+        
         #convert to a mask again
         pwb_buff2_fp = self.mask_build(pwb_buff1_fp, logger=log)
         
@@ -599,7 +719,7 @@ class Session(TComs, baseSession):
         inun1_1_fp = self.mask_combine([pwb_buff2_fp, inun_rlay], logger=log,
                                      ofp = os.path.join(self.temp_dir, 'inun1_1.tif'))
         
-
+        
         #===================================================================
         # crop to HAND extents
         #===================================================================

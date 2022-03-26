@@ -203,6 +203,7 @@ def getRasterMetadata(fp):
     return md
 
 def getRasterStatistics(fp):
+    """warning: this sometimes disagrees with native:rasterlayerstatistics (and QGIS)"""
     ds = gdal.Open(fp)
  
     band = ds.GetRasterBand(1)

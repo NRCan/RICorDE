@@ -14,7 +14,8 @@ from pandas.testing import assert_frame_equal, assert_series_equal, assert_index
 idx = pd.IndexSlice
 
 from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsWkbTypes, QgsRasterLayer
-from ricorde.ses import Session
+import processing
+from ricorde.scripts import Session
 from hp.Q import vlay_get_fdf
 from hp.gdal import getRasterStatistics, rlay_to_array, getRasterMetadata
     
@@ -30,6 +31,13 @@ rproj_lib = {
                 },
     
         }
+
+@pytest.fixture(scope='session')
+def write():
+    write=False
+    if write:
+        print('WARNING!!! runnig in write mode')
+    return write
 
 #===============================================================================
 # function.fixtures-------
@@ -123,12 +131,7 @@ def root_dir():
     from definitions import root_dir
     return root_dir
 
-@pytest.fixture(scope='session')
-def write():
-    write=True
-    if write:
-        print('WARNING!!! runnig in write mode')
-    return write
+
 
 @pytest.fixture(scope='session')
 def logger(root_dir):
@@ -228,14 +231,16 @@ def compare_layers(vtest, vtrue, #two containers of layers
     elif isinstance(vtest, QgsRasterLayer):
         
         #compare stats
-        testStats_d = getRasterStatistics(vtest.source())
-        trueStats_d = getRasterStatistics(vtrue.source())
+        testStats_d = rasterstats(vtest) #getRasterStatistics(vtest.source())
+        trueStats_d = rasterstats(vtrue) # getRasterStatistics(vtrue.source())
         
-        df = pd.DataFrame.from_dict({'true':trueStats_d, 'test':testStats_d}).round(3)
+        df = pd.DataFrame.from_dict({'true':trueStats_d, 'test':testStats_d}).loc[['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'], :].round(3)
         
-        assert df.eq(other=df['true'], axis=0).all().all()
+        assert df.eq(other=df['true'], axis=0).all().all(), df
         
-        
+        """
+        rasterstats(vtest)
+        """
         #getRasterMetadata(vtest.source())
         
         if test_data:
@@ -244,8 +249,13 @@ def compare_layers(vtest, vtrue, #two containers of layers
             
             assert_equal(ar_test, ar_true)
             
-            
-            
+def rasterstats(rlay): 
+      
+    ins_d = { 'BAND' : 1, 
+             'INPUT' : rlay,
+              'OUTPUT_HTML_FILE' : 'TEMPORARY_OUTPUT' }
+ 
+    return processing.run('native:rasterlayerstatistics', ins_d )   
             
             
             

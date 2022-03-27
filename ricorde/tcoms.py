@@ -358,7 +358,7 @@ class TComs(Qproj):
             out_dir = self.temp_dir
         if not os.path.exists(out_dir):os.makedirs(out_dir)
         
-        log.debug('on \'%s\' w/ \'%s\''%(
+        log.info('on \'%s\' w/ \'%s\''%(
             os.path.basename(dem_fp), os.path.basename(inun_fp)))
         #===================================================================
         # mask out interior

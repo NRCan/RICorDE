@@ -187,7 +187,7 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
 
     layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('b1Bounds',[r'test_08b1Bounds_fred01_test_070\working\test_tag_0327_b1Bounds.pickle'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
@@ -205,6 +205,26 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
     test_rlay = session.retrieve(dkey, write=write)
 
     layer_compare(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
+    
+@pytest.mark.dev
+@pytest.mark.parametrize('interpResolution',[6] ) #too slow otherwise
+@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0327_beach2.gpkg'] ) #from test_hand
+@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
+@pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_11beach2Interp(session, true_dir, write, base_dir, beach2, dem, inun2, interpResolution):
+    
+    #set the compiled references
+    session.compiled_fp_d={
+        'beach2':os.path.join(base_dir, beach2),
+        'dem':os.path.join(base_dir, dem),
+        'inun2':os.path.join(base_dir, inun2),
+        }
+    
+    dkey = 'beach2Interp'
+    test_rlay = session.retrieve(dkey, write=write, interpResolution=interpResolution)
+
+    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================
 # commons--------
 #===============================================================================

@@ -252,7 +252,7 @@ def compare_layers(vtest, vtrue, #two containers of layers
         testStats_d = rasterstats(vtest) #getRasterStatistics(vtest.source())
         trueStats_d = rasterstats(vtrue) # getRasterStatistics(vtrue.source())
         
-        compare_dicts(testStats_d, trueStats_d, coln_l=['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'])
+        compare_dicts(testStats_d, trueStats_d, index_l=['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'])
  
         
         """

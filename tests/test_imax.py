@@ -38,7 +38,7 @@ def test_03inun(session, true_dir, dem, write, base_dir):
     dkey = 'inun_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
  
-@pytest.mark.dev
+
 @pytest.mark.parametrize('dem_fp',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
@@ -54,15 +54,17 @@ def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
 
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
 
-
+@pytest.mark.dev
 @pytest.mark.parametrize('pwb_rlay',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb
+@pytest.mark.parametrize('dem_hyd',[r'test_04demHyd_fred01_test_01de0\working\test_tag_0327_dem_hyd.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
-def test_04hand(session, true_dir, pwb_rlay, write, base_dir):
+def test_04hand(session, true_dir, pwb_rlay, write, base_dir, dem_hyd):
     
     #set the compiled references
-    session.compiled_fp_d.update({
+    session.compiled_fp_d = {
         'pwb_rlay':os.path.join(base_dir, pwb_rlay),
-        })
+        'dem_hyd':os.path.join(base_dir, dem_hyd),
+        }
     
     
     dkey = 'HAND'

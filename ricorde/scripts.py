@@ -292,6 +292,7 @@ class Session(TComs, baseSession):
             
  
         mstore=QgsMapLayerStore()
+        
         #=======================================================================
         # load
         #=======================================================================
@@ -318,7 +319,7 @@ class Session(TComs, baseSession):
             if not round(psize_raw, 0) == psize_raw:
                 resample=True
         
- 
+        meta_d = {'raw_fp':dem_fp, 'dem_psize':dem_psize, 'psize_raw':psize_raw}
             
  
         #=======================================================================
@@ -343,7 +344,7 @@ class Session(TComs, baseSession):
         if not self.getRasterCompression(rlay_raw.source()) is None:
             decompres = True
             
-        
+        meta_d.update({'clip':clip, 'resample':resample, 'reproj':reproj, 'decompres':decompres})
         #=======================================================================
         # warp-----
         #=======================================================================
@@ -431,6 +432,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
+        self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         mstore.removeAllMapLayers()
         
         return rlay

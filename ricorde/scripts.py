@@ -162,11 +162,15 @@ class Session(TComs, baseSession):
  
     
 
-    
+    #===========================================================================
+    # PHASE0: Data Prep---------
+    #===========================================================================
 
         
-    def run_dataPrep(self, #clean and load data into memory
+    def run_dataPrep(self, #clean and load inputs into memory
                      ):
+        
+        self.mstore.removeAllMapLayers()
         
         self.retrieve('dem')
  
@@ -176,11 +180,9 @@ class Session(TComs, baseSession):
         
         self.mstore_log(logger=self.logger.getChild('rDataPrep'))
         
+        assert len(self.mstore.mapLayers())==3, 'count mismatch in mstore'
         
-
-        
-
-
+ 
 
     def build_dem(self, #checks and reprojection on the DEM
                   dem_fp=None,

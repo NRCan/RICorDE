@@ -45,7 +45,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=False
+    write=True
     #===========================================================================
     # write key
     #===========================================================================
@@ -251,7 +251,10 @@ def compare_layers(vtest, vtrue, #two containers of layers
         
         df = pd.DataFrame.from_dict({'true':trueStats_d, 'test':testStats_d}).loc[['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'], :].round(3)
         
-        assert df.eq(other=df['true'], axis=0).all().all(), df
+        bx = ~df['test'].eq(other=df['true'], axis=0)
+        if bx.any():
+            raise AssertionError('%i/%i raster stats failed to match\n%s'%(bx.sum(), len(bx), df.loc[bx,:]))
+ 
         
         """
         rasterstats(vtest)

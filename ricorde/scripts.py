@@ -551,6 +551,7 @@ class Session(TComs, baseSession):
     def run_HAND(self,
                  logger=None,
                  ):
+        """TODO: release dem_hyd?"""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -567,7 +568,7 @@ class Session(TComs, baseSession):
         hand_rlay = self.retrieve('HAND', logger=log)  
         
         #nodata boundary of hand layer (polygon)
-        #hand_mask = self.retrieve('HAND_mask', logger=log) 
+        hand_mask = self.retrieve('HAND_mask', logger=log) 
         
         #=======================================================================
         # wrap
@@ -807,16 +808,13 @@ class Session(TComs, baseSession):
         #=======================================================================
         # add minimum water bodies to FiC inundation
         #=======================================================================
-        
-
-
  
         
         inun1_rlay = self.retrieve('inun1')
+        return
         #=======================================================================
         # get hydrauilc maximum
         #=======================================================================
-        return
         isamp1_vlay=self.retrieve('isamp1')
         
         #get initial edge samples
@@ -895,18 +893,7 @@ class Session(TComs, baseSession):
         assert dkey == 'inun1'
         if write is None: write=self.write
         
-        
-
-        
-        #output
-        if write:
-            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-        else:
-            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-         
-        if os.path.exists(ofp):
-            assert self.overwrite
-            os.remove(ofp)
+        layname, ofp = self.get_outpars(dkey, write)
         
         #buff_dist
         if not isinstance(buff_dist, int):
@@ -979,6 +966,10 @@ class Session(TComs, baseSession):
         #===================================================================
  
         self.ofp_d[dkey] = ofp
+        
+        if self.exit_summary:
+ 
+            self.smry_d[dkey] = pd.Series({'buff_dist':buff_dist}).to_frame()
         
         
  

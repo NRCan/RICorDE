@@ -73,7 +73,7 @@ def test_04hand(session, true_dir, pwb_rlay, write, base_dir, dem_hyd):
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_05handMask(session, true_dir, hand_fp, write, base_dir):
@@ -87,7 +87,7 @@ def test_05handMask(session, true_dir, hand_fp, write, base_dir):
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-
+@pytest.mark.dev
 @pytest.mark.parametrize('buff_dist',[10] ) #othwerwise the dem needs to be loaded
 @pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0327_HAND_mask.tif'] ) #from test_hand_mask
 @pytest.mark.parametrize('pwb_fp',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb

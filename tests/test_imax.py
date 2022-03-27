@@ -58,7 +58,7 @@ def test_04hand(session, true_dir, pwb_rlay, write, base_dir):
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_02pwb_0\working\test_tag_0327_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_05handMask(session, true_dir, hand_fp, write, base_dir):
@@ -72,16 +72,20 @@ def test_05handMask(session, true_dir, hand_fp, write, base_dir):
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
 
- 
+@pytest.mark.dev
 @pytest.mark.parametrize('buff_dist',[10] ) #othwerwise the dem needs to be loaded
-@pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0326_HAND_mask.tif'] ) #from test_hand_mask
+@pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0327_HAND_mask.tif'] ) #from test_hand_mask
+@pytest.mark.parametrize('pwb_fp',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb
+@pytest.mark.parametrize('inun_fp',[r'test_03inun_test_01dem_None_fr1\working\test_tag_0327_inun_rlay.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist):
+def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp, inun_fp):
     
     #set the compiled references
-    session.compiled_fp_d.update({
-        'HAND_mask':os.path.join(base_dir, handM_fp)
-        })
+    session.compiled_fp_d = {
+        'HAND_mask':os.path.join(base_dir, handM_fp),
+        'pwb_rlay':os.path.join(base_dir, pwb_fp),
+        'inun_rlay':os.path.join(base_dir, inun_fp),
+        }
     
     dkey = 'inun1'
     test_rlay = session.retrieve(dkey, write=write, buff_dist=buff_dist)

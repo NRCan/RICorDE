@@ -583,7 +583,7 @@ class Session(TComs, baseSession):
                       dem_rlay=None,
                       
                       #parameters
-                      dist=100, #Maximum search distance for breach paths in cells
+                      dist=None, #Maximum search distance for breach paths in cells
                       
                       #generals
                       dkey=None, logger=None,write=None,
@@ -595,12 +595,17 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         log=logger.getChild('build_dem_hyd')
         assert dkey=='dem_hyd'
-        assert isinstance(dist, int)
+        
+
         
         if dem_rlay is None:
             dem_rlay = self.retrieve('dem')
             
-            
+        if dist is None:
+            #2km or 100 cells
+            dist = min(int(2000/self.dem_psize), 100)
+        
+        assert isinstance(dist, int)
  
         
         #output
@@ -811,11 +816,12 @@ class Session(TComs, baseSession):
  
         
         inun1_rlay = self.retrieve('inun1')
-        return
+        
         #=======================================================================
         # get hydrauilc maximum
         #=======================================================================
         isamp1_vlay=self.retrieve('isamp1')
+        return
         
         #get initial edge samples
         #=======================================================================
@@ -867,7 +873,7 @@ class Session(TComs, baseSession):
               
               
               #parameters
-              buff_dist=None, #buffer to apply to nhn
+              buff_dist=None, #buffer to apply to perm water
  
               
               #misc
@@ -914,8 +920,6 @@ class Session(TComs, baseSession):
         if HAND_mask is None:
             HAND_mask=self.retrieve('HAND_mask')
             
- 
-
         #=======================================================================
         # build
         #=======================================================================
@@ -927,16 +931,20 @@ class Session(TComs, baseSession):
         #===================================================================
         # buffer
         #===================================================================
-        """nice to add a tiny buffer to the waterbodies to ensure no zero hand values"""
+        """nice to add a tiny buffer to the waterbodies to ensure no zero hand values
+        can be dangerous when the pwb has lots of noise"""
 
         #raw buffer (buffered cells have value=2)
-        pwb_buff1_fp = self.rBuffer(pwb_rlay, logger=log, dist=buff_dist,
-                                    output = os.path.join(self.temp_dir, '%s_buff1.tif'%pwb_rlay.name()))
-        
-        assert_func(lambda:  self.rlay_check_match(pwb_buff1_fp,HAND_mask, logger=log))
-        
-        #convert to a mask again
-        pwb_buff2_fp = self.mask_build(pwb_buff1_fp, logger=log)
+        if buff_dist>0:
+            pwb_buff1_fp = self.rBuffer(pwb_rlay, logger=log, dist=buff_dist,
+                                        output = os.path.join(self.temp_dir, '%s_buff1.tif'%pwb_rlay.name()))
+            
+            #assert_func(lambda:  self.rlay_check_match(pwb_buff1_fp,HAND_mask, logger=log))
+            
+            #convert to a mask again
+            pwb_buff2_fp = self.mask_build(pwb_buff1_fp, logger=log)
+        else:
+            pwb_buff2_fp = pwb_rlay
         
  
         
@@ -980,12 +988,10 @@ class Session(TComs, baseSession):
     def build_samples1(self, #sapmle the HAND layer using inun1 edges
             #inputs
             hand_rlay=None,
-            handM_rlay=None,
+            #handM_rlay=None,
             inun1_rlay=None,
             
-            
-            #parameters
-            sample_spacing=None,       
+    
                 
               #generals
               dkey=None,
@@ -1004,70 +1010,78 @@ class Session(TComs, baseSession):
         log=logger.getChild('b.%s'%dkey)
         assert dkey=='isamp1'
  
- 
+        layname, ofp = self.get_outpars(dkey, write)
         
-        if sample_spacing is None:
-            sample_spacing = self.dem_psize*5
+
             
         #=======================================================================
         # retrieve
         #=======================================================================
         if hand_rlay is None:
             hand_rlay=self.retrieve('HAND')
-            
-        rToSamp_fp = hand_rlay.source()
-
-            
-        if handM_rlay is None:
-            handM_rlay = self.retrieve('HAND_mask')
-
+ 
         if inun1_rlay is None:
-            inun1_rlay=self.retreive('inun1')
+            inun1_rlay=self.retrieve('inun1')
             
-        
-        
-        #=======================================================================
-        # build a subsession
-        #=======================================================================
  
-            
-        log.info('building \'%s\' w/ %s %s'%(dkey,  kwargs))
-        
-        from ricorde.hand_inun import HIses
-        
-        #filepaths
-        if write:
-            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-        else:
-            """warning: the subsession will delete its temp_dir"""
-            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-        
-        #init
-        with HIses(session=self, logger=logger, inher_d=self.childI_d,
-                   temp_dir = os.path.join(self.temp_dir, 'HANDses'), 
-                   write=write) as wrkr:
-        
-            ofp, meta_d = wrkr.get_edge_samples(
-                rToSamp_fp=rToSamp_fp,
-                 **kwargs)
-            
-        
-        
-        
-        self.ofp_d[dkey] = ofp
-        self.meta_d.update({dkey:meta_d})
-        
-        assert self.smpl_fieldName == meta_d['smpl_fieldName']
- 
-            
 
+        #=======================================================================
+        # execute
+        #=======================================================================
+        self.get_beach_rlay(
+            inun_rlay=inun1_rlay, base_rlay=hand_rlay, logger=log, ofp=ofp)
             
+            
+ 
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('got %s \n    %s'%(fp_key, ofp))
+        if write:
+            self.ofp_d[dkey] = ofp
+ 
         
         return ofp
+    
+    def get_beach_rlay(self, #raster along edge of inundation where values match some base layer
+                       inun_rlay=None,
+                       base_rlay=None,
+                        logger=None,
+                        ofp=None,
+                        ):
+        """
+        see hand_inun.Session.get_edge_samples() for vector based implementation
+        """
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+ 
+        log=logger.getChild('get_beach_rlay')
+        
+        assert isinstance(base_rlay, QgsRasterLayer)
+        
+        log.info('w/ inun \'%s\' and base \'%s\''%(inun_rlay.name(), base_rlay.name()))
+        
+        pixel_size = self.rlay_get_resolution(inun_rlay)
+        
+        #=======================================================================
+        # build sampling mask
+        #=======================================================================
+        #buffer 1 pixel
+        buff_fp = self.rBuffer(inun_rlay, logger=log, dist=pixel_size)
+        
+        #retrieve buffered pixels
+        mask1_fp = self.mask_build(buff_fp, logger=log, thresh=1.5, thresh_type='lower')
+        
+        #=======================================================================
+        # sample the base
+        #=======================================================================
+        samp_fp = self.mask_apply(base_rlay, mask1_fp,logger=log, ofp=ofp) 
+        
+        log.debug('finsihed on %s'%samp_fp)
+        
+        return samp_fp
+        
             
     def get_sample_bounds(self, #get the min/max HAND values to use (from sample stats)
                           pts_fp,

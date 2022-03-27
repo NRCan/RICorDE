@@ -836,7 +836,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         
         return vlay_fp, fcnt
     
-    def get_edge_samples(self,
+    def get_edge_samples(self, #points vecotor layer with base raster samples
                          rToSamp_fp='', #raster layer to sample
                          inun_fp='', #inundation (filtered bby h ydrauilc maximum)
                          ndb_fp='', #nodata boundary polygon of hand layer
@@ -863,6 +863,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         Regardless, some unexpected extremes will show up in the edge values
             becuase of the vertical/value variance in the dem
             i.e. some min/max filtering may always be required
+            
+        see get_edge_rsamp for raster based
         """
         
         #=======================================================================

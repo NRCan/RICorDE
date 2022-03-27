@@ -377,7 +377,7 @@ class Qproj(QAlgos, Basic):
         
     
     def vlay_load(self,
-                  file_path,
+                  fp,
 
                   providerLib='ogr',
                   addSpatialIndex=True,
@@ -385,7 +385,7 @@ class Qproj(QAlgos, Basic):
                   reproj=False, #whether to reproject hte layer to match the project
                   
                   set_proj_crs = False, #set the project crs from this layer
-
+                  dkey=None,
                   logger = None,
                   ):
         
@@ -397,17 +397,17 @@ class Qproj(QAlgos, Basic):
         
         
         #file
-        assert not file_path is None
-        assert os.path.exists(file_path), file_path
-        fname, ext = os.path.splitext(os.path.split(file_path)[1])
+        assert not fp is None
+        assert os.path.exists(fp), fp
+        fname, ext = os.path.splitext(os.path.split(fp)[1])
         assert not ext in ['tif'], 'passed invalid filetype: %s'%ext
-        log.debug('on %s'%file_path)
+        log.debug('on %s'%fp)
         mstore = QgsMapLayerStore() 
         #===========================================================================
         # load the layer--------------
         #===========================================================================
 
-        vlay_raw = QgsVectorLayer(file_path,fname,providerLib)
+        vlay_raw = QgsVectorLayer(fp,fname,providerLib)
   
         #===========================================================================
         # checks
@@ -494,7 +494,7 @@ class Qproj(QAlgos, Basic):
                       QgsWkbTypes().displayString(vlay2.wkbType()), 
                       dp.featureCount(), 
                       vlay2.crs().authid(),
-                      file_path))
+                      fp))
         
         mstore.removeAllMapLayers()
         
@@ -688,6 +688,7 @@ class Qproj(QAlgos, Basic):
     def rlay_load(self, fp,  #load a raster layer and apply an aoi clip
                   aoi_vlay = None,
                   logger=None,
+                  dkey=None,
                   
                   #crs handling
                   set_proj_crs = False, #set the project crs from this layer

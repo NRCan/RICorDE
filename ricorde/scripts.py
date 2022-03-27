@@ -157,7 +157,7 @@ class Session(TComs, baseSession):
                 'build':lambda **kwargs:self.build_inun2(**kwargs),
                 },
             'beach2':{
-                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'compiled':lambda **kwargs:self.vlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_beach2(**kwargs),
                 },
             'hvGrid':{

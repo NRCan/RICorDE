@@ -352,7 +352,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
-        self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+        if self.exit_summary: self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         mstore.removeAllMapLayers()
  
  
@@ -524,8 +524,9 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
-        assert not dkey in self.smry_d
-        self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+        if self.exit_summary:
+            assert not dkey in self.smry_d
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         
         rlay1.setName(layname)
         log.info('finished on %s'%rlay1.name())

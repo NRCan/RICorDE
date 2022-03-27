@@ -213,6 +213,7 @@ def search_fp(dirpath, ext, pattern): #get a matching file with extension and be
 def retrieve_data(dkey, fp, ses): #load some compiled result off the session (using the dkey)
     assert dkey in ses.data_retrieve_hndls
     hndl_d = ses.data_retrieve_hndls[dkey]
+    assert 'compiled' in hndl_d, '%s has no compliled handles'%dkey
     
     return hndl_d['compiled'](fp=fp, dkey=dkey)
 

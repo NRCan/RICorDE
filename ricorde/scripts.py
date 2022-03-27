@@ -139,8 +139,9 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_inun1(**kwargs),
                 },
-            'isamp1':{
-                'build':lambda **kwargs:self.build_samples1(**kwargs),
+            'beach1':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_beach1(**kwargs),
                 }
              
             }
@@ -820,12 +821,12 @@ class Session(TComs, baseSession):
         #=======================================================================
         # get hydrauilc maximum
         #=======================================================================
-        isamp1_vlay=self.retrieve('isamp1')
+        isamp1_vlay=self.retrieve('beach1')
         return
         
         #get initial edge samples
         #=======================================================================
-        # smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
+        # smpls1_fp = self.build_beach1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
         #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
         #=======================================================================
         
@@ -985,7 +986,7 @@ class Session(TComs, baseSession):
 
         return rlay
     
-    def build_samples1(self, #sapmle the HAND layer using inun1 edges
+    def build_beach1(self, #beach sample HAND values 
             #inputs
             hand_rlay=None,
             #handM_rlay=None,
@@ -1008,7 +1009,7 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
-        assert dkey=='isamp1'
+        assert dkey=='beach1'
  
         layname, ofp = self.get_outpars(dkey, write)
         
@@ -1036,11 +1037,12 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
+        rlay = self.rlay_load(ofp, logger=log)
         if write:
             self.ofp_d[dkey] = ofp
  
         
-        return ofp
+        return rlay
     
     def get_beach_rlay(self, #raster along edge of inundation where values match some base layer
                        inun_rlay=None,

@@ -337,7 +337,7 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         assert dkey in self.data_retrieve_hndls, dkey
         
         hndl_d = self.data_retrieve_hndls[dkey]
-        
+        meta_d = dict()
         #=======================================================================
         # 2.compiled provided
         #=======================================================================
@@ -372,14 +372,24 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         
         if isinstance(data, QgsMapLayer):
             self.mstore.addMapLayer(data)
+            
+            meta_d.update({'layname':data.name(), 'source':data.source()})
+            
+            
         else:
             assert hasattr(data, '__len__'), '\'%s\' failed to retrieve some data'%dkey
         self.data_d[dkey] = data
         
+        #=======================================================================
+        # meta
+        #=======================================================================
         tdelta = round((datetime.datetime.now() - start).total_seconds(), 1)
-            
-        self.dk_meta_d[dkey].update({
+        meta_d.update({
             'tdelta (secs)':tdelta, 'dtype':type(data), 'method':method})
+        
+        
+            
+        self.dk_meta_d[dkey].update(meta_d)
         #=======================================================================
         # wrap
         #=======================================================================

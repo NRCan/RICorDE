@@ -832,26 +832,15 @@ class Session(TComs, baseSession):
         #clip inun1 by hydrauilc  maximum (raster)
         inun2_rlay = self.retrieve('inun2') 
         
-        return
-        inun2r_fp = self.build_inun2(inun1_fp, inun_hmax_fp, logger=log)
-        
-        #vector polygons
-        inun2_fp = self.build_inun2_vlay(inun2r_fp, logger=log)
-        
+
         #=======================================================================
         # wrap
         #=======================================================================
+        tdelta = datetime.datetime.now() - start
         
-        #get just those datalayers built by this function
-        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
-        log.info('built %i datalayers'%len(ofp_d))
+        log.info('finished in %s'%tdelta)
         
-        
-        self._log_datafiles(d=ofp_d)
-        
-        self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
-        
-        return datetime.datetime.now() - start
+        return
     
     
         
@@ -1976,9 +1965,14 @@ class Session(TComs, baseSession):
                 else:
                     self.smry_d[k] = self.smry_d[k].reset_index().append(
                             retrieve_df.reset_index(), ignore_index=True).set_index('index')
+                            
+            
+            #dkey summary
             
             
-            self.smry_d = {**{'_smry':pd.Series(self.meta_d, name='val').to_frame()},
+            
+            self.smry_d = {**{'_smry':pd.Series(self.meta_d, name='val').to_frame(),
+                              '_smry.dkey':pd.DataFrame.from_dict(self.dk_meta_d).T},
                             **self.smry_d}
             
             #=======================================================================

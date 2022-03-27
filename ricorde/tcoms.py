@@ -67,7 +67,7 @@ class TComs(Qproj):
     # common sub-routines--------
     #===========================================================================
     def rasterize_inun(self, #rasterize an inundation layer (raster props from a reference layer)
-                      rlay_fp,
+                      vlay_fp,
 
                       ref_lay=None, #layer to use for reference
                       #compress=None, hard coded medium compression
@@ -82,24 +82,24 @@ class TComs(Qproj):
         if logger is None: logger=self.logger
         log=logger.getChild('rasterize_inun')
         
- 
+        if ref_lay is None:
+            ref_lay = self.retreive('dem')
+        else:
+            ref_lay = self.get_layer(ref_lay)
             
  
-        mstore = QgsMapLayerStore()
-        if isinstance(ref_lay, str):
-            ref_lay=self.rlay_load(ref_lay, logger=log)
-            mstore.addMapLayer(ref_lay)
-        
         assert ref_lay.crs() == self.qproj.crs()
-        if isinstance(rlay_fp, str): 
-            assert os.path.exists(rlay_fp)
+        assert isinstance(ref_lay, QgsRasterLayer), type(ref_lay)
+        
+        if isinstance(vlay_fp, str): 
+            assert os.path.exists(vlay_fp)
         assert os.path.exists(self.out_dir)
         #=======================================================================
         # #rasterize
         #=======================================================================
         if ofp is None:
             """special default"""
-            ofp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(rlay_fp))[0]+'.tif')
+            ofp = os.path.join(self.wrk_dir, os.path.splitext(os.path.basename(vlay_fp))[0]+'.tif')
         
         
         #get reference values
@@ -116,7 +116,7 @@ class TComs(Qproj):
          #'HEIGHT' : 14152, 'WIDTH' : 21807,
          'HEIGHT' : ref_lay.height(), 'WIDTH' : ref_lay.width(), 'EXTENT' : extent, 
          'INIT' : None, 
-         'INPUT' : rlay_fp,  'OUTPUT' : ofp, 
+         'INPUT' : vlay_fp,  'OUTPUT' : ofp, 
          'OPTIONS' : 'COMPRESS=LZW', #lite compression for WhiteBoxx 
 
            }
@@ -129,7 +129,7 @@ class TComs(Qproj):
         #=======================================================================
         # wrap
         #=======================================================================
-        mstore.removeAllMapLayers()
+ 
     
  
             
@@ -138,11 +138,15 @@ class TComs(Qproj):
     
     def clean_inun_vlay(self, #typical operations for cleaning an inundation polygon
                         vlay_raw,
-                        output='TEMPORARY_OUTPUT',
+                        
+                        #params
                         simp_dist=None,
                         hole_size=None,
                         island_size=None,
-                        logger=None, mstore=None,
+                        dem_psize=None,
+                        
+                        #gen
+                        logger=None, mstore=None, output='TEMPORARY_OUTPUT',
                         ):
         #=======================================================================
         # defaults
@@ -157,14 +161,17 @@ class TComs(Qproj):
             clear_mstore=False
             
         #parameter defaults
-        assert isinstance(self.dem_psize, float)            
-        if simp_dist is None: simp_dist = self.dem_psize
-        if hole_size is None: hole_size = (self.dem_psize*5)**2.0
+        if dem_psize is None: dem_psize=self.dem_psize
+        assert isinstance(dem_psize, int)            
+        
+        if simp_dist is None: simp_dist = dem_psize*0.5
+        if hole_size is None: hole_size = (dem_psize*4)**2.0
         if island_size is  None: island_size=hole_size
         
         log.info('cleaning \'%s\' w/ simp_dist=%s, hole_size=%s'%(
             vlay_raw, simp_dist, hole_size))
         
+        meta_d={'dem_psize':dem_psize, 'simp_dist':simp_dist, 'hole_size':hole_size,'island_size':island_size} 
         #=======================================================================
         # fix geo
         #=======================================================================
@@ -215,7 +222,7 @@ class TComs(Qproj):
         # remvoe small feats
         #=======================================================================
         if not island_size=='none':
-            res = self.extractbyexpression(vlay5, '$area>%i'%island_size, output=output, logger=log)
+            res = self.extractbyexpression(vlay5, '$area>%i'%island_size, output=output, logger=log)['OUTPUT']
         else:
             raise Error('dome')
         
@@ -225,7 +232,7 @@ class TComs(Qproj):
         if clear_mstore: mstore.removeAllMapLayers()
         
         log.debug('finished w/ %s'%res)
-        return res
+        return res, meta_d
         
     def inun_max_filter(self, #return inundatio matching BOTH
                         inun_fp, inun_max_fp, 

@@ -1469,7 +1469,7 @@ class QAlgos(object):
     def cliprasterwithpolygon(self,
               rlay_raw,
               poly_vlay,
-              layname = None,
+ 
               output = 'TEMPORARY_OUTPUT',
               #result = 'layer', #type fo result to provide
                 #layer: default, returns a raster layuer
@@ -1497,11 +1497,7 @@ class QAlgos(object):
             feedback=self.feedback
         log = logger.getChild('cliprasterwithpolygon')
         
-        #=======================================================================
-        # if layname is None:
-        #     layname = '%s_clipd'%rlay_raw.name()
-        #=======================================================================
-            
+ 
             
         algo_nm = 'gdal:cliprasterbymasklayer'
             
@@ -1509,13 +1505,11 @@ class QAlgos(object):
         #=======================================================================
         # precheck
         #=======================================================================
-        #=======================================================================
-        # assert isinstance(rlay_raw, QgsRasterLayer)
-        # assert isinstance(poly_vlay, QgsVectorLayer)
-        # assert 'Poly' in QgsWkbTypes().displayString(poly_vlay.wkbType())
-        # 
-        # assert rlay_raw.crs() == poly_vlay.crs()
-        #=======================================================================
+        assert isinstance(rlay_raw, QgsRasterLayer)
+        assert isinstance(poly_vlay, QgsVectorLayer)
+        assert 'Poly' in QgsWkbTypes().displayString(poly_vlay.wkbType())
+         
+        assert rlay_raw.crs() == poly_vlay.crs()
         
         #=======================================================================
         # cleanup outputs

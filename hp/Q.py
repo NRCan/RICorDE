@@ -783,10 +783,15 @@ class Qproj(QAlgos, Basic):
         
         return vlay
     
-    def slice_aoi(self, vlay,
+    def slice_aoi(self, 
+                  lay_raw,
                   aoi_vlay = None,
+                  layname=None,
                   sfx = 'aoi',
-                  logger=None):
+                  method='select', #slicing method (for vlays)
+                  logger=None,
+                  output='TEMPORARY_OUTPUT',
+                  ):
         """
         also see misc.aoi_slicing
         """
@@ -797,37 +802,74 @@ class Qproj(QAlgos, Basic):
         if aoi_vlay is None: aoi_vlay = self.aoi_vlay
         if logger is None: logger=self.logger
         log = logger.getChild('slice_aoi')
+        assert isinstance(lay_raw, QgsMapLayer), type(lay_raw)
+        if layname is None:
+            layname = '%s_%s'%(lay_raw.name(), sfx)
+            
+        log.info('slicing \'%s\' (%s) by \'%s\''%(
+            lay_raw.name(), QgsMapLayerType(lay_raw.type()).name, aoi_vlay.name()))
         
+        
+ 
         #=======================================================================
         # prechecks
         #=======================================================================
         self._check_aoi(aoi_vlay)
         
+        if aoi_vlay.extent()==lay_raw.extent():
+            """just a rectangular comparison"""
+            log.warning('extents match (%s)'%lay_raw.name())
+            
+ 
         
         #=======================================================================
-        # slice by aoi
+        # vectorlyares
         #=======================================================================
+        elif isinstance(lay_raw, QgsVectorLayer):
+            if method=='select':
 
-        vlay.removeSelection()
-        log.info('slicing finv \'%s\' and %i feats w/ aoi \'%s\''%(
-            vlay.name(),vlay.dataProvider().featureCount(), aoi_vlay.name()))
+                lay_raw.removeSelection()
+                log.debug('slicing finv \'%s\' and %i feats w/ aoi \'%s\''%(
+                    lay_raw.name(),lay_raw.dataProvider().featureCount(), aoi_vlay.name()))
+                
         
-
-        
-        res_vlay =  self.selectbylocation(vlay, aoi_vlay, result_type='layer', logger=log)
+                
+                sliced_lay =  self.selectbylocation(lay_raw, aoi_vlay, result_type='layer', logger=log, output=output)
+                
+                lay_raw.removeSelection()
+                
+            elif method=='clip':
+                log.debug('clipping')
+                sliced_lay = self.clip(lay_raw, aoi_vlay, logger=log, output=output)
+            else:
+                raise Error('not recognized')
+            
+            
+            
+        #=======================================================================
+        # raster layers
+        #=======================================================================
+        elif isinstance(lay_raw, QgsRasterLayer):
+ 
+            res_d = self.cliprasterwithpolygon(lay_raw, aoi_vlay, logger=log, output=output) 
+            sliced_lay = self.rlay_load(res_d['OUTPUT'], logger=log)
+            
+        else:
+            raise IOError('unroecnitzed lay_raw type: %s'%type(lay_raw))
         
         #=======================================================================
         # wrap
         #=======================================================================
-        vlay.removeSelection()
+        assert isinstance(sliced_lay, QgsMapLayer), type(sliced_lay)
+        
         #got some selection
-        if isinstance(res_vlay, QgsVectorLayer):
-            res_vlay.setName('%s_%s'%(vlay.name(), sfx))
+ 
+        sliced_lay.setName(layname)
             
-        
+        log.debug('finished on %s'%sliced_lay.name())
         
             
-        return res_vlay
+        return sliced_lay
     
     def _check_aoi(self, #special c hecks for AOI layers
                   vlay, 
@@ -1257,7 +1299,7 @@ class Qproj(QAlgos, Basic):
         # setup
         #=======================================================================
         mstore = QgsMapLayerStore()
-        rlay = self._rlay_get(obj, logger=log, mstore=mstore)
+        rlay = self.get_layer(obj, logger=log, mstore=mstore)
             
         rcentry = self._rCalcEntry(rlay)
 
@@ -1495,7 +1537,7 @@ class Qproj(QAlgos, Basic):
             
             
             #retrieve
-            rlay_filld = self._rlay_get(obj_filld, mstore=mstore,  logger=log)
+            rlay_filld = self.get_layer(obj_filld, mstore=mstore,  logger=log)
             
  
             #check
@@ -1730,8 +1772,8 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # load
         #=======================================================================
-        rlay1 = self._rlay_get(rlay1_raw, logger=log)
-        rlay2 = self._rlay_get(rlay2_raw, logger=log)
+        rlay1 = self.get_layer(rlay1_raw, logger=log)
+        rlay2 = self.get_layer(rlay2_raw, logger=log)
         
         #=======================================================================
         # run tests
@@ -1779,17 +1821,34 @@ class Qproj(QAlgos, Basic):
         
         
         
-    def _rlay_get(self, rlay,mstore=None, **kwargs): #retrieve raster from filepath or rasterobject
-        if isinstance(rlay, str):
-            res =  self.rlay_load(rlay, **kwargs)
+    def get_layer(self, obj,mstore=None, **kwargs): #retrieve raster from filepath or rasterobject.
+        
+        #=======================================================================
+        # load from filepath
+        #=======================================================================
+        if isinstance(obj, str):
+            assert os.path.exists(obj)
+            ext = os.path.splitext(obj)[1]
+            
+            #rasters
+            if ext=='.tif':
+                res =  self.rlay_load(obj, **kwargs)
+            elif ext in list(self.vlay_drivers.values()):
+                res = self.vlay_load(obj, **kwargs)
+            else:
+                raise IOError('unrecognized extension: %s'%ext)
+                
             if not mstore is None:                
                 mstore.addMapLayer(res)
             return res
- 
-        elif isinstance(rlay, QgsRasterLayer):
-            return rlay
+        
+        #=======================================================================
+        # passed a layer
+        #=======================================================================
+        elif isinstance(obj, QgsMapLayer):
+            return obj
         else:
-            raise Error('bad type: %s'%type(rlay))
+            raise Error('bad type: %s'%type(obj))
         
         
         

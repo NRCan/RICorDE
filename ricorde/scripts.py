@@ -51,25 +51,25 @@ add tests
 #===============================================================================
 # imports-----------
 #===============================================================================
-import os, datetime, copy
+import os, datetime, copy, shutil
 import pandas as pd
  
 start =  datetime.datetime.now()
 
  
-
+import processing
 
 from hp.exceptions import Error, assert_func
 from hp.dirz import force_open_dir
  
-from hp.plot import Plotr #only needed for plotting sessions
+#from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
     QgsRasterLayer, QgsWkbTypes, vlay_get_fdf
     
 from hp.oop import Session as baseSession
      
 from ricorde.tcoms import TComs
-from hp.gdal import get_nodata_val
+from hp.gdal import get_nodata_val 
 
 
 #===============================================================================
@@ -167,7 +167,7 @@ class Session(TComs, baseSession):
         
         
     #===========================================================================
-    # PHASE1: Inundation Hydro Correction---------
+    # PHASE1: Inundation Correction---------
     #===========================================================================
 
     def run_imax(self,
@@ -267,69 +267,150 @@ class Session(TComs, baseSession):
                   
                   #parameters
                   dem_psize=None,
+                  aoi_vlay=None,
+                  
                   
                   #gen
-                  dkey=None,
-                  write=None,
+                  dkey=None,write=None,overwrite=None,
                   ):
         """
         user can pass a pixel size, or we reproject to the nearest integer
+        see also self.build_rlay()
         """
         #=======================================================================
         # defaults
         #=======================================================================
         log = self.logger.getChild('build_rlay.%s'%dkey)
         if write is None: write=self.write
+        if overwrite is None: overwrite=self.overwrite
         assert dkey =='dem'
         if dem_fp is None: dem_fp=self.dem_fp
+        if aoi_vlay is None: aoi_vlay=self.aoi_vlay
         
         if not dem_psize is  None:
             assert isinstance(dem_psize, int), 'got bad pixel size request on the dem (%s)'%dem_psize
             
  
-            
-
-            
         mstore=QgsMapLayerStore()
         #=======================================================================
         # load
         #=======================================================================
         rlay_raw= self.rlay_load(dem_fp, logger=log)
         
-        
+        #=======================================================================
+        # confi parameters----------
+        #=======================================================================
         #=======================================================================
         # config resolution
         #=======================================================================
         psize_raw = self.rlay_get_resolution(rlay_raw)
+        resample=False
         
-        #get new pixel size
+        #use passed pixel size
         if not dem_psize is None: #use passed
             assert dem_psize>=psize_raw
-            new_psize = float(dem_psize)
+            if not psize_raw==dem_psize:
+                resample=True
+        
+        #use native
         else:
-            new_psize = round(psize_raw, 0)
+            dem_psize=int(round(psize_raw, 0))
+            if not round(psize_raw, 0) == psize_raw:
+                resample=True
+        
+ 
+            
+ 
+        #=======================================================================
+        # clip
+        #=======================================================================
+        clip=False
+        if not aoi_vlay is None:
+            if not aoi_vlay.extent()==rlay_raw.extent():
+                clip=True
+                
+        #=======================================================================
+        # reproject
+        #=====================================================================
+        reproj=False
+        if not rlay_raw.crs()==self.qproj.crs():
+            reproj=True
+            
+        #=======================================================================
+        # compression
+        #=======================================================================
+        decompres=False
+        if not self.getRasterCompression(rlay_raw.source()) is None:
+            decompres = True
+            
         
         #=======================================================================
-        # reproject-----
+        # warp-----
         #=======================================================================
-        if not psize_raw == new_psize:
+        if resample or clip or reproj or decompres:
             #===================================================================
             # defaults
             #===================================================================
-            log.info('reprojecting DEM (%s) to match pixel size (from %.6f to %.1f)'%(rlay_raw.name(), psize_raw, new_psize))
+            msg = 'warping DEM (%s) w/ resol=%.4f'%(rlay_raw.name(), psize_raw)
+            if clip:
+                msg = msg + ' +clipping extents to %s'%aoi_vlay.name()
+            if resample:
+                msg = msg + ' +resampling to %.2f'%dem_psize
+            if reproj:
+                msg = msg + ' +reproj to %s'%self.qproj.crs().authid()
+            if decompres:
+                msg = msg + ' +decompress'
+            log.info(msg)
+ 
             mstore.addMapLayer(rlay_raw)
             
             if write:
-                ofp = os.path.join(self.wrk_dir, '%s_%ix%i_%s.tif'%(self.layName_pfx,int(new_psize), int(new_psize), dkey))
+                ofp = os.path.join(self.wrk_dir, '%s_%ix%i_%s.tif'%(self.layName_pfx,int(dem_psize), int(dem_psize), dkey))
                 
             else:
                 ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+                
+            if os.path.exists(ofp):
+                assert overwrite
+                os.remove(ofp)
             
             #===================================================================
-            # reproject
+            # warp
             #===================================================================
-            self.warpreproject(rlay_raw, crsOut=self.qproj.crs(), resolution=new_psize, 
-                               compression=self.compress, nodata_val=-9999, output=ofp, logger=log)
+            """custom cliprasterwithpolygon"""
+            ins_d = {   'ALPHA_BAND' : False,
+                    'CROP_TO_CUTLINE' : clip,
+                    'DATA_TYPE' : 6, #float32
+                    'EXTRA' : '',
+                    'INPUT' : rlay_raw,
+                    
+                    'MASK' : aoi_vlay,
+                    'MULTITHREADING' : True,
+                    'NODATA' : -9999,
+                    'OPTIONS' : '', #no compression
+                    'OUTPUT' : ofp,
+                    
+                    'KEEP_RESOLUTION' : not resample,  #will ignore x and y res
+                    'SET_RESOLUTION' : resample,
+                    'X_RESOLUTION' : dem_psize,
+                    'Y_RESOLUTION' : dem_psize,
+                    
+                    'SOURCE_CRS' : None,
+                    'TARGET_CRS' : self.qproj.crs(),
+
+                     }
+                    
+            algo_nm = 'gdal:cliprasterbymasklayer'
+            log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
+        
+            res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
+            
+            log.debug('finished w/ \n    %s'%res_d)
+            
+            if not os.path.exists(res_d['OUTPUT']):
+                """failing intermittently"""
+                raise Error('failed to get a result')
+ 
             
             #===================================================================
             # wrap
@@ -401,8 +482,13 @@ class Session(TComs, baseSession):
                         dkey=None,
                         write=None,
                         ref_lay=None,
+                        aoi_vlay=None,
+                        clean_inun_kwargs={},
                         ):
-        
+        """
+        see also self.build_dem()
+        """
+ 
         #=======================================================================
         # defaults
         #=======================================================================
@@ -412,57 +498,108 @@ class Session(TComs, baseSession):
         
         assert not fp is None, dkey
         assert os.path.exists(fp), fp
-        
+        if aoi_vlay is None: aoi_vlay=self.aoi_vlay
         #load the reference layer
         if ref_lay is None:
             ref_lay = self.retrieve('dem', logger=log)
         
+        mstore = QgsMapLayerStore()
+        
+        #output
+        if write:
+            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+            self.ofp_d[dkey] = ofp
+        else:
+            ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+            
+
+        meta_d = {'dkey':dkey,'raw_fp':fp,'ref_lay':ref_lay.source(),'aoi_vlay':aoi_vlay}
         #=======================================================================
-        # passed a raster
+        # raster-------
         #=======================================================================
         if fp.endswith('tif'):
             rlay_fp = fp
         
         #=======================================================================
-        # polygon
+        # polygon--------
         #=======================================================================
         else:
-
  
-            #build the raster
-            if write:
-                ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-                self.ofp_d[dkey] = ofp
+            vlay_raw = self.vlay_load(fp, logger=log)
+            #===================================================================
+            # #pre-clip
+            #===================================================================
+ 
+            if aoi_vlay is None:
+                """TODO: build polygon aoi from ref layer extents
+                check if extents match"""
+                raise IOError('not implemented')
             else:
-                ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+                clip_vlay = aoi_vlay
             
-            rlay_fp = self.rasterize_inun(fp, logger=log, ref_lay=ref_lay, 
-                                ofp = ofp,
-                                )
+            if not clip_vlay is None:
+                mstore.addMapLayer(vlay_raw)
+                vlay1 = self.slice_aoi(vlay_raw, aoi_vlay=aoi_vlay, logger=log,
+                        method='clip', #avoidds breaking any geometry (we clip below anyway)... no... leaves too much
+                                        )
+            else:
+                vlay1=vlay_raw
+ 
+                
+            #===================================================================
+            # #cleaning
+            #===================================================================
+            vlay2_fp, d = self.clean_inun_vlay(vlay1, logger=log,
+                                 output=os.path.join(self.temp_dir, '%s_clean_inun.gpkg'%(vlay_raw.name())),
+                                                  **clean_inun_kwargs)
             
-            log.info('\'%s\' saved to \n    %s'%(dkey, rlay_fp))
+            meta_d.update(d)
+ 
+ 
+            #===================================================================
+            # #build the raster 
+            #===================================================================
+            rlay_fp = self.rasterize_inun(vlay2_fp, logger=log, ref_lay=ref_lay,
+                                          ofp=os.path.join(self.temp_dir, '%s_clean_inun.tif'%(vlay_raw.name()))
+                                          )
+            
+            log.debug('\'%s\' saved to \n    %s'%(dkey, rlay_fp))
         #=======================================================================
         # load the layer
         #=======================================================================
         rlay= self.rlay_load(rlay_fp, logger=log)
         
         #=======================================================================
+        # clip
+        #=======================================================================
+        if not aoi_vlay is None:
+            rlay1 = self.slice_aoi(rlay, aoi_vlay=aoi_vlay, logger=log, output=ofp)
+            mstore.addMapLayer(rlay)
+        else:
+            shutil.copyfile(rlay.source(),ofp)
+            rlay1=rlay
+ 
+ 
+        #=======================================================================
         # checks
         #=======================================================================
-        assert_func(lambda:  self.rlay_check_match(rlay, ref_lay, logger=log), msg=dkey)
+        assert os.path.exists(ofp)
+        assert_func(lambda:  self.rlay_check_match(rlay1, ref_lay, logger=log), msg=dkey)
         
-        assert_func(lambda:  self.mask_check(rlay), msg=dkey)
+        assert_func(lambda:  self.mask_check(rlay1), msg=dkey)
         
-        
-        
+ 
         if dkey == 'pwb_rlay':
-            assert_func(lambda: self.check_pwb(rlay))
+            assert_func(lambda: self.check_pwb(rlay1))
         
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('finished on %s'%rlay.name())
-        return rlay
+        assert not dkey in self.smry_d
+        self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+        log.info('finished on %s'%rlay1.name())
+        mstore.removeAllMapLayers()
+        return rlay1
         
 
         
@@ -1108,7 +1245,7 @@ class Session(TComs, baseSession):
         return ofp
     
     #===========================================================================
-    # PHASE2: Rolling HAND depths----------
+    # PHASE2: Rolling HAND----------
     #===========================================================================
     
     def run_hdep_mosaic(self, #get mosaic of depths (from HAND values)
@@ -1691,7 +1828,20 @@ class Session(TComs, baseSession):
             
             self.meta_d = {**{'now':datetime.datetime.now(), 'runtime (mins)':runtime}, **self.meta_d}
             
-    
+            #===================================================================
+            # assembel summary sheets
+            #===================================================================
+            #merge w/ retrieve data
+            for k, sub_d in self.dk_meta_d.items():
+                if len(sub_d)==0:continue
+                retrieve_df = pd.Series(sub_d).to_frame()
+                if not k in self.smry_d:
+                    self.smry_d[k] = retrieve_df
+                else:
+                    self.smry_d[k] = self.smry_d[k].reset_index().append(
+                            retrieve_df.reset_index(), ignore_index=True).set_index('index')
+            
+            
             self.smry_d = {**{'_smry':pd.Series(self.meta_d, name='val').to_frame()},
                             **self.smry_d}
             

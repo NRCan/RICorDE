@@ -9,7 +9,7 @@ Created on Oct. 8, 2020
 #===============================================================================
 # # standard imports -----------------------------------------------------------
 #===============================================================================
-import time, sys, os, logging, datetime, inspect, gc, shutil
+import time, sys, os, logging, datetime, inspect, gc, shutil, pprint
 
 import numpy as np
 import pandas as pd
@@ -1857,6 +1857,24 @@ class Qproj(QAlgos, Basic):
     #===========================================================================
     # HELPERS---------
     #===========================================================================
+    def mstore_log(self, #convenience to log the mstore
+                   mstore=None,
+                   logger=None):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log = logger
+        if mstore is None: mstore=self.mstore
+        
+        
+        
+        d = {lay.name():QgsMapLayerType(lay.type()).name for lay in mstore.mapLayers().values()}
+        
+        txt = pprint.pformat(d, width=30, indent=0, compact=True, sort_dicts =False)
+        
+        log.info('mstore has %i layers \n%s'%(len(d), txt))
+        
  
      
     def _rCalcEntry(self, #helper for raster calculations 

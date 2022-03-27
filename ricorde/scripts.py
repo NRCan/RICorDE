@@ -165,103 +165,23 @@ class Session(TComs, baseSession):
     
 
         
+    def run_dataPrep(self, #clean and load data into memory
+                     ):
         
-    #===========================================================================
-    # PHASE1: Inundation Correction---------
-    #===========================================================================
-
-    def run_imax(self,
-                  #input data
-                     #==========================================================
-                     # dem_fp=None,
-                     # nhn_fp=None,
-                     # fic_fp=None,
-                     #==========================================================
-                     
-                     #get_edge_samples
-                     sample_spacing=None, #HAND sample point spacing. None=dem*5
-                     
-                     #get_sample_bounds
-                     qhigh=0.75, #quartile defining the maximum inundation HAND value
-                     qlow=0.25,
+        self.retrieve('dem')
  
-                      logger=None,
-                 ):
-        #=======================================================================
-        # defaults
-        #=======================================================================
-        if logger is None: logger=self.logger
-        log=logger.getChild('rImax')
-        start =  datetime.datetime.now()
+        self.retrieve('pwb_rlay')
+ 
+        self.retrieve('inun_rlay')
         
-        #ofp_d_old = copy.copy(self.afp_d)
+        self.mstore_log(logger=self.logger.getChild('rDataPrep'))
         
- 
-        #=======================================================================
-        # #get the HAND layer
-        #=======================================================================
-        log.info('building HAND layer')
-        #rasterize NHN polys
-        nhn_rlay = self.retrieve('pwb_rlay', logger=log)
- 
-        
-        #get the hand layer
-        hand_rlay = self.retrieve('HAND', logger=log)        
- 
-         
-        #=======================================================================
-        # add minimum water bodies to FiC inundation
-        #=======================================================================
         
 
-        #nodata boundary of hand layer (polygon)
-        hand_mask = self.retrieve('HAND_mask')
- 
         
-        inun1_rlay = self.retrieve('inun1')
-        #=======================================================================
-        # get hydrauilc maximum
-        #=======================================================================
-        return
-        isamp1_vlay=self.retrieve('isamp1')
-        
-        #get initial edge samples
-        #=======================================================================
-        # smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
-        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
-        #=======================================================================
-        
-        #get bounds
-        hv_max, hv_min = self.get_sample_bounds(smpls1_fp, qhigh=qhigh, qlow=qlow,logger=log)
-        
-        #get hydrauilc maximum
-        inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_max,logger=log)
-        
-        #=======================================================================
-        # reduce inun by the hydrauilc maximum
-        #=======================================================================
-        #clip inun1 by hydrauilc  maximum (raster) 
-        inun2r_fp = self.build_inun2(inun1_fp, inun_hmax_fp, logger=log)
-        
-        #vector polygons
-        inun2_fp = self.build_inun2_vlay(inun2r_fp, logger=log)
-        
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        
-        #get just those datalayers built by this function
-        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
-        log.info('built %i datalayers'%len(ofp_d))
-        
-        
-        self._log_datafiles(d=ofp_d)
-        
-        self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
-        
-        return datetime.datetime.now() - start
-    
-    
+
+
+
     def build_dem(self, #checks and reprojection on the DEM
                   dem_fp=None,
                   
@@ -280,7 +200,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # defaults
         #=======================================================================
-        log = self.logger.getChild('build_rlay.%s'%dkey)
+        log = self.logger.getChild('build_dem')
         if write is None: write=self.write
         if overwrite is None: overwrite=self.overwrite
         assert dkey =='dem'
@@ -434,6 +354,9 @@ class Session(TComs, baseSession):
         #=======================================================================
         self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         mstore.removeAllMapLayers()
+ 
+ 
+ 
         
         return rlay
     
@@ -508,12 +431,16 @@ class Session(TComs, baseSession):
         mstore = QgsMapLayerStore()
         
         #output
+        layname = '%s_%s'%(self.layName_pfx, dkey) 
         if write:
-            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+            ofp = os.path.join(self.wrk_dir, layname+'.tif')
             self.ofp_d[dkey] = ofp
         else:
-            ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
+            ofp=os.path.join(self.temp_dir, layname+'.tif')
             
+        if os.path.exists(ofp):
+            assert self.overwrite
+            os.remove(ofp)
 
         meta_d = {'dkey':dkey,'raw_fp':fp,'ref_lay':ref_lay.source(),'aoi_vlay':aoi_vlay}
         #=======================================================================
@@ -599,11 +526,107 @@ class Session(TComs, baseSession):
         #=======================================================================
         assert not dkey in self.smry_d
         self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+        
+        rlay1.setName(layname)
         log.info('finished on %s'%rlay1.name())
         mstore.removeAllMapLayers()
+        
         return rlay1
+    """
+    self.mstore_log()
+    """
+    
+    #===========================================================================
+    # PHASE1: Inundation Correction---------
+    #===========================================================================
+    def run_imax(self,
+                  #input data
+                     #==========================================================
+                     # dem_fp=None,
+                     # nhn_fp=None,
+                     # fic_fp=None,
+                     #==========================================================
+                     
+                     #get_edge_samples
+                     sample_spacing=None, #HAND sample point spacing. None=dem*5
+                     
+                     #get_sample_bounds
+                     qhigh=0.75, #quartile defining the maximum inundation HAND value
+                     qlow=0.25,
+ 
+                      logger=None,
+                 ):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('rImax')
+        start =  datetime.datetime.now()
+        
+        #ofp_d_old = copy.copy(self.afp_d)
+        
+ 
+        #=======================================================================
+        # #get the HAND layer
+        #=======================================================================
+ 
+        #get the hand layer
+        hand_rlay = self.retrieve('HAND', logger=log)        
+ 
+         
+        #=======================================================================
+        # add minimum water bodies to FiC inundation
+        #=======================================================================
         
 
+        #nodata boundary of hand layer (polygon)
+        hand_mask = self.retrieve('HAND_mask')
+ 
+        
+        inun1_rlay = self.retrieve('inun1')
+        #=======================================================================
+        # get hydrauilc maximum
+        #=======================================================================
+        return
+        isamp1_vlay=self.retrieve('isamp1')
+        
+        #get initial edge samples
+        #=======================================================================
+        # smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
+        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
+        #=======================================================================
+        
+        #get bounds
+        hv_max, hv_min = self.get_sample_bounds(smpls1_fp, qhigh=qhigh, qlow=qlow,logger=log)
+        
+        #get hydrauilc maximum
+        inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_max,logger=log)
+        
+        #=======================================================================
+        # reduce inun by the hydrauilc maximum
+        #=======================================================================
+        #clip inun1 by hydrauilc  maximum (raster) 
+        inun2r_fp = self.build_inun2(inun1_fp, inun_hmax_fp, logger=log)
+        
+        #vector polygons
+        inun2_fp = self.build_inun2_vlay(inun2r_fp, logger=log)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        
+        #get just those datalayers built by this function
+        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
+        log.info('built %i datalayers'%len(ofp_d))
+        
+        
+        self._log_datafiles(d=ofp_d)
+        
+        self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
+        
+        return datetime.datetime.now() - start
+    
+    
         
     def build_hand(self, #load or build the HAND layer
                    dkey=None,

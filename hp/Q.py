@@ -18,7 +18,9 @@ import pandas as pd
 # import QGIS librarires
 #===============================================================================
 from qgis.core import *
+ 
 from qgis.gui import QgisInterface
+ 
 from hp.gdal import get_nodata_val
 
 from PyQt5.QtCore import QVariant, QMetaType 
@@ -975,7 +977,7 @@ class Qproj(QAlgos, Basic):
         fields_d = {coln:np_to_pytype(col.dtype) for coln, col in df.items()}
         
         #fields container
-        qfields = fields_build_new(fields_d = fields_d, logger=log)
+        qfields = fields_build_new(fields_d = fields_d)
         
         #=======================================================================
         # assemble the features
@@ -1000,7 +1002,7 @@ class Qproj(QAlgos, Basic):
                 qfield = feat.fields().at(findx)
                 
                 #make the type match
-                ndata = qtype_to_pytype(value, qfield.type(), logger=log)
+                ndata = qtype_to_pytype(value, qfield.type())
                 
                 #set the attribute
                 if not feat.setAttribute(findx, ndata):
@@ -1042,7 +1044,7 @@ class Qproj(QAlgos, Basic):
                              layname,
                              qfields,
                              list(feats_d.values()),
-                             logger=log,
+ 
                              )
         self.createspatialindex(vlay, logger=log)
         #=======================================================================
@@ -1177,12 +1179,13 @@ class Qproj(QAlgos, Basic):
         # output file
         #=======================================================================
         if ofp is None:
+            QgsProcessing.TEMPORARY_OUTPUT
             if out_dir is None: out_dir=self.temp_dir
     
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
             
-            ofp = os.path.join(out_dir,layname+'.tif' )
+            ofp = os.path.join(out_dir,layname+datetime.datetime.now().strftime('%f')+'.tif' )
             
         if os.path.exists(ofp): 
             assert self.overwrite
@@ -2298,7 +2301,7 @@ def vlay_get_geo( #get geometry dict from layer
         #logger=mod_logger,
         ):
     
-    log = logger.getChild('vlay_get_geo')
+ 
     
     #===========================================================================
     # build the request
@@ -2313,8 +2316,10 @@ def vlay_get_geo( #get geometry dict from layer
         """
         todo: check if there is already a fid filter placed on the reuqester
         """
-        log.debug('limiting data pull to %i selected features on \'%s\''%(
-            vlay.selectedFeatureCount(), vlay.name()))
+        #=======================================================================
+        # log.debug('limiting data pull to %i selected features on \'%s\''%(
+        #     vlay.selectedFeatureCount(), vlay.name()))
+        #=======================================================================
         
         sfids = vlay.selectedFeatureIds()
         
@@ -2326,9 +2331,7 @@ def vlay_get_geo( #get geometry dict from layer
     #===========================================================================
 
     d = {f.id():f.geometry() for f in vlay.getFeatures(request)}
-    
-    log.debug('retrieved %i attributes from features on \'%s\''%(
-        len(d), vlay.name()))
+ 
     
     #===========================================================================
     # checks
@@ -2352,7 +2355,7 @@ def vlay_new_mlay(#create a new mlay
         #=======================================================================
         # defaults
         #=======================================================================
-        log = logger.getChild('vlay_new_mlay')
+ 
 
         #=======================================================================
         # prechecks
@@ -2361,7 +2364,8 @@ def vlay_new_mlay(#create a new mlay
             raise Error('expected a string for layname, isntead got %s'%type(layname))
         
         if gtype=='None':
-            log.warning('constructing mlay w/ \'None\' type')
+            pass
+            #log.warning('constructing mlay w/ \'None\' type')
         #=======================================================================
         # assemble into new layer
         #=======================================================================
@@ -2391,12 +2395,13 @@ def vlay_new_mlay(#create a new mlay
         if vlaym.wkbType() == 100:
             msg = 'constructed layer \'%s\' has NoGeometry'%vlaym.name()
             if gtype == 'None':
-                log.debug(msg)
+                pass
+                #log.debug(msg)
             else:
                 raise Error(msg)
 
         
-        log.debug('constructed \'%s\''%vlaym.name())
+        #log.debug('constructed \'%s\''%vlaym.name())
         return vlaym
     
 
@@ -2458,14 +2463,13 @@ def fields_build_new( #build qfields from different data containers
                     #logger=mod_logger,
                     ):
 
-    log = logger.getChild('fields_build_new')
+ 
     #===========================================================================
     # buidl the fields_d
     #===========================================================================
     if (fields_d is None) and (fields_l is None): #only if we have nothign better to start with
         if samp_d is None: 
-            log.error('got no data to build fields on!')
-            raise IOError
+            raise IOError('got no data to build fields on!')
         
         fields_l = []
         for fname, value in samp_d.items():
@@ -2478,7 +2482,7 @@ def fields_build_new( #build qfields from different data containers
             
             fields_l.append(field_new(fname, pytype=type(value)))
             
-        log.debug('built %i fields from sample data'%len(fields_l))
+        #log.debug('built %i fields from sample data'%len(fields_l))
         
     
     
@@ -2490,7 +2494,7 @@ def fields_build_new( #build qfields from different data containers
         for fname, ftype in fields_d.items():
             fields_l.append(field_new(fname, pytype=ftype))
             
-        log.debug('built %i fields from explicit name/type'%len(fields_l))
+        #log.debug('built %i fields from explicit name/type'%len(fields_l))
             
         #check it 
         if not len(fields_l) == len(fields_d):
@@ -2516,8 +2520,7 @@ def fields_build_new( #build qfields from different data containers
 
     #report
     if len(fail_msg_d)>0:
-        for indx, (msg, field) in fail_msg_d.items():
-            log.error(msg)
+ 
             
         raise Error('failed to write %i fields'%len(fail_msg_d))
     
@@ -2616,22 +2619,17 @@ def qtype_to_pytype( #convert object to the pythonic type taht matches the passe
             return obj.toPyDateTime()
         
         
-        log = logger.getChild('qtype_to_pytype')
+ 
         if obj is None:
-            log.error('got NONE type')
+            msg = 'got NONE type'
             
         elif isinstance(obj, QVariant):
-            log.error('got a Qvariant object')
+            msg ='got a Qvariant object'
             
         else:
-            log.error('unable to map object \'%s\' of type \'%s\' to type \'%s\''
-                      %(obj, type(obj), py_type))
-            
-            
-            """
-            QMetaType.typeName(obj)
-            """
-        raise IOError
+            msg ='unable to map object \'%s\' of type \'%s\' to type \'%s\''%(obj, type(obj), py_type)
+ 
+        raise IOError(msg)
     
 def ptype_to_qtype(py_type, 
                    #logger=mod_logger
@@ -2710,7 +2708,7 @@ def qisnull(obj):
 def is_qtype_match(obj, qtype_code, 
                    #logger=mod_logger,
                    ): #check if the object matches the qtype code
-    log = logger.getChild('is_qtype_match')
+
     
     #get pythonic type for this code
     try:
@@ -2718,8 +2716,8 @@ def is_qtype_match(obj, qtype_code,
     except:
 
         if not qtype_code in type_qvar_py_d.keys():
-            log.error('passed qtype_code \'%s\' not in dict from \'%s\''%(qtype_code, type(obj)))
-            raise IOError
+
+            raise IOError('passed qtype_code \'%s\' not in dict from \'%s\''%(qtype_code, type(obj)))
     
     if not isinstance(obj, py_type):
         #log.debug('passed object of type \'%s\' does not match Qvariant.type \'%s\''%(type(obj), QMetaType.typeName(qtype_code)))

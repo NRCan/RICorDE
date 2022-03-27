@@ -1063,7 +1063,35 @@ class QAlgos(object):
         
         mstore.removeAllMapLayers()
         return res_d['OUTPUT']
-    
+
+    def pixelstopoints(self,
+            rlay,
+            fieldName='VALUE',
+ 
+            logger=None,
+            output='TEMPORARY_OUTPUT',
+            ):
+        
+        #=======================================================================
+        # setups and defaults
+        #=======================================================================
+        if logger is None: logger=self.logger    
+        algo_nm = 'native:pixelstopoints'
+        log = logger.getChild('pixelstopoints')
+        
+ 
+ 
+        feedback=self.feedback
+            
+
+        ins_d = { 'FIELD_NAME' : fieldName, 'INPUT_RASTER' : rlay,
+                  'OUTPUT' : output, 'RASTER_BAND' : 1 }
+        
+        log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
+ 
+        res_d = processing.run(algo_nm, ins_d,  feedback=feedback, context=self.context)
+ 
+        return res_d['OUTPUT']
     #===========================================================================
     # QGIS--------
     #===========================================================================

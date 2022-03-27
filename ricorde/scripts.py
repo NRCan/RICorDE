@@ -64,7 +64,8 @@ from hp.dirz import force_open_dir
  
 #from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
-    QgsRasterLayer, QgsWkbTypes, vlay_get_fdf, QgsVectorLayer
+    QgsRasterLayer, QgsWkbTypes, vlay_get_fdf, QgsVectorLayer, vlay_get_fdata, \
+    vlay_get_geo
     
 from hp.oop import Session as baseSession
      
@@ -143,6 +144,10 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_beach1(**kwargs),
                 },
+            'b1Bounds':{
+                'compiled':lambda **kwargs:self.load_pick(**kwargs),
+                'build':lambda **kwargs:self.build_b1Bounds(**kwargs),
+                },
             'inunHmax':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_hmax(**kwargs),
@@ -150,6 +155,14 @@ class Session(TComs, baseSession):
             'inun2':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_inun2(**kwargs),
+                },
+            'beach2':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_beach2(**kwargs),
+                },
+            'hvGrid':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_hvgrid(**kwargs),
                 },
              
             }
@@ -818,7 +831,9 @@ class Session(TComs, baseSession):
         #get initial HAND beach values
         beach1_rlay=self.retrieve('beach1')
  
- 
+        #get beach bounds
+        beach1_bounds = self.retrieve('b1Bounds')
+        
         #get hydrauilc maximum
         inun_hmax = self.retrieve('inunHmax')
         
@@ -979,7 +994,7 @@ class Session(TComs, baseSession):
               #generals
               dkey=None,
               logger=None,write=None,
-              **kwargs):
+             ):
         """
         (rToSamp_fp=hand_fp, 
         inun_fp=inun1_fp,
@@ -1067,6 +1082,64 @@ class Session(TComs, baseSession):
         return samp_fp
         
             
+    def build_b1Bounds(self,
+               beach1_rlay = None,
+
+                          
+                #hand value stats
+               qhigh=0.9, cap=7.0, 
+               
+               qlow=0.1, floor=0.5, 
+               
+               #gen
+              dkey=None, logger=None,write=None,
+               ):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+        
+
+ 
+        assert dkey=='b1Bounds'
+        
+ 
+        layname, ofp = self.get_outpars(dkey, write)
+        
+        if beach1_rlay is None:
+            beach1_rlay = self.retrieve('beach1')
+        
+        #=======================================================================
+        # #get bounds
+        #=======================================================================
+        hv_d, meta_d = self.get_sample_bounds(beach1_rlay, qhigh=qhigh,cap=cap,
+                                           qlow=qlow, floor=floor, logger=log)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+ 
+        if self.exit_summary:
+ 
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+        
+ 
+        
+ 
+        log.info('for \'%s\' built: \n    %s'%(dkey, hv_d))
+        if write:
+            self.ofp_d[dkey] = self.write_pick(hv_d.copy(), 
+                                   os.path.join(self.wrk_dir, '%s_%s.pickle'%(self.layName_pfx, dkey)), 
+                                               logger=log)
+
+        return hv_d
+        
+        
+        
+    
     def get_sample_bounds(self, #get the min/max HAND values to use (from sample stats)
                           beach_lay,
                           
@@ -1161,14 +1234,13 @@ class Session(TComs, baseSession):
         
         return res_d, meta_d
     
-        
+    
+
     def build_hmax(self, #get the hydrauilc maximum inundation from sampled HAND values
-                   beach1_rlay = None,
+                   
                    hand_rlay=None,
+                   hval=None,
  
-                
-               #parameters
-               qhigh=0.9, cap=7.0, #hand value stats
                
                #gen
               dkey=None, logger=None,write=None,
@@ -1191,21 +1263,20 @@ class Session(TComs, baseSession):
         #=======================================================================
         # retrieve
         #=======================================================================
-        if beach1_rlay is None:
-            beach1_rlay = self.retrieve('beach1')
-        
+ 
         if hand_rlay is None:
             hand_rlay=self.retrieve('HAND')
-        #=======================================================================
-        # #get bounds
-        #=======================================================================
-        hv_d, meta_d = self.get_sample_bounds(beach1_rlay, qhigh=qhigh,cap=cap,  logger=log)
+            
+        if hval is None:
+            bounds=self.retrieve('b1Bounds')
+            hval = bounds['qhi']
+
         
         #=======================================================================
         # get inundation
         #=======================================================================
-        meta_d['hval'] = hv_d['qhi']
-        self.get_hand_inun(hand_rlay,meta_d['hval'] , logger=log, ofp=ofp)
+ 
+        self.get_hand_inun(hand_rlay,hval, logger=log, ofp=ofp)
             
 
         #=======================================================================
@@ -1214,7 +1285,7 @@ class Session(TComs, baseSession):
         rlay = self.rlay_load(ofp, logger=log)
         if self.exit_summary:
  
-            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+            self.smry_d[dkey] = pd.Series({'hval':hval}).to_frame()
         
         if write:self.ofp_d[dkey]=ofp
         
@@ -1223,6 +1294,7 @@ class Session(TComs, baseSession):
 
         return rlay
     
+
     def build_inun2(self, #merge inun_2 with the max
                     inun1_rlay=None,
                     inun_hmax=None,
@@ -1283,7 +1355,7 @@ class Session(TComs, baseSession):
 
         return rlay
     
-    def build_inun2_vlay(self,
+    def xxxbuild_inun2_vlay(self,
                          inun2r_fp='',
                          clean_kwargs={}, 
                          logger=None,
@@ -1356,7 +1428,7 @@ class Session(TComs, baseSession):
     # PHASE2: Rolling HAND----------
     #===========================================================================
     
-    def run_hdep_mosaic(self, #get mosaic of depths (from HAND values)
+    def run_hdepMosaic(self, #get mosaic of depths (from HAND values)
                   inun2_fp=None,
                   hand_fp=None,
                    ndb_fp=None, #nodata boundary polygon
@@ -1382,24 +1454,32 @@ class Session(TComs, baseSession):
         log=logger.getChild('rHdMo')
         start =  datetime.datetime.now()
         
-        ofp_d_old = copy.copy(self.afp_d)
-        #=======================================================================
-        # datafile ssetup
-        #=======================================================================
- 
-        
-        if inun2_fp is None: inun2_fp=self.afp_d['inun2_fp']
-        if hand_fp is None: hand_fp=self.afp_d['hand_fp']
-        if ndb_fp is None: ndb_fp=self.afp_d['ndb_fp']
-        if inun2r_fp is  None: inun2r_fp=self.afp_d['inun2r_fp']
-        if dem_fp is None: dem_fp=self.afp_d['dem_fp']
-        
-        
-        if hv_min is None: hv_min=self.hv_min
-        if hv_max is None: hv_max=self.hv_max
- 
- 
-        self.mstore.removeAllMapLayers() 
+#==============================================================================
+#        ofp_d_old = copy.copy(self.afp_d)
+#        #=======================================================================
+#        # datafile ssetup
+#        #=======================================================================
+# 
+#        
+#        if inun2_fp is None: inun2_fp=self.afp_d['inun2_fp']
+#        if hand_fp is None: hand_fp=self.afp_d['hand_fp']
+#        if ndb_fp is None: ndb_fp=self.afp_d['ndb_fp']
+#        if inun2r_fp is  None: inun2r_fp=self.afp_d['inun2r_fp']
+#        if dem_fp is None: dem_fp=self.afp_d['dem_fp']
+#        
+#        
+#        if hv_min is None: hv_min=self.hv_min
+#        if hv_max is None: hv_max=self.hv_max
+# 
+# 
+#        self.mstore.removeAllMapLayers() 
+#==============================================================================
+        self.clear_all() #release everything from memory and reset the data containers
+        """
+        self.compiled_fp_d
+        self.mstore_log()
+        self.data_d.keys()
+        """
         #=======================================================================
         # get rolling hand values
         #=======================================================================
@@ -1408,13 +1488,20 @@ class Session(TComs, baseSession):
             this approximates the event HAND with rolling values
         
         """
-        hvgrid_fp = self.build_hvgrid(inun2_fp=inun2_fp, inun2r_fp=inun2r_fp,
-                                      hand_fp=hand_fp,ndb_fp=ndb_fp,
-                                      sample_spacing=None, #use default. #None=dem_psize x 5
-                                      max_grade = 0.1, #maximum hand value grade to allow 
-                                      hval_prec=hval_prec,
-                                      hv_min=hv_min, hv_max=hv_max, #value caps
-                                      logger=log)
+        beach2_rlay = self.retrieve('beach2')
+        return
+        hvgrid = self.retrieve('hvGrid')
+        
+        
+        #=======================================================================
+        # hvgrid_fp = self.build_hvgrid(inun2_fp=inun2_fp, inun2r_fp=inun2r_fp,
+        #                               hand_fp=hand_fp,ndb_fp=ndb_fp,
+        #                               sample_spacing=None, #use default. #None=dem_psize x 5
+        #                               max_grade = 0.1, #maximum hand value grade to allow 
+        #                               hval_prec=hval_prec,
+        #                               hv_min=hv_min, hv_max=hv_max, #value caps
+        #                               logger=log)
+        #=======================================================================
         
         
         #=======================================================================
@@ -1456,47 +1543,189 @@ class Session(TComs, baseSession):
         return datetime.datetime.now() - start
     
         
-    def build_hvgrid(self, #get gridded HAND values from some indundation
-                *args,
-              logger=None,
-              **kwargs):
+    def build_beach2(self, #beach values (on inun2 w/ some refinement)
+             
+             #datalayesr
+             hand_rlay=None,
+             inun2_rlay=None,
+             
+             #parameters
+             bounds=None, 
+             
+               #gen
+               write_csv=False,
+              dkey=None, logger=None,write=None,
+                  ):
+ 
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+        
+ 
+ 
+        assert dkey=='beach2'
+        
+ 
+        layname, ofp = self.get_outpars(dkey, write, ext='.gpkg')
+        
+ 
+ 
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if bounds is None: # hi/low quartiles from beach1
+            bounds = self.retrieve('b1Bounds')
+            
+        if hand_rlay is None:
+            hand_rlay=self.retrieve('HAND')
+ 
+        if inun2_rlay is None:
+            inun2_rlay=self.retrieve('inun2')
+            
+        mstore=QgsMapLayerStore()
+        
+        
+        #=======================================================================
+        # get raw samples
+        #=======================================================================
+        samp_raw_fp = self.get_beach_rlay(
+            inun_rlay=inun2_rlay, base_rlay=hand_rlay, logger=log)
+        
+        #convert to points
+        fieldName='hvals'
+        samp_raw_pts = self.pixelstopoints(samp_raw_fp, logger=log, fieldName=fieldName)
+        
+        mstore.addMapLayer(samp_raw_pts)
+        samp_raw_pts.setName('%s_samp_raw'%dkey)
+        #=======================================================================
+        # cap samples
+        #=======================================================================
+        samp_cap_vlay, df, meta_d = self.get_capped_pts(samp_raw_pts, 
+                                   logger=log, fieldName=fieldName,
+                            vmin=bounds['qlo'], vmax=bounds['qhi'])
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        
+        if write:
+            self.ofp_d[dkey] = self.vlay_write(samp_cap_vlay,ofp,  logger=log)
+            
+        if write_csv:
+            """for plotting later"""
+            ofp = os.path.join(self.out_dir, '%s_%s_hvals.csv'%(self.layName_pfx, dkey))
+            df.to_csv(ofp)
+            log.info('wrote %s to %s'%(str(df.shape), ofp))
+            
+            
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+ 
+ 
+        return samp_cap_vlay
+ 
+ 
+        
+    def get_capped_pts(self, #force lower/upper bounds on some points
+                    vlay_raw, #points vector layer
+                    fieldName='hvals', #field name on vlay with sample values
+                    
+                    #parameters
+                    vmin=None, #minimum HAND value to allow
+                    vmax=None,
+                    
+                    
+                    prec=3,
+                    #plot=None,
+                    logger=None,
+                    ):
         
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.hvgrid')
+        log=logger.getChild('get_capped_pts')
         
+        assert isinstance(vmin, float)
+        assert isinstance(vmax, float)
+        #===================================================================
+        # setup
+        #===================================================================
+        log.info('forcing bounds (%.2f and %.2f) on  %s'%(
+            vmin, vmax, vlay_raw.name()))
  
-        fp_key = 'hvgrid_fp'
+        #===================================================================
+        # get values
+        #===================================================================
+        sraw = pd.Series(vlay_get_fdata(vlay_raw, fieldName), dtype=float, name=fieldName).round(prec)
+ 
+        assert sraw.notna().all()
+ 
+        sclean = sraw.copy()
+        #===================================================================
+        # force new lower bounds
+        #===================================================================
+        bx = sraw<vmin
+        sclean.loc[bx] = vmin
         
-        #=======================================================================
-        # build
-        #=======================================================================
-        if not fp_key in self.fp_d:
-            log.info('building \'%s\' w/ %s %s'%(fp_key, args, kwargs))
-            from ricorde.hand_inun import HIses as SubSession
-            
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d,
-                            fp_d=self.fp_d) as wrkr:
-            
-                ofp_d, meta_d = wrkr.run_hvgrid(*args, fp_key=fp_key, **kwargs)
-                
-            self.ofp_d.update(ofp_d)
-            self.meta_d.update(meta_d) #this function is too complex to report as a block (should promote)
-            ofp = ofp_d[fp_key] #pull out the focal dataset for consistency
-        #=======================================================================
-        # load
-        #=======================================================================
+        #===================================================================
+        # force upper bounds
+        #===================================================================
+        bx_up = sraw>vmax
+        sclean.loc[bx_up] = vmax
+        
+        log.info('set %i / %i (of %i) min/max vals %.2f / %.2f'%(
+            bx.sum(), bx_up.sum(), len(bx), vmin, vmax))
+        
+        #===================================================================
+        # build result
+        #===================================================================
+        if (not bx_up.any()) and (not bx.any()):
+            res_vlay = vlay_raw
+            log.warning('set zero caps... returning raw')
         else:
-            ofp = self.fp_d[fp_key]
-                
+        
+            geo_d= vlay_get_geo(vlay_raw)
+            
+            res_vlay = self.vlay_new_df(sclean.to_frame(), geo_d=geo_d, logger=log)
+        
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('got %s \n    %s'%(fp_key, ofp))
+        meta_d = {'max_cap_cnt':bx_up.sum(), 
+                       'min_floor_cnt':bx.sum(),
+                       'total':len(bx)}
         
-        return ofp
+        df = pd.concat({'raw':sraw, 'capped':sclean}, axis=1)
+        
+        
+        return res_vlay, df, meta_d
+ 
+        
+    def build_hvgrid(self, #get gridded HAND values from some indundation
+             
+             #datalayesr
+             hand_rlay=None,
+             inun2_rlay=None,
+             
+               #gen
+              dkey=None, logger=None,write=None,
+                  ):
+ 
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+        
+
+ 
+        assert dkey=='hvGrid'
+ 
+ 
     
     def build_hiSet(self, #get HAND derived inundations
                     *args,
@@ -1780,15 +2009,20 @@ class Session(TComs, baseSession):
     #===========================================================================
     # helpers--------
     #===========================================================================
-    def get_outpars(self, dkey, write
+    def clear_all(self): #clear all the loaded data
+        self.data_d = dict()
+        self.mstore.removeAllMapLayers()
+        self.compiled_fp_d.update(self.ofp_d) #copy everything over to compiled
+        
+    def get_outpars(self, dkey, write, ext='.tif'
                     ):
                 #output
         layname = '%s_%s'%(self.layName_pfx, dkey) 
         if write:
-            ofp = os.path.join(self.wrk_dir, layname+'.tif')
+            ofp = os.path.join(self.wrk_dir, layname+ext)
             
         else:
-            ofp=os.path.join(self.temp_dir, layname+'.tif')
+            ofp=os.path.join(self.temp_dir, layname+ext)
             
         if os.path.exists(ofp):
             assert self.overwrite

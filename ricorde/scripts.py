@@ -640,7 +640,7 @@ class Session(TComs, baseSession):
         log.info('finished on %s'%rlay.name())
  
         
-        return ofp
+        return rlay
             
             
      

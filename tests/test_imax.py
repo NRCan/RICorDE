@@ -38,8 +38,21 @@ def test_03inun(session, true_dir, dem, write, base_dir):
     dkey = 'inun_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
  
-
+@pytest.mark.dev
+@pytest.mark.parametrize('dem_fp',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
+def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
     
+    #set the compiled references
+    session.compiled_fp_d = {
+        'dem':os.path.join(base_dir, dem_fp),
+        }
+    
+    
+    dkey = 'dem_hyd'
+    test_rlay = session.retrieve(dkey, write=write )
+
+    rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
 
 
 @pytest.mark.parametrize('pwb_rlay',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb
@@ -92,7 +105,7 @@ def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp
 
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('sample_spacing',[10] ) #othwerwise the dem needs to be loaded
 @pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0326_HAND_mask.tif'] ) #from test_hand_mask
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 

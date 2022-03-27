@@ -26,14 +26,14 @@ def test_01dem(session, true_dir, dem_psize):
 
 
 @pytest.mark.parametrize('proj_d',['fred02'], indirect=True) #feeds through the session (see conftest.py) 
-@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0326_2x2_dem.tif'] ) #from test_pwb
+@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 def test_02pwb(session, true_dir, dem, write, base_dir):
     dkey = 'pwb_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
     
- 
-@pytest.mark.parametrize('proj_d',['fred02'], indirect=True) #feeds through the session (see conftest.py) 
-@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0326_2x2_dem.tif'] ) #from test_pwb
+@pytest.mark.dev
+@pytest.mark.parametrize('proj_d',['fred01','fred02'], indirect=True) #raster and polygon inundations
+@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 def test_03inun(session, true_dir, dem, write, base_dir):
     dkey = 'inun_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
@@ -41,7 +41,7 @@ def test_03inun(session, true_dir, dem, write, base_dir):
 
     
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('pwb_rlay',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0326_pwb_rlay.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 def test_04hand(session, true_dir, pwb_rlay, write, base_dir):

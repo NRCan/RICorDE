@@ -187,8 +187,13 @@ class TComs(Qproj):
         #===================================================================
         # remove fields
         #===================================================================
-        vlay3 = self.deletecolumn(vlay2, [f.name() for f in vlay2.fields()], logger=log)
-        mstore.addMapLayer(vlay3)
+        fnl = [f.name() for f in vlay2.fields()]
+        if len(fnl)>0:
+            vlay3 = self.deletecolumn(vlay2,fnl, logger=log)
+            mstore.addMapLayer(vlay3)
+        else:
+            vlay3=vlay2
+        
         
         #===================================================================
         # simplify 

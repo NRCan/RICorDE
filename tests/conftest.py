@@ -252,11 +252,7 @@ def compare_layers(vtest, vtrue, #two containers of layers
         testStats_d = rasterstats(vtest) #getRasterStatistics(vtest.source())
         trueStats_d = rasterstats(vtrue) # getRasterStatistics(vtrue.source())
         
-        df = pd.DataFrame.from_dict({'true':trueStats_d, 'test':testStats_d}).loc[['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'], :].round(3)
-        
-        bx = ~df['test'].eq(other=df['true'], axis=0)
-        if bx.any():
-            raise AssertionError('%i/%i raster stats failed to match\n%s'%(bx.sum(), len(bx), df.loc[bx,:]))
+        compare_dicts(testStats_d, trueStats_d, coln_l=['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'])
  
         
         """
@@ -269,6 +265,20 @@ def compare_layers(vtest, vtrue, #two containers of layers
             ar_true = rlay_to_array(vtrue.source())
             
             assert_equal(ar_test, ar_true)
+            
+def compare_dicts(dtest, dtrue, index_l = None,
+                 ):
+        df1 = pd.DataFrame.from_dict({'true':dtrue, 'test':dtest})
+        
+        if index_l is None:
+            index_l = df1.index.tolist()
+        
+        df2 = df1.loc[index_l,: ].round(3)
+        
+        bx = ~df2['test'].eq(other=df2['true'], axis=0)
+        if bx.any():
+            raise AssertionError('%i/%i raster stats failed to match\n%s'%(bx.sum(), len(bx), df2.loc[bx,:]))
+    
             
 def rasterstats(rlay): 
       

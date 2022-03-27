@@ -41,7 +41,7 @@ def test_03inun(session, true_dir, dem, write, base_dir):
 
     
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('pwb_rlay',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 def test_04hand(session, true_dir, pwb_rlay, write, base_dir):
@@ -58,8 +58,8 @@ def test_04hand(session, true_dir, pwb_rlay, write, base_dir):
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-
-@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_02pwb_0\working\test_tag_0326_HAND.tif'] ) #from test_hand
+@pytest.mark.dev
+@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_02pwb_0\working\test_tag_0327_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_05handMask(session, true_dir, hand_fp, write, base_dir):
     

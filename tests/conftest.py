@@ -45,7 +45,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=False
+    write=True
     #===========================================================================
     # write key
     #===========================================================================
@@ -131,12 +131,14 @@ def session(tmp_path,
                    overwrite=True,
                    write=write, #avoid writing prep layers
                    exit_summary=False,
-                   
+                   compiled_fp_d=dict(), #I guess my tests are writing to the class... no tthe instance
                    **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
                    ) as ses:
         
-        #assert len(ses.data_d)==0
+        assert len(ses.data_d)==0
+        assert len(ses.compiled_fp_d)==0
         yield ses
+ 
  
 #===============================================================================
 # session.fixtures----------

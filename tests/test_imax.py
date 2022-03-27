@@ -107,7 +107,7 @@ def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp
 
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('inun1',[r'test_06inun1_fred01_test_03inu0\working\test_tag_0327_inun1.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
@@ -124,6 +124,22 @@ def test_07beach1(session, true_dir, write, base_dir, inun1, hand_fp):
 
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
+@pytest.mark.dev
+@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('beach1',[r'test_07beach1_fred01_test_06in0\working\test_tag_0327_beach1.tif'] )  
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_08inunHmax(session, true_dir, write, base_dir, beach1, hand_fp):
+    
+    #set the compiled references
+    session.compiled_fp_d={
+        'beach1':os.path.join(base_dir, beach1),
+        'HAND':os.path.join(base_dir, hand_fp),
+        }
+    
+    dkey = 'inunHmax'
+    test_rlay = session.retrieve(dkey, write=write)
+
+    rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================
 # commons--------
 #===============================================================================

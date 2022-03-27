@@ -147,6 +147,10 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_hmax(**kwargs),
                 },
+            'inun2':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_inun2(**kwargs),
+                },
              
             }
         
@@ -791,26 +795,12 @@ class Session(TComs, baseSession):
     # PHASE1: Inundation Correction---------
     #===========================================================================
     def run_imax(self,
-                  #input data
-                     #==========================================================
-                     # dem_fp=None,
-                     # nhn_fp=None,
-                     # fic_fp=None,
-                     #==========================================================
-                     
-                     #get_edge_samples
-                     sample_spacing=None, #HAND sample point spacing. None=dem*5
-                     
-                     #get_sample_bounds
-                     qhigh=0.75, #quartile defining the maximum inundation HAND value
-                     qlow=0.25,
  
-                      logger=None,
                  ):
         #=======================================================================
         # defaults
         #=======================================================================
-        if logger is None: logger=self.logger
+        logger=self.logger
         log=logger.getChild('rImax')
         start =  datetime.datetime.now()
         
@@ -832,14 +822,17 @@ class Session(TComs, baseSession):
         #get hydrauilc maximum
         inun_hmax = self.retrieve('inunHmax')
         
-        #inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_d['qhi'],logger=log)
+ 
         
-        return
+        
         
         #=======================================================================
         # reduce inun by the hydrauilc maximum
         #=======================================================================
-        #clip inun1 by hydrauilc  maximum (raster) 
+        #clip inun1 by hydrauilc  maximum (raster)
+        inun2_rlay = self.retrieve('inun2') 
+        
+        return
         inun2r_fp = self.build_inun2(inun1_fp, inun_hmax_fp, logger=log)
         
         #vector polygons
@@ -1197,7 +1190,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         if write is None: write=self.write
-        log=logger.getChild('b.hmax')
+        log=logger.getChild('b.%s'%dkey)
         
 
  
@@ -1242,74 +1235,64 @@ class Session(TComs, baseSession):
         return rlay
     
     def build_inun2(self, #merge inun_2 with the max
-                  inun1_fp,
-                  hInun_max_fp,
+                    inun1_rlay=None,
+                    inun_hmax=None,
+                    
                   
-                  logger=None,
+               #gen
+              dkey=None, logger=None,write=None,
                   ):
  
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.inun2r')
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+        
 
-        fp_key = 'inun2r_fp'
+ 
+        assert dkey=='inun2'
+        
+ 
+        layname, ofp = self.get_outpars(dkey, write)
+ 
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if inun_hmax is None:
+            inun_hmax=self.retrieve('inunHmax')
+            
+        if inun1_rlay is None:
+            inun1_rlay = self.retrieve('inun1')
+ 
+ 
+        log.info('maxFiltering \'%s\' with \'%s\''%(
+            inun1_rlay.name(),
+            inun_hmax.name()))
+        
+ 
  
         
-        #=======================================================================
-        # build
-        #=======================================================================
-        if not fp_key in self.fp_d:
-            #===================================================================
-            # setup
-            #===================================================================
-            log.info('maxFiltering \'%s\' with \'%s\''%(
-                os.path.basename(inun1_fp),
-                os.path.basename(hInun_max_fp)))
- 
-            #filepaths
- 
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_inun2r.tif')
-            if os.path.exists(ofp): 
-                assert self.overwrite
-                os.remove(ofp)
-            
-            #===================================================================
-            # rasterize inundation polygon
-            #===================================================================
-
-            inun2_rlay_fp = self.rasterize_inun(inun1_fp, 
-                            ref_lay=hInun_max_fp,
-                            ofp=os.path.join(self.temp_dir, '%s_rasterized.tif'%fp_key), #get a filepath
-                                                 logger=log)
- 
-            #===================================================================
-            # apply fillter
-            #===================================================================
-            self.inun_max_filter(inun2_rlay_fp, hInun_max_fp, 
-                            ofp=ofp,logger=log)
+        #===================================================================
+        # apply fillter
+        #===================================================================
+        self.inun_max_filter(inun_hmax.source(), inun1_rlay.source(),
+                             ofp=ofp,logger=log)
             
  
-            
-            #===================================================================
-            # wrap
-            #===================================================================
-            self.ofp_d[fp_key]= ofp
-            
-        else:
-            ofp = self.fp_d[fp_key]
-
-        
         #=======================================================================
         # wrap
         #=======================================================================
+        rlay = self.rlay_load(ofp, logger=log)
  
         
-        log.info('got rectified hydrauilc maximum inundation  \'%s\' \n    %s'%(
-               fp_key, ofp))
+        if write:self.ofp_d[dkey]=ofp
         
-        return ofp
+ 
+        log.info('for \'%s\' built: \n    %s'%(dkey, ofp))
+
+        return rlay
     
     def build_inun2_vlay(self,
                          inun2r_fp='',

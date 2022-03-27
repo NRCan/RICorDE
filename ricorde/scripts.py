@@ -159,14 +159,15 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.vlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_beach2(**kwargs),
                 },
-            'beach2Interp':{
+            'hgRaw':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
-                'build':lambda **kwargs:self.build_beach2Interp(**kwargs),
+                'build':lambda **kwargs:self.build_hgRaw(**kwargs),
                 },
-            'hvGrid':{
+            'hgSmooth':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
-                'build':lambda **kwargs:self.build_hvgrid(**kwargs),
+                'build':lambda **kwargs:self.build_hgSmooth(**kwargs),
                 },
+ 
              
             }
         
@@ -1428,10 +1429,10 @@ class Session(TComs, baseSession):
         return ofp
     
     #===========================================================================
-    # PHASE2: Rolling HAND----------
+    # PHASE2: Rolling HAND grid----------
     #===========================================================================
     
-    def run_hdepMosaic(self, #get mosaic of depths (from HAND values)
+    def run_HANDgrid(self, #get mosaic of depths (from HAND values)
                   inun2_fp=None,
                   hand_fp=None,
                    ndb_fp=None, #nodata boundary polygon
@@ -1454,7 +1455,7 @@ class Session(TComs, baseSession):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('rHdMo')
+        log=logger.getChild('rHgrid')
         start =  datetime.datetime.now()
         
 #==============================================================================
@@ -1493,11 +1494,11 @@ class Session(TComs, baseSession):
         """
         beach2_rlay = self.retrieve('beach2')
         
-        self.retrieve('beach2Interp')
+        hgRaw_rlay = self.retrieve('hgRaw')
         
+        
+        hvgrid = self.retrieve('hgSmooth')
         return
-        hvgrid = self.retrieve('hvGrid')
-        
         
         #=======================================================================
         # hvgrid_fp = self.build_hvgrid(inun2_fp=inun2_fp, inun2r_fp=inun2r_fp,
@@ -1707,7 +1708,7 @@ class Session(TComs, baseSession):
         
         return res_vlay, df, meta_d
     
-    def build_beach2Interp(self, #build interpolated surface from edge points
+    def build_hgRaw(self, #interpolate and grow the beach 2 values
              
              #datalayesr
              beach2_vlay=None,
@@ -1735,7 +1736,7 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
  
-        assert dkey=='beach2Interp'
+        assert dkey=='hgRaw'
         
 
             
@@ -1817,10 +1818,7 @@ class Session(TComs, baseSession):
         rlay = self.rlay_load(ofp, logger=log)
         if write:
             self.ofp_d[dkey] = ofp
-            
  
-            
-            
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
  
@@ -1829,17 +1827,30 @@ class Session(TComs, baseSession):
         
  
         
-    def build_hvgrid(self, #get gridded HAND values from some indundation
+    def build_hgSmooth(self, #smoth the rolling hand grid (low-pass and downsample)
              
              #datalayesr
-             beach2_vlay=None,
+             hgRaw_vlay=None,
              
-             hand_rlay=None,
-             inun2_rlay=None,
+             #parameters
+              resolution=None,
+             
+             range_thresh=None, #maximum range (between HAND cell values) to allow
+                #None: calc from max_slope and resolution
+             max_grade = 0.05, #maximum hand value grade to allow 
+             
+             neighborhood_size = 7,
+             
+             max_iter=20, #maximum number of smoothing iterations to allow
+             hval_prec=0.2, #reserved for mround
+             
              
                #gen
-              dkey=None, logger=None,write=None,
+              dkey=None, logger=None,write=None, debug=False,
                   ):
+        """
+        this is super nasty... must be a nice pre-built low-pass filter out there
+        """
  
         #=======================================================================
         # defaults
@@ -1848,30 +1859,331 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
  
-        assert dkey=='hvGrid'
+        assert dkey=='hgSmooth'
         
-        layname, ofp = self.get_outpars(dkey, write, ext='.gpkg')
+        layname, ofp = self.get_outpars(dkey, write)
+        meta_d = dict()
         
+ 
         #=======================================================================
         # retrieve
         #=======================================================================
-        if beach2_vlay is None:
-            beach2_vlay=self.retrieve('beach2')
+        if hgRaw_vlay is None:
+            hgRaw_vlay=self.retrieve('hgRaw')
         
         #=======================================================================
-        # smothed and gridded rolling HAND values 
+        # parameters 2
         #=======================================================================
+ 
+        if resolution is None: 
+            """not much benefit to downsampling actually
+                    just makes the smoothing iterations faster"""
+            resolution = int(self.rlay_get_resolution(hgRaw_vlay)*3)
+            
+        if range_thresh is  None:
+            """capped at 2.0 for low resolution runs""" 
+            range_thresh = min(max_grade*resolution, 2.0)
+            
+            
+        meta_d.update({'smooth_resolution':resolution, 'smooth_range_thresh':range_thresh})
+            
+        log.info('applying low-pass filter and downsampling (%.2f) from %s'%(
+            resolution, hgRaw_vlay.name()))
+ 
+        
+        
+        #===================================================================
+        # smooth initial
+        #===================================================================
+        smooth_rlay_fp1 = self.rNeighbors(hgRaw_vlay,
+                        neighborhood_size=neighborhood_size, 
+                        circular_neighborhood=True,
+                        cell_size=resolution,
+                        #output=ofp, 
+                        logger=log)
+        
+        assert os.path.exists(smooth_rlay_fp1)
+        #===================================================================
+        # get mask
+        #===================================================================
+        """
+        getting a new mask from teh smoothed as this has grown outward
+        """
+        mask_fp = self.mask_build(smooth_rlay_fp1, logger=log,
+                        ofp=os.path.join(self.temp_dir, 'inun31_mask.tif'))
+        
 
+        #===================================================================
+        # smooth loop-----
+        #===================================================================
+        #===================================================================
+        # setup
+        #===================================================================
+        rlay_fp_i=smooth_rlay_fp1
+        rval = 99.0 #dummy starter value
+        rvals_d = dict()
         
-        #low-pass and downsample
-        hvgrid_fp, d = self.smooth_hvals(interp2_rlay_fp, logger=log,
-                                      range_thresh=range_thresh,max_grade=max_grade,
-                                      hval_prec=hval_prec,fp_key=fp_key
-                                      )
+        #directories
+        temp_dir = os.path.join(self.temp_dir, 'smoothing')
+        if not os.path.exists(temp_dir): os.makedirs(temp_dir)
         
-        meta_d.update({'smooth_hvals':d})
+        #===================================================================
+        # loopit
+        #===================================================================
+        fail_cnt = 0 #number of failures to smoothen
+        for i in range(0,max_iter):
+            #===============================================================
+            # #check range and smoth
+            #===============================================================
+            try:
+                check, rlay_fp_i, rvali, fail_pct = self.smooth_iter(rlay_fp_i, 
+                                                           range_thresh=range_thresh,
+                                                           mask=mask_fp,
+                                                           logger=log.getChild(str(i)),
+                                                           out_dir=temp_dir,
+                                                           sfx='%03d'%i,
+                                                           debug=debug)
+            except Exception as e:
+                log.warning('smooth_iter %i failed w/ \n    %s'%(i, e))
+                fail_cnt=10
+                rvali=0
+
+            #===============================================================
+            # #check progress  
+            #===============================================================
+            if not rvali< rval:
+                """this can trip early on
+                TODO: more sophisticated trip"""
+                fail_cnt+=1
+                log.warning('(%i/%i) failed to reduce the range (%.2f>%.2f). fail_cnt=%i'%(
+                    i,max_iter-1, rvali, rval, fail_cnt))
+                
+            else:
+                fail_cnt=0 #reset counter
+            #===============================================================
+            # #wrap
+            #===============================================================
+            rval = rvali
+            rvals_d[i] = {
+                'rval':round(rvali,3), 'check':check,'fail_pct':fail_pct,'fail_cnt':fail_cnt, 
+                'fp':rlay_fp_i} 
+            
+            if check:
+                break
+            
+            #execsesive faiolure check
+            if fail_cnt>3:
+                log.warning('excessive concurrent failures...breaking')
+                break
+        #===================================================================
+        # #wrap
+        #===================================================================
+        meta_d.update({'smooth_iters':i, 'smooth_rval':round(rvali, 3)})
+        df = pd.DataFrame.from_dict(rvals_d, orient='index')
+
+        #sucess
+        if check:
+            log.info('achieved desired smoothness in %i iters \n    %s'%(i,
+                                                  df['rval'].to_dict()))
+        
+        #failure
+        else:
+            # retrieve minimum
+            """pulling the best we did"""
+            imin = df['rval'].idxmin()
+            rlay_fp_i = df.loc[imin, 'fp']
+            
+            
+            log.warning('FAILED smoothness in %i (%.2f>%.2f). taking i=%i\n    %s'%(
+                i,rvali, range_thresh, imin, df['rval'].to_dict()))
+        
+ 
+        #===================================================================
+        # copy to result path
+        #===================================================================
+        """TODO: replace with something that can mround"""
+        #self.roundraster(rlay_fp_i, prec=1, logger=log, output=ofp)
+        self.rlay_mround(rlay_fp_i, output=ofp, logger=log, multiple=hval_prec)
+
+        #===================================================================
+        # build animations
+        #===================================================================
+        if debug:
+            from hp.animation import capture_images
+            capture_images(
+                os.path.join(self.out_dir, dkey, self.layName_pfx+'_shvals_avg.gif'),
+                os.path.join(temp_dir, 'avg')
+                )
+            
+            capture_images(
+                os.path.join(self.out_dir, dkey, self.layName_pfx+'_shvals_range.gif'),
+                os.path.join(temp_dir, 'range')
+                )
+            
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        rlay = self.rlay_load(ofp, logger=log)
+        if write:
+            self.ofp_d[dkey] = ofp
+ 
+        if self.exit_summary:
+            df.copy() #add tot he summary sheet
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
  
  
+        return rlay
+ 
+    def smooth_iter(self,  #check if range threshold is satisifed... or smooth 
+                    rlay_fp, 
+                    range_thresh=1.0,
+                    neighborhood_size=3,
+                    #circular_neighborhood=True,
+                    mask=None,
+                    sfx='',
+                    out_dir=None,
+                    logger=None,
+                    debug=False,
+                    ):
+        """
+        spent a few hours on this
+            theres probably a nicer pre-buit algo I should be using
+            
+        most parameter configurations return the smoothest result on iter=2
+        """
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        
+        if logger is None: logger=self.logger
+        log=logger.getChild('iter')
+        log.debug('on %s'%os.path.join(rlay_fp))
+        
+        #setup directories
+        if out_dir is None: out_dir=self.temp_dir
+        
+        if not os.path.exists(os.path.join(out_dir, 'range')):
+            os.makedirs(os.path.join(out_dir, 'range'))
+            
+        if not os.path.exists(os.path.join(out_dir, 'avg')):
+            os.makedirs(os.path.join(out_dir, 'avg'))
+            
+        if not os.path.exists(os.path.join(out_dir, 'mask')):
+            os.makedirs(os.path.join(out_dir, 'mask'))
+            
+        #=======================================================================
+        # apply mask
+        #=======================================================================
+        
+        rlay_maskd_fp = self.mask_apply(rlay_fp, mask, logger=log)
+        assert os.path.exists(rlay_maskd_fp)
+        #=======================================================================
+        # get max mrange
+        #=======================================================================
+        range_fp = self.rNeighbors(rlay_maskd_fp,
+                            neighborhood_size=neighborhood_size, 
+                            circular_neighborhood=False,
+                            method='range',
+                            #mask=mask_range, #moved to a hard mask
+                            #output=os.path.join(out_dir, 'range','%s_range.tif'%sfx), #not working
+                            #logger=log,
+                            #feedback='none',
+                            )
+        #copy over
+        assert os.path.exists(range_fp)
+        if debug:
+            shutil.copyfile(range_fp,os.path.join(out_dir, 'range','%s_range.tif'%sfx))
+        
+        #get the statistics
+        stats_d = self.rasterlayerstatistics(range_fp)
+        rval = stats_d['MAX']        
+        #=======================================================================
+        # check critiera
+        #=======================================================================
+        if rval<=range_thresh:
+            log.debug('maximum range (%.2f) < %.2f'%(rval, range_thresh))
+            
+            
+            return True, rlay_maskd_fp, rval, 0
+        
+        #=======================================================================
+        # build mask of values failing criteria
+        #=======================================================================
+        range_mask = self.mask_build(range_fp, 
+                     thresh=(range_thresh*0.75), #values exceeding this are smoothed below
+                        #smoothing a bit beyond those failing seems to improve the overall
+                                     thresh_type='lower', logger=log,
+                                     ofp=os.path.join(out_dir, 'mask', '%s_range_mask.tif'%sfx))
+        
+        #get the fail count
+        fail_cnt = self.rasterlayerstatistics(range_mask)['SUM']
+        cell_cnt = self.rasterlayerstatistics(rlay_maskd_fp)['SUM']
+        pct = (fail_cnt/float(cell_cnt))*100.0
+        
+        assert cell_cnt>1
+        #=======================================================================
+        # apply smoothing to these
+        #=======================================================================
+        log.info('max range (%.2f) exceeds threshold (%.2f) on %.2f pct... smoothing'%(
+            rval, range_thresh,pct))
+        assert os.path.exists(rlay_maskd_fp)
+        assert os.path.exists(range_mask)
+        
+        """"
+        #=======================================================================
+        # #performance tests
+        #=======================================================================
+        neighborhood_size=7, circular_neighborhood=TRUE, mask=range_mask, resolution=15
+            range=2.96 (i=2)
+        
+        neighborhood_size=5, circular_neighborhood=TRUE, mask=range_mask, resolution=15
+            range=2.96 (i=2)
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=range_mask, resolution=15
+            range=2.96 (i=2)
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=range_mask, resolution=15, method='median'
+            range=3.137 (i=1)
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=range_mask*1.1, resolution=15
+            range=2.96 (i=2)
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=None, resolution=15
+            range=1.95 (i=19)
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=range_mask+0.5, resolution=15
+            range=2.96 (i=2), pct=1.62
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=range_mask/2.0, resolution=15
+            range=2.96 (i=1), pct=1.62
+            
+        neighborhood_size=5, circular_neighborhood=False, mask=range_mask*0.25, resolution=15
+            range=2.22(i=19), pct=22
+        
+        """
+        smooth_fp = self.rNeighbors(rlay_maskd_fp,
+                            neighborhood_size=neighborhood_size+2, #must be odd number 
+                            circular_neighborhood=True,
+                            method='average',
+                            mask=range_mask, #only smooth those failing the threshold
+                            #output=os.path.join(out_dir,'avg','%s_avg.tif'%sfx),
+                            #logger=log
+                            #feedback='none',
+                            )
+        assert os.path.exists(smooth_fp)
+        """good to have a different name for iterations"""
+        
+        ofp = os.path.join(os.path.dirname(smooth_fp), '%s_avg.tif'%sfx)
+        os.rename(smooth_fp,ofp)
+        #copy over
+        if debug:
+            shutil.copyfile(ofp,os.path.join(out_dir,'avg','%s_avg.tif'%sfx))
+        
+        return False, ofp, rval, fail_cnt
+    
+
+
     
     def build_hiSet(self, #get HAND derived inundations
                     *args,

@@ -193,6 +193,7 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
+    """todo.. output this as a geojson"""
     
     #set the compiled references
     session.compiled_fp_d={
@@ -221,7 +222,7 @@ def test_11beach2Interp(session, true_dir, write, base_dir, beach2, dem, inun2, 
         'inun2':os.path.join(base_dir, inun2),
         }
     
-    dkey = 'beach2Interp'
+    dkey = 'hgRaw'
     test_rlay = session.retrieve(dkey, write=write, interpResolution=interpResolution)
 
     layer_compare(dkey, true_dir, session, test_rlay, test_data=False)

@@ -1316,6 +1316,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
  
 
         """
+        raise IOError('moved')
         #=======================================================================
         # defaults
         #=======================================================================
@@ -1525,7 +1526,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             
         most parameter configurations return the smoothest result on iter=2
         """
-        
+        raise IOError('moved')
         #=======================================================================
         # defaults
         #=======================================================================

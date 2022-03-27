@@ -64,12 +64,12 @@ from hp.dirz import force_open_dir
  
 #from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
-    QgsRasterLayer, QgsWkbTypes, vlay_get_fdf
+    QgsRasterLayer, QgsWkbTypes, vlay_get_fdf, QgsVectorLayer
     
 from hp.oop import Session as baseSession
      
 from ricorde.tcoms import TComs
-from hp.gdal import get_nodata_val 
+from hp.gdal import get_nodata_val, rlay_to_array
 from hp.whitebox import Whitebox
 
 
@@ -142,7 +142,11 @@ class Session(TComs, baseSession):
             'beach1':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_beach1(**kwargs),
-                }
+                },
+            'inunHmax':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_hmax(**kwargs),
+                },
              
             }
         
@@ -821,20 +825,16 @@ class Session(TComs, baseSession):
         #=======================================================================
         # get hydrauilc maximum
         #=======================================================================
-        isamp1_vlay=self.retrieve('beach1')
-        return
-        
-        #get initial edge samples
-        #=======================================================================
-        # smpls1_fp = self.build_beach1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
-        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
-        #=======================================================================
-        
-        #get bounds
-        hv_max, hv_min = self.get_sample_bounds(smpls1_fp, qhigh=qhigh, qlow=qlow,logger=log)
-        
+        #get initial HAND beach values
+        beach1_rlay=self.retrieve('beach1')
+ 
+ 
         #get hydrauilc maximum
-        inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_max,logger=log)
+        inun_hmax = self.retrieve('inunHmax')
+        
+        #inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_d['qhi'],logger=log)
+        
+        return
         
         #=======================================================================
         # reduce inun by the hydrauilc maximum
@@ -986,7 +986,7 @@ class Session(TComs, baseSession):
 
         return rlay
     
-    def build_beach1(self, #beach sample HAND values 
+    def build_beach1(self, #raster of beach values (on HAND layer)
             #inputs
             hand_rlay=None,
             #handM_rlay=None,
@@ -1086,14 +1086,14 @@ class Session(TComs, baseSession):
         
             
     def get_sample_bounds(self, #get the min/max HAND values to use (from sample stats)
-                          pts_fp,
+                          beach_lay,
                           
                           #data parameters
-                          qhigh=0.75, 
-                          qlow=0.25,
+                          qhigh=None, 
+                          qlow=None,
                           
-                          cap=7.0, #maxiomum hval to allow (overwrite quartile
-                          floor = 0.5, #minimum
+                          cap=None, #maxiomum hval to allow (overwrite quartile
+                          floor = None, #0.5, #minimum
                           
                           coln=None,
                           logger=None,
@@ -1111,112 +1111,135 @@ class Session(TComs, baseSession):
 
         if coln is None: coln = self.smpl_fieldName
         
-        log.debug('on w/ qhigh=%.2f, qlow=%.2f from %s'%(
-            qhigh, qlow, os.path.basename(pts_fp)))
+        log.debug('on %s'% beach_lay.name())
+        
+        res_d = dict()
         
         #=======================================================================
-        # get stats----
+        # points
         #=======================================================================
-        mstore= QgsMapLayerStore()
+        if isinstance(beach_lay, QgsVectorLayer):
+            """leaving for backwards compatability"""
+            #vlay_raw = self.vlay_load(pts_fp, logger=log)
+            
+            #mstore.addMapLayer(vlay_raw)
+            
+            df_raw = vlay_get_fdf(beach_lay, logger=log)
+            assert 'float' in df_raw[coln].dtype.name
+            
+            sraw = df_raw[coln].round(prec).copy()
+            
         #=======================================================================
-        # load the layer
+        # raster
         #=======================================================================
-        vlay_raw = self.vlay_load(pts_fp, logger=log)
-        mstore.addMapLayer(vlay_raw)
-        
-        #===================================================================
-        # get values
-        #===================================================================
-        df_raw = vlay_get_fdf(vlay_raw, logger=log)
-        assert 'float' in df_raw[coln].dtype.name
-        
-        sraw = df_raw[coln].round(prec).copy()
-        
-        
+        elif isinstance(beach_lay, QgsRasterLayer):
+            ar = rlay_to_array(beach_lay.source())
+            sraw = pd.Series(ar.reshape((1, -1))[0], dtype=float).dropna().round(3).reset_index(drop=True)
+ 
+            
+            
+        else:
+            raise IOError('bad type: %s'%type(beach_lay))
+ 
         #===================================================================
         # upper bound
         #===================================================================
-        qh = sraw.quantile(q=qhigh)
-        if qh > cap:
-            log.warning('q%.2f (%.2f) exceeds cap (%.2f).. using cap'%(
-                qhigh, qh, cap))
-            hv_max = cap
-        else:
-            hv_max=qh
+        if not qhigh is None:
+            qh = sraw.quantile(q=qhigh)
+            if qh > cap:
+                log.warning('q%.2f (%.2f) exceeds cap (%.2f).. using cap'%(
+                    qhigh, qh, cap))
+                hv_max = cap
+            else:
+                hv_max=qh
             
+            res_d['qhi'] = round(hv_max, 3)
         #=======================================================================
         # lower bound
         #=======================================================================
-        ql = sraw.quantile(q=qlow)
-        if ql < floor:
-            log.warning('q%.2f (%.2f) is lower than floor (%.2f).. using floor'%(
-                qlow, ql, floor))
-            hv_min = floor
-        else:
-            hv_min=ql
+        if not qlow is None:
+            ql = sraw.quantile(q=qlow)
+            if ql < floor:
+                log.warning('q%.2f (%.2f) is lower than floor (%.2f).. using floor'%(
+                    qlow, ql, floor))
+                hv_min = floor
+            else:
+                hv_min=ql
+                
+            res_d['qlo'] = round(hv_min, 3)
             
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('got hv_max=%.2f, hv_min=%.2f'%(hv_max, hv_min))
+        log.info('got %s'%res_d)
         
-        self.hv_max=round(hv_max, 3)
-        self.hv_min=round(hv_min, 3)
+ 
             
-        self.meta_d.update({'get_sample_bounds':{'hv_max':self.hv_max, 'hv_min':self.hv_min}})
+        meta_d = {**{'qhigh':qhigh, 'qlow':qlow, 'cap':cap, 'floor':floor}, **res_d}
         
-        return self.hv_max, self.hv_min
+        return res_d, meta_d
     
         
     def build_hmax(self, #get the hydrauilc maximum inundation from sampled HAND values
-                hand_fp='',
-                hval=None,
-              logger=None,
-              **kwargs):
+                   beach1_rlay = None,
+                   hand_rlay=None,
+ 
+                
+               #parameters
+               qhigh=0.9, cap=7.0, #hand value stats
+               
+               #gen
+              dkey=None, logger=None,write=None,
+               ):
         
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
+        if write is None: write=self.write
         log=logger.getChild('b.hmax')
+        
+
  
-        fp_key = 'hInun_max_fp'
+        assert dkey=='inunHmax'
         
-        if hval is None: hval=self.hv_max #from get_sample_bounds()
+ 
+        layname, ofp = self.get_outpars(dkey, write)
         
         #=======================================================================
-        # build
+        # retrieve
         #=======================================================================
-        if not fp_key in self.fp_d:
-            log.info('building \'%s\' w/ %s %s'%(fp_key, hand_fp, kwargs))
+        if beach1_rlay is None:
+            beach1_rlay = self.retrieve('beach1')
+        
+        if hand_rlay is None:
+            hand_rlay=self.retrieve('HAND')
+        #=======================================================================
+        # #get bounds
+        #=======================================================================
+        hv_d, meta_d = self.get_sample_bounds(beach1_rlay, qhigh=qhigh,cap=cap,  logger=log)
+        
+        #=======================================================================
+        # get inundation
+        #=======================================================================
+        meta_d['hval'] = hv_d['qhi']
+        self.get_hand_inun(hand_rlay,meta_d['hval'] , logger=log, ofp=ofp)
             
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_hrun_imax_%03d.tif'%(hval*100))
-            
-            
-            from ricorde.tcoms import TComs as SubSession
-            
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d,
-                            fp_d=self.fp_d) as wrkr:
-            
-                wrkr.get_hand_inun(hand_fp, hval,ofp=ofp, **kwargs)
-                
 
-                
-            self.ofp_d[fp_key] = ofp
-            #self.meta_d.update(meta_d)
-
-        #=======================================================================
-        # load
-        #=======================================================================
-        else:
-            ofp = self.fp_d[fp_key]
-                
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('got %s \n    %s'%(fp_key, ofp))
+        rlay = self.rlay_load(ofp, logger=log)
+        if self.exit_summary:
+ 
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         
-        return ofp
+        if write:self.ofp_d[dkey]=ofp
+        
+ 
+        log.info('for \'%s\' built: \n    %s'%(dkey, ofp))
+
+        return rlay
     
     def build_inun2(self, #merge inun_2 with the max
                   inun1_fp,

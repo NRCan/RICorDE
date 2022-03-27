@@ -44,7 +44,7 @@ class Whitebox(object):
         
     def breachDepressionsLeastCost(self,
                                    dem_fp, #file path to fill. MUST BE UNCOMPRESSED!
-                                   dist=100, #pixe distance to fill
+                                   dist=100, #(Maximum search distance for breach paths in cells) pixel distance to fill
                                    ofp = None, #outpath
                                    logger=None,
         
@@ -70,8 +70,8 @@ class Whitebox(object):
                 '--run={}'.format(tool_nm),
                 '--dem=\'{}\''.format(dem_fp),
                 '--dist=%i'%dist,
-                '--min_dist=\'True\'',
-                '--fill=\'True\'',
+                '--min_dist=\'True\'', #Optional flag indicating whether to minimize breach distances
+                '--fill=\'True\'', # fill any remaining unbreached depressions
                 '--compress_raster=\'False\'',
                 '--output=\'{}\''.format(ofp),
 

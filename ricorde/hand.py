@@ -27,7 +27,7 @@ from ricorde.tcoms import TComs
 import whitebox
 from WBT.whitebox_tools import WhiteboxTools"""
 
-
+raise IOError('depreciated 2022-03-27')
 #===============================================================================
 # vars
 #===============================================================================
@@ -63,6 +63,7 @@ class HANDses(TComs):
                    logger=None,
                    ofp=None,
                    ):
+        """moved a lot of this to session.build_dem_hyd"""
         
  
         if logger is None: logger=self.logger

@@ -70,6 +70,7 @@ from hp.oop import Session as baseSession
      
 from ricorde.tcoms import TComs
 from hp.gdal import get_nodata_val 
+from hp.whitebox import Whitebox
 
 
 #===============================================================================
@@ -120,6 +121,11 @@ class Session(TComs, baseSession):
             'inun_rlay':{ #flood inundation observation
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
                 'build': lambda **kwargs:self.build_rlay(inun_fp, **kwargs), #rasters or gpkg
+                },
+            'dem_hyd':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build': lambda **kwargs:self.build_dem_hyd(**kwargs),
+                
                 },
             'HAND':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
@@ -540,110 +546,115 @@ class Session(TComs, baseSession):
     """
     
     #===========================================================================
-    # PHASE1: Inundation Correction---------
+    # PHASE0: Build HAND---------
     #===========================================================================
-    def run_imax(self,
-                  #input data
-                     #==========================================================
-                     # dem_fp=None,
-                     # nhn_fp=None,
-                     # fic_fp=None,
-                     #==========================================================
-                     
-                     #get_edge_samples
-                     sample_spacing=None, #HAND sample point spacing. None=dem*5
-                     
-                     #get_sample_bounds
-                     qhigh=0.75, #quartile defining the maximum inundation HAND value
-                     qlow=0.25,
- 
-                      logger=None,
+    def run_HAND(self,
+                 logger=None,
                  ):
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('rImax')
+        log=logger.getChild('rHand')
         start =  datetime.datetime.now()
-        
-        #ofp_d_old = copy.copy(self.afp_d)
-        
- 
         #=======================================================================
-        # #get the HAND layer
+        # run
         #=======================================================================
- 
+        #hydrocorrected DEM
+        dem_hyd = self.retrieve('dem_hyd', logger=log)
+        
         #get the hand layer
-        hand_rlay = self.retrieve('HAND', logger=log)        
- 
-         
-        #=======================================================================
-        # add minimum water bodies to FiC inundation
-        #=======================================================================
+        hand_rlay = self.retrieve('HAND', logger=log)  
         
-
         #nodata boundary of hand layer (polygon)
-        hand_mask = self.retrieve('HAND_mask')
- 
-        
-        inun1_rlay = self.retrieve('inun1')
-        #=======================================================================
-        # get hydrauilc maximum
-        #=======================================================================
-        return
-        isamp1_vlay=self.retrieve('isamp1')
-        
-        #get initial edge samples
-        #=======================================================================
-        # smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
-        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
-        #=======================================================================
-        
-        #get bounds
-        hv_max, hv_min = self.get_sample_bounds(smpls1_fp, qhigh=qhigh, qlow=qlow,logger=log)
-        
-        #get hydrauilc maximum
-        inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_max,logger=log)
-        
-        #=======================================================================
-        # reduce inun by the hydrauilc maximum
-        #=======================================================================
-        #clip inun1 by hydrauilc  maximum (raster) 
-        inun2r_fp = self.build_inun2(inun1_fp, inun_hmax_fp, logger=log)
-        
-        #vector polygons
-        inun2_fp = self.build_inun2_vlay(inun2r_fp, logger=log)
+        #hand_mask = self.retrieve('HAND_mask', logger=log) 
         
         #=======================================================================
         # wrap
         #=======================================================================
+        tdelta = datetime.datetime.now() - start
         
-        #get just those datalayers built by this function
-        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
-        log.info('built %i datalayers'%len(ofp_d))
+        log.info('finished in %s'%tdelta)
         
-        
-        self._log_datafiles(d=ofp_d)
-        
-        self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
-        
-        return datetime.datetime.now() - start
+        return
     
-    
+    def build_dem_hyd(self, #hydraulically corrected DEM
+                      dem_rlay=None,
+                      
+                      #parameters
+                      dist=100, #Maximum search distance for breach paths in cells
+                      
+                      #generals
+                      dkey=None, logger=None,write=None,
+                      ):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        if write is None: write=self.write
+        log=logger.getChild('build_dem_hyd')
+        assert dkey=='dem_hyd'
+        assert isinstance(dist, int)
         
+        if dem_rlay is None:
+            dem_rlay = self.retrieve('dem')
+            
+            
+ 
+        
+        #output
+        layname = '%s_%s'%(self.layName_pfx, dkey) 
+        if write:
+            ofp = os.path.join(self.wrk_dir, layname+'.tif')
+            self.ofp_d[dkey] = ofp
+        else:
+            ofp=os.path.join(self.temp_dir, layname+'.tif')
+            
+        if os.path.exists(ofp):
+            assert self.overwrite
+            os.remove(ofp)
+            
+        #=======================================================================
+        # precheck
+        #=======================================================================
+        #check compression
+        assert self.getRasterCompression(dem_rlay.source()) is None, 'dem has some compression: %s'%dem_rlay.name()
+        
+        #=======================================================================
+        # execute
+        #=======================================================================
+        ofp = Whitebox(out_dir=self.temp_dir, logger=logger
+                 ).breachDepressionsLeastCost(dem_rlay.source(), dist=dist, ofp=ofp)
+                 
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%ofp
+        
+        rlay = self.rlay_load(ofp, logger=log)
+        
+        if self.exit_summary:
+ 
+            self.smry_d[dkey] = pd.Series({'search_dist':dist}).to_frame()
+        
+        log.info('finished on %s'%rlay.name())
+ 
+        
+        return ofp
+            
+            
+     
     def build_hand(self, #load or build the HAND layer
                    dkey=None,
                    
-                   dem_rlay=None,
+                   demH_rlay=None, #hydro corrected DEM
                    pwb_rlay=None,
                    
                    write=None,
                    logger=None,
-                  **kwargs
+
                  ):
-        """
-        TODO: metadata?
-        """
+
         #=======================================================================
         # defaults
         #=======================================================================
@@ -652,61 +663,46 @@ class Session(TComs, baseSession):
         assert dkey == 'HAND'
         #if dem_fp is None: dem_fp=self.dem_fp
         if write is None: write=self.write
+        
+        layname, ofp = self.get_outpars(dkey, write)
         #=======================================================================
         # retrieve
         #=======================================================================
         if pwb_rlay is None:
             pwb_rlay = self.retrieve('pwb_rlay')
-        pwb_rlay_fp = pwb_rlay.source()
- 
-        
-        if dem_rlay is None:
-            dem_rlay = self.retrieve('dem')
+             
 
+        if demH_rlay is None:
+            demH_rlay = self.retrieve('dem_hyd')
 
-        dem_fp = dem_rlay.source() 
         
-        log.info('on %s'%{'pwb_rlay_fp':pwb_rlay_fp, 'dem_fp':dem_fp})
+        pwb_fp = pwb_rlay.source()
+        dem_fp = demH_rlay.source() 
+        
+        log.info('on %s'%{'pwb_fp':pwb_fp, 'dem_fp':dem_fp})
+        
         #=======================================================================
-        # build sub session
+        # precheck
         #=======================================================================
-        from ricorde.hand import HANDses
         
-        """using a pretty complicated inheritance parameter passing
-        seems to be working... but I wouldnt do this again
-        see oop.Session.inherit
-        """
+        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
         
-        if write:
-            ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-        else:
-            """warning: the subsession will delete its temp_dir"""
-            ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
- 
+        #=======================================================================
+        # execute
+        #=======================================================================
+        Whitebox(out_dir=self.out_dir, logger=logger
+                 ).elevationAboveStream(dem_fp, pwb_fp, out_fp=ofp)
         
-        with HANDses(session=self, logger=logger,  inher_d=self.childI_d,  feedback=self.feedback,
-                     temp_dir = os.path.join(self.temp_dir, 'HANDses'), 
-                     write=write, #otherwise
-                     ) as wrkr:
- 
-            """passing all filepathss for a clean kill"""
-            fp = wrkr.run(dem_fp=dem_fp, pwb_fp = pwb_rlay_fp, 
-                          ofp=ofp, #easier to control at this level
-                          **kwargs)
-            """
-            wrkr.temp_dir
-            """
-            
-            wrkr.logger.debug('finished')
+        
             
         #=======================================================================
         # check 
         #=======================================================================
-        rlay = self.rlay_load(fp, logger=log)
+        rlay = self.rlay_load(ofp, logger=log)
         
-        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))
+        assert_func(lambda:  self.rlay_check_match(rlay,demH_rlay, logger=log))
         
-        if write:self.ofp_d[dkey] = fp
+        if write:self.ofp_d[dkey] = ofp
             
  
         return rlay
@@ -780,6 +776,88 @@ class Session(TComs, baseSession):
         return rlay
     
     
+    #===========================================================================
+    # PHASE1: Inundation Correction---------
+    #===========================================================================
+    def run_imax(self,
+                  #input data
+                     #==========================================================
+                     # dem_fp=None,
+                     # nhn_fp=None,
+                     # fic_fp=None,
+                     #==========================================================
+                     
+                     #get_edge_samples
+                     sample_spacing=None, #HAND sample point spacing. None=dem*5
+                     
+                     #get_sample_bounds
+                     qhigh=0.75, #quartile defining the maximum inundation HAND value
+                     qlow=0.25,
+ 
+                      logger=None,
+                 ):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('rImax')
+        start =  datetime.datetime.now()
+        
+ 
+        #=======================================================================
+        # add minimum water bodies to FiC inundation
+        #=======================================================================
+        
+
+
+ 
+        
+        inun1_rlay = self.retrieve('inun1')
+        #=======================================================================
+        # get hydrauilc maximum
+        #=======================================================================
+        return
+        isamp1_vlay=self.retrieve('isamp1')
+        
+        #get initial edge samples
+        #=======================================================================
+        # smpls1_fp = self.build_samples1(rToSamp_fp=hand_fp, inun_fp=inun1_fp,
+        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
+        #=======================================================================
+        
+        #get bounds
+        hv_max, hv_min = self.get_sample_bounds(smpls1_fp, qhigh=qhigh, qlow=qlow,logger=log)
+        
+        #get hydrauilc maximum
+        inun_hmax_fp = self.build_hmax(hand_fp=hand_fp,hval=hv_max,logger=log)
+        
+        #=======================================================================
+        # reduce inun by the hydrauilc maximum
+        #=======================================================================
+        #clip inun1 by hydrauilc  maximum (raster) 
+        inun2r_fp = self.build_inun2(inun1_fp, inun_hmax_fp, logger=log)
+        
+        #vector polygons
+        inun2_fp = self.build_inun2_vlay(inun2r_fp, logger=log)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        
+        #get just those datalayers built by this function
+        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
+        log.info('built %i datalayers'%len(ofp_d))
+        
+        
+        self._log_datafiles(d=ofp_d)
+        
+        self.afp_d = {**self.fp_d, **self.ofp_d} #fp_d overwritten by ofp_d
+        
+        return datetime.datetime.now() - start
+    
+    
+        
+
     def build_inun1(self, #merge NHN and FiC and crop to DEM extents
             
             
@@ -1697,7 +1775,24 @@ class Session(TComs, baseSession):
             return True, ''
 
  
-    
+    #===========================================================================
+    # helpers--------
+    #===========================================================================
+    def get_outpars(self, dkey, write
+                    ):
+                #output
+        layname = '%s_%s'%(self.layName_pfx, dkey) 
+        if write:
+            ofp = os.path.join(self.wrk_dir, layname+'.tif')
+            
+        else:
+            ofp=os.path.join(self.temp_dir, layname+'.tif')
+            
+        if os.path.exists(ofp):
+            assert self.overwrite
+            os.remove(ofp)
+            
+        return layname, ofp
     def get_delta(self, #subtract two rasters
                   top_fp,
                   bot_fp,

@@ -111,7 +111,7 @@ def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp
 @pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('inun1',[r'test_06inun1_fred01_test_03inu0\working\test_tag_0327_inun1.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_07beaceh1(session, true_dir, write, base_dir, inun1, hand_fp):
+def test_07beach1(session, true_dir, write, base_dir, inun1, hand_fp):
     
     #set the compiled references
     session.compiled_fp_d={

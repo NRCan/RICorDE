@@ -72,7 +72,7 @@ def test_05handMask(session, true_dir, hand_fp, write, base_dir):
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('buff_dist',[10] ) #othwerwise the dem needs to be loaded
 @pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0327_HAND_mask.tif'] ) #from test_hand_mask
 @pytest.mark.parametrize('pwb_fp',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb
@@ -92,16 +92,16 @@ def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp
 
     rlay_compare(dkey, true_dir, session, test_rlay, test_data=False)
     
-
+@pytest.mark.dev
 @pytest.mark.parametrize('sample_spacing',[10] ) #othwerwise the dem needs to be loaded
 @pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0326_HAND_mask.tif'] ) #from test_hand_mask
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_07isamp1(session, true_dir, handM_fp, write, base_dir, sample_spacing):
     
     #set the compiled references
-    session.compiled_fp_d.update({
+    session.compiled_fp_d={
         'HAND_mask':os.path.join(base_dir, handM_fp)
-        })
+        }
     
     dkey = 'inun1'
     test_rlay = session.retrieve(dkey, write=write, buff_dist=buff_dist)

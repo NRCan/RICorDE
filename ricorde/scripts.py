@@ -126,7 +126,6 @@ class Session(TComs, baseSession):
             'dem_hyd':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build': lambda **kwargs:self.build_dem_hyd(**kwargs),
-                
                 },
             'HAND':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
@@ -159,6 +158,10 @@ class Session(TComs, baseSession):
             'beach2':{
                 'compiled':lambda **kwargs:self.vlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_beach2(**kwargs),
+                },
+            'beach2Interp':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_beach2Interp(**kwargs),
                 },
             'hvGrid':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
@@ -1489,6 +1492,9 @@ class Session(TComs, baseSession):
         
         """
         beach2_rlay = self.retrieve('beach2')
+        
+        self.retrieve('beach2Interp')
+        
         return
         hvgrid = self.retrieve('hvGrid')
         
@@ -1570,8 +1576,6 @@ class Session(TComs, baseSession):
         
  
         layname, ofp = self.get_outpars(dkey, write, ext='.gpkg')
-        
- 
  
         #=======================================================================
         # retrieve
@@ -1702,11 +1706,134 @@ class Session(TComs, baseSession):
         
         
         return res_vlay, df, meta_d
+    
+    def build_beach2Interp(self, #build interpolated surface from edge points
+             
+             #datalayesr
+             beach2_vlay=None,
+             dem_vlay=None, #for reference
+             inun2_rlay=None,
+             fieldName=None, #field name with sample values
+             
+             #parameters (interploate)
+             distP=2.0, #distance coeffiocient#I think this is unitless
+             interpResolution=None,
+             pts_cnt = 10, #number of points to include in seawrches
+ 
+             
+               #gen
+              dkey=None, logger=None,write=None,
+                  ):
+        """
+        should this be split?
+        """
+ 
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+ 
+        assert dkey=='beach2Interp'
+        
+
+            
+
+        
+        layname, ofp = self.get_outpars(dkey, write)
+        
+        meta_d = {'distP':distP, 'interp_resolution':interpResolution, 'pts_cnt':pts_cnt}
+        
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if dem_vlay is None:
+            dem_vlay = self.retrieve('dem')
+            
+        if beach2_vlay is None:
+            beach2_vlay=self.retrieve('beach2')
+            
+        if inun2_rlay is None:
+            """basically a mask of the beach2_vlay points"""
+            inun2_rlay=self.retrieve('inun2')
+            
+        #=======================================================================
+        # parameters 2
+        #=======================================================================
+        if fieldName is None:
+            fnl = [f.name() for f  in beach2_vlay.fields() if not f.name()=='fid']
+            assert len(fnl)==1
+            fieldName = fnl[0]
+        
+        
+        if interpResolution is None:
+            interpResolution=self.dem_psize
+            
+        assert isinstance(distP, float)
+        assert isinstance(interpResolution, int)
+        #=======================================================================
+        # #build interpolated surface from edge points-----
+        #=======================================================================
+        log.info('IDW Interpolating HAND values from \'%s\' (%i)\n '%(
+                        beach2_vlay.name(), beach2_vlay.dataProvider().featureCount()) +\
+                        '    distP=%.2f, resolution=%i'%(distP, interpResolution))
+        
+        
+        #===================================================================
+        # get interpolated raster
+        #===================================================================
+        """couldnt figure out how to configure the input field"""
+        #===================================================================
+        # interp_rlay = self.idwinterpolation(pts_vlay, coln, resolution, distP=distP, 
+        #                                     logger=log)
+        #===================================================================
+        """tried a bit to get this to work... could be worth more effort as its probably faster"""
+        #===================================================================
+        # interp_rlay = Whitebox(out_dir=self.out_dir, logger=logger
+        #      ).IdwInterpolation(smpl_vlay_fp, self.smpl_fieldName,
+        #                         weight=distP, cell_size=resolution,
+        #                         logger=log, out_fp=ofp)
+        #===================================================================
+        """GRASS.. a bit slow"""
+        interp_raw_fp = self.vSurfIdw(beach2_vlay, fieldName, distP=distP,
+                      pts_cnt=pts_cnt, cell_size=interpResolution, extents=dem_vlay.extent(),
+                      logger=log, 
+                      output=os.path.join(self.temp_dir, 'vsurfidw.tif'),
+                      )
+        assert os.path.exists(interp_raw_fp)
+        
+        
+   
+        #=======================================================================
+        # #re-interpolate interior regions-----
+        #=======================================================================
+        self.wsl_extrap_wbt(interp_raw_fp,inun2_rlay.source(),  logger=log, ofp=ofp)
+ 
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        rlay = self.rlay_load(ofp, logger=log)
+        if write:
+            self.ofp_d[dkey] = ofp
+            
+ 
+            
+            
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+ 
+ 
+        return rlay
+        
  
         
     def build_hvgrid(self, #get gridded HAND values from some indundation
              
              #datalayesr
+             beach2_vlay=None,
+             
              hand_rlay=None,
              inun2_rlay=None,
              
@@ -1720,10 +1847,29 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
-        
-
  
         assert dkey=='hvGrid'
+        
+        layname, ofp = self.get_outpars(dkey, write, ext='.gpkg')
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if beach2_vlay is None:
+            beach2_vlay=self.retrieve('beach2')
+        
+        #=======================================================================
+        # smothed and gridded rolling HAND values 
+        #=======================================================================
+
+        
+        #low-pass and downsample
+        hvgrid_fp, d = self.smooth_hvals(interp2_rlay_fp, logger=log,
+                                      range_thresh=range_thresh,max_grade=max_grade,
+                                      hval_prec=hval_prec,fp_key=fp_key
+                                      )
+        
+        meta_d.update({'smooth_hvals':d})
  
  
     

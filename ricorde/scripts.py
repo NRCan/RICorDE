@@ -1803,10 +1803,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # #build interpolated surface from edge points-----
         #=======================================================================
-        log.info('IDW Interpolating HAND values from \'%s\' (%i)\n '%(
-                        beach2_vlay.name(), beach2_vlay.dataProvider().featureCount()) +\
-                        '    distP=%.2f, radius=%.2f'%(distP, radius))
-        
+        log.info('IDW Interpolating HAND values from \'%s\' (%i) w/ \n    %s'%(
+                        beach2_vlay.name(), beach2_vlay.dataProvider().featureCount(), meta_d))
         
         #===================================================================
         # get interpolated raster-----

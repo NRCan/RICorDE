@@ -47,7 +47,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=False
+    write=True
     #===========================================================================
     # write key
     #===========================================================================
@@ -183,10 +183,14 @@ def base_dir():
 def true_dir(write, tmp_path, base_dir):
     true_dir = os.path.join(base_dir, os.path.basename(tmp_path))
     if write:
-        if os.path.exists(true_dir): 
-            shutil.rmtree(true_dir)
-            os.makedirs(true_dir) #add back an empty folder
-            os.makedirs(os.path.join(true_dir, 'working')) #and the working folder
+        if os.path.exists(true_dir):
+            try: 
+                shutil.rmtree(true_dir)
+                os.makedirs(true_dir) #add back an empty folder
+                os.makedirs(os.path.join(true_dir, 'working')) #and the working folder
+            except Exception as e:
+                print('failed to cleanup the true_dir: %s w/ \n    %s'%(true_dir, e))
+
             
     return true_dir
     

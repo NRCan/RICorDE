@@ -220,7 +220,7 @@ class Session(TComs, baseSession):
                   dem_fp=None,
                   
                   #parameters
-                  dem_psize=None,
+                  resolution=None, #optional resolution for resampling the DEM
                   aoi_vlay=None,
                   
                   
@@ -241,8 +241,8 @@ class Session(TComs, baseSession):
         if dem_fp is None: dem_fp=self.dem_fp
         if aoi_vlay is None: aoi_vlay=self.aoi_vlay
         
-        if not dem_psize is  None:
-            assert isinstance(dem_psize, int), 'got bad pixel size request on the dem (%s)'%dem_psize
+        if not resolution is  None:
+            assert isinstance(resolution, int), 'got bad pixel size request on the dem (%s)'%resolution
             
         layname, ofp = self.get_outpars(dkey, write)
         
@@ -260,28 +260,27 @@ class Session(TComs, baseSession):
         # config resolution
         #=======================================================================
         psize_raw = self.rlay_get_resolution(rlay_raw)
-        resample=False
         
         #use passed pixel size
-        if not dem_psize is None: #use passed
-            assert dem_psize>=psize_raw
-            if not psize_raw==dem_psize:
-                resample=True
-        
+        if not resolution is None: #use passed
+            assert resolution>=psize_raw, 'only downsampling allowed'
+ 
         #use native
         else:
-            dem_psize=int(round(psize_raw, 0))
-            if not round(psize_raw, 0) == psize_raw:
-                resample=True
+            resolution=int(round(psize_raw, 0))
+            
+        resample=False
+        if not psize_raw == resolution:
+            resample=True
         
-        meta_d = {'raw_fp':dem_fp, 'dem_psize':dem_psize, 'psize_raw':psize_raw}
+        meta_d = {'raw_fp':dem_fp, 'resolution':resolution, 'psize_raw':psize_raw}
         
         #=======================================================================
         # execute
         #=======================================================================
         
-        rlay1, d = self.rlay_warp(rlay_raw, ref_lay=rlay_raw, aoi_vlay=aoi_vlay, decompres=True,
-                               resample=resample, resampling='Mean', ofp=ofp,
+        rlay1, d = self.rlay_warp(rlay_raw, ref_lay=None, aoi_vlay=aoi_vlay, decompres=True,
+                               resample=resample, resolution=resolution, resampling='Average', ofp=ofp,
                                logger=log)
             
  
@@ -300,10 +299,8 @@ class Session(TComs, baseSession):
         if write: self.ofp_d[dkey] = ofp
         mstore.removeAllMapLayers()
  
- 
- 
         
-        return rlay
+        return rlay1
     
     def load_dem(self,
                  fp=None,
@@ -335,7 +332,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         dem_psize = self.rlay_get_resolution(rlay)
         
-        assert round(dem_psize, 0)==dem_psize
+        assert round(dem_psize, 0)==dem_psize, 'got bad resolution on dem: %s'%dem_psize
         
         self.dem_psize = int(dem_psize)
         
@@ -455,6 +452,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # checks
         #=======================================================================
+        assert_func(lambda:self.rlay_check_match(rlay1, ref_lay, logger=log))
+        
         assert_func(lambda:  self.mask_check(rlay1), msg=dkey)
         
  
@@ -488,6 +487,7 @@ class Session(TComs, baseSession):
                    #parameters
                    resampling='Maximum', #resampling method
                    compress=None,
+                   resolution=None,
                    
                   
                   logger=None, ofp=None,
@@ -507,8 +507,7 @@ class Session(TComs, baseSession):
         
         if ofp is None: ofp=os.path.join(self.temp_dir, '%s_warp.tif'%rlay_raw.name())
         
-        if ref_lay is None: 
-            ref_lay=self.retrieve('dem', logger=log)
+ 
             
         if aoi_vlay is None: aoi_vlay=self.aoi_vlay
         
@@ -602,30 +601,40 @@ class Session(TComs, baseSession):
             
             
         reso_raw = self.rlay_get_resolution(rlay2)
-        dem_psize = self.rlay_get_resolution(ref_lay)
+        
+        if resolution is None:
+            assert not ref_lay is None
+            resolution = self.rlay_get_resolution(ref_lay)
             
         if resample is None:
             #===================================================================
             # get parameters
             #===================================================================
 
-            meta_d.update({'reso_raw':reso_raw, 'reso_ref':dem_psize})
+            meta_d.update({'reso_raw':reso_raw, 'reso_ref':resolution})
  
             resample = False
-            if not dem_psize == reso_raw:
+            if not resolution == reso_raw:
                 resample = True
                 
             """seems to trip often because the aoi extents dont match the dem?"""
-            if not rlay2.extent()==ref_lay.extent():
-                resample=True
+            if not ref_lay is None:
+                if not rlay2.extent()==ref_lay.extent():
+                    resample=True
                 
         #===================================================================
         # resample
         #===================================================================
         if resample:
-            log.info('resampling from %.4f to %.2f w/ %s'%(reso_raw, dem_psize, resampling))
-            rlay3 = self.warpreproject(rlay2, resolution=int(dem_psize), compression=compress, 
-                resampling=resampling, logger=log, extents=ref_lay.extent(),
+            log.info('resampling from %.4f to %.2f w/ %s'%(reso_raw, resolution, resampling))
+            
+            if not ref_lay is None:
+                extents=ref_lay.extent()
+            else:
+                extents=None
+            
+            rlay3 = self.warpreproject(rlay2, resolution=int(resolution), compression=compress, 
+                resampling=resampling, logger=log, extents=extents,
                 output=ofp)
             if isinstance(rlay2, QgsMapLayer):mstore.addMapLayer(rlay2)
         else:
@@ -636,7 +645,7 @@ class Session(TComs, baseSession):
         # checks
         #=======================================================================
  
-        assert_func(lambda:self.rlay_check_match(rlay3, ref_lay, logger=log))
+        
         return self.get_layer(rlay3, logger=log), meta_d
     #===========================================================================
     # PHASE0: Build HAND---------

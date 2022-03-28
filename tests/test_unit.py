@@ -10,17 +10,17 @@ import pytest, copy, os
 from tests.conftest import search_fp, retrieve_data, compare_layers, compare_dicts
 
 
-
+@pytest.mark.dev
 @pytest.mark.parametrize('proj_d',['fred02'], indirect=True) #feeds through the session (see conftest.py) 
-@pytest.mark.parametrize('dem_psize',[None, 6]) #feeds through the session (see conftest.py) 
-def test_01dem(session, true_dir, dem_psize):
+@pytest.mark.parametrize('resolution',[None, 6]) #feeds through the session (see conftest.py) 
+def test_01dem(session, true_dir, resolution):
     
     dkey = 'dem'
-    test_rlay = session.retrieve(dkey, dem_psize=dem_psize)
+    test_rlay = session.retrieve(dkey, resolution=resolution)
     
     assert isinstance(session.dem_psize, int), 'bad type on dem_psize: %s'%type(session.dem_psize)
     
-    layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=(dem_psize is None))
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=(resolution is None))
 
 
 
@@ -31,7 +31,7 @@ def test_02pwb(session, true_dir, dem, write, base_dir):
     dkey = 'pwb_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('proj_d',['fred01','fred02', 'fred03'], indirect=True) #raster and polygon inundations
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 def test_03inun(session, true_dir, dem, write, base_dir):

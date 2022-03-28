@@ -539,6 +539,7 @@ class Session(TComs, baseSession):
             rlay1 = self.slice_aoi(rlay, aoi_vlay=aoi_vlay, logger=log, output=ofp)
             mstore.addMapLayer(rlay)
         else:
+            log.warning('no AOI provided')
             shutil.copyfile(rlay.source(),ofp)
             rlay1=rlay
  
@@ -1679,6 +1680,10 @@ class Session(TComs, baseSession):
                   ):
         """
         should this be split?
+        
+        2022-03-28:
+            changed to use wbt
+            changed to always match dem resolution
         """
  
         #=======================================================================
@@ -1689,16 +1694,10 @@ class Session(TComs, baseSession):
         log=logger.getChild('b.%s'%dkey)
  
         assert dkey=='hgRaw'
-        
-
-            
-
-        
+ 
         layname, ofp = self.get_outpars(dkey, write)
         
-        
-        
-        
+ 
         #=======================================================================
         # retrieve
         #=======================================================================

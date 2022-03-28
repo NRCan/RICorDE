@@ -20,7 +20,7 @@ def test_01dem(session, true_dir, dem_psize):
     
     assert isinstance(session.dem_psize, int), 'bad type on dem_psize: %s'%type(session.dem_psize)
     
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=(dem_psize is None))
 
 
 
@@ -52,7 +52,7 @@ def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
     dkey = 'dem_hyd'
     test_rlay = session.retrieve(dkey, write=write )
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
 
 @pytest.mark.parametrize('pwb_rlay',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0327_pwb_rlay.tif'] ) #from test_pwb
@@ -70,7 +70,7 @@ def test_04hand(session, true_dir, pwb_rlay, write, base_dir, dem_hyd):
     dkey = 'HAND'
     test_rlay = session.retrieve(dkey, write=write )
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
     
 
@@ -84,7 +84,7 @@ def test_05handMask(session, true_dir, hand_fp, write, base_dir):
     dkey = 'HAND_mask'
     test_rlay = session.retrieve(dkey, write=write)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
 
@@ -105,7 +105,7 @@ def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp
     dkey = 'inun1'
     test_rlay = session.retrieve(dkey, write=write, buff_dist=buff_dist)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
 @pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
@@ -122,7 +122,7 @@ def test_07beach1(session, true_dir, write, base_dir, inun1, hand_fp):
     dkey = 'beach1'
     test_rlay = session.retrieve(dkey, write=write)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
 @pytest.mark.parametrize('beach1',[r'test_07beach1_fred01_test_06in0\working\test_tag_0327_beach1.tif'] )  
@@ -168,7 +168,7 @@ def test_08inunHmax(session, true_dir, write, base_dir, beach1, hand_fp):
     dkey = 'inunHmax'
     test_rlay = session.retrieve(dkey, write=write)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
 @pytest.mark.parametrize('inunHmax',[r'test_08inunHmax_fred01_test_070\working\test_tag_0327_inunHmax.tif'] ) 
@@ -185,7 +185,7 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     dkey = 'inun2'
     test_rlay = session.retrieve(dkey, write=write)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
 @pytest.mark.parametrize('b1Bounds',[r'test_08b1Bounds_fred01_test_070\working\test_tag_0327_b1Bounds.pickle'] ) #from test_hand
@@ -205,15 +205,15 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
     dkey = 'beach2'
     test_rlay = session.retrieve(dkey, write=write)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
     
 @pytest.mark.dev
-@pytest.mark.parametrize('interpResolution',[6] ) #too slow otherwise
 @pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0327_beach2.gpkg'] ) #from test_hand
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, interpResolution):
+def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2):
+    """3 parameters were not really testing here"""
     
     #set the compiled references
     session.compiled_fp_d={
@@ -223,9 +223,26 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, interpR
         }
     
     dkey = 'hgRaw'
+    test_rlay = session.retrieve(dkey, write=write)
+
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
+    
+
+@pytest.mark.parametrize('resolution',[6] ) #too slow otherwise
+@pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution):
+    
+    #set the compiled references
+    session.compiled_fp_d={
+        'hgRaw':os.path.join(base_dir, beach2),
+ 
+        }
+    
+    dkey = 'hgSmooth'
     test_rlay = session.retrieve(dkey, write=write, interpResolution=interpResolution)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================
 # commons--------
 #===============================================================================
@@ -238,10 +255,11 @@ def water_rlay_tests(dkey, session, true_dir, dem, write, base_dir):  #common te
     
     test_rlay = session.retrieve(dkey, write=write)
 
-    layer_compare(dkey, true_dir, session, test_rlay, test_data=False)
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-def layer_compare(dkey, true_dir, session, test_rlay, test_data=False, ext='.tif'):
+def layer_post( #post test commons for layer types
+        dkey, true_dir, session, test_rlay, ext='.tif', **kwargs):
     #===========================================================================
     # load true
     #===========================================================================
@@ -253,4 +271,4 @@ def layer_compare(dkey, true_dir, session, test_rlay, test_data=False, ext='.tif
     #===========================================================================
     # compare
     #===========================================================================
-    compare_layers(test_rlay, true_rlay, test_data=test_data)
+    compare_layers(test_rlay, true_rlay, wrkr=session, **kwargs)

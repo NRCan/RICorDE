@@ -229,15 +229,24 @@ class Whitebox(object):
     
     def IdwInterpolation(self,
                         vlay_pts_fp, fieldn, 
+                        
+                        #parameters
                         weight=2, #IDW weight value
-                        cell_size=10, 
+                        radius=4.0, #Search Radius in map units
+                        min_points=3, #Minimum number of points
+                        
+                        #output data props
+                        cell_size=None, #resolution of output
+                        ref_lay_fp=None, #optional reference layer (if no cell_size is specifed)
+                        
+                        #gen 
                         logger=None, out_fp=None,
                         ):
 
         #=======================================================================
         # defaults
         #=======================================================================
-        tool_nm = 'IdwInterpolation '
+        tool_nm = 'IdwInterpolation'
         if logger is None: logger=self.logger
         log=logger.getChild(tool_nm)
         
@@ -245,16 +254,31 @@ class Whitebox(object):
             out_fp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(vlay_pts_fp))[0]+'_idw.tif')
         
         assert out_fp.endswith('.tif')
+        
+        assert os.path.exists(vlay_pts_fp)
+        
+        assert vlay_pts_fp.endswith('.shp'), 'only shapefiles allowed'
  
+
         #=======================================================================
         # setup
         #=======================================================================
         args = [self.exe_fp,'-v','--run={}'.format(tool_nm),'--output={}'.format(out_fp),
-                '--input={}'.format(vlay_pts_fp),
+                '-i={}'.format(vlay_pts_fp),
                 '--field=%s'%fieldn,
                 '--weight=%.2f'%weight,
-                '--cell_size=%.2f'%cell_size,
+                '--radius=%.2f'%radius,
+                '--min_points=%i'%min_points,
                 ]
+        
+        if ref_lay_fp is None:
+            assert isinstance(cell_size, int)
+            args.append('--cell_size=%i'%cell_size)
+        else:
+            assert cell_size is None
+            assert os.path.exists(ref_lay_fp)
+            assert ref_lay_fp.endswith('.tif')
+            args.append('--base=%s'%ref_lay_fp)
         
         #=======================================================================
         # execute

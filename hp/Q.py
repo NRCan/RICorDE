@@ -42,7 +42,7 @@ from qgis.analysis import QgsNativeAlgorithms, QgsRasterCalculatorEntry, QgsRast
 # custom imports
 #===============================================================================
 
-from hp.exceptions import Error
+from hp.exceptions import Error, assert_func
 
 from hp.oop import Basic
 from hp.dirz import get_valid_filename
@@ -329,13 +329,13 @@ class Qproj(QAlgos, Basic):
         opts.driverName = driverName
         opts.fileEncoding = fileEncoding
 
+        assert driverName in self.vlay_drivers, 'unrecognized driverName: %s'%driverName
         #===========================================================================
         # checks
         #===========================================================================
         #file extension
         fhead, ext = os.path.splitext(out_fp)
-        
-        if not 'gpkg' in ext:
+        if not self.vlay_drivers[driverName] in ext:
             raise Error('unexpected extension: %s'%ext)
         
         if os.path.exists(out_fp):
@@ -1365,7 +1365,10 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # wrap
         #=======================================================================
-        self.mask_check(ofp, nullType=nullType)
+        assert_func(lambda:  self.rlay_check_match(ofp, rlay, logger=log))
+        
+        assert_func(lambda:  self.mask_check(ofp, nullType=nullType))
+        
         mstore.removeAllMapLayers()
         
         
@@ -1545,7 +1548,8 @@ class Qproj(QAlgos, Basic):
             
  
             #check
-            self.mask_check(rlay_filld, nullType='zeros', stats_d=stats_d)
+            assert_func(lambda:  self.mask_check(rlay_filld, nullType='zeros', stats_d=stats_d))
+            
             
             #build entry
             rcentry_d[i] = self._rCalcEntry(rlay_filld, logger=log)
@@ -1653,7 +1657,8 @@ class Qproj(QAlgos, Basic):
         
         stats_d = self.rasterlayerstatistics(rlay)
         
-        self.mask_check(rlay, stats_d=stats_d)
+        
+        assert_func(lambda:  self.mask_check(rlay, stats_d=stats_d))
         
         #pixel size
         pixel_area = rlay.rasterUnitsPerPixelY() * rlay.rasterUnitsPerPixelX()

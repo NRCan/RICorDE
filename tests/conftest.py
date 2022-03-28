@@ -45,7 +45,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=True
+    write=False
     #===========================================================================
     # write key
     #===========================================================================
@@ -217,27 +217,29 @@ def retrieve_data(dkey, fp, ses): #load some compiled result off the session (us
     
     return hndl_d['compiled'](fp=fp, dkey=dkey)
 
-def compare_layers(vtest, vtrue, #two containers of layers
+def compare_layers(lay_test, lay_true, #two containers of layers
                    test_data=True, #check vlay attributes
+                   test_spatial=True,
                    ignore_fid=True,  #whether to ignore the native ordering of the vlay
+                   wrkr=None,
                    ):
     
  
         
-    dptest, dptrue = vtest.dataProvider(), vtrue.dataProvider()
+    dptest, dptrue = lay_test.dataProvider(), lay_true.dataProvider()
     
-    assert type(vtest)==type(vtrue)
+    assert type(lay_test)==type(lay_true)
     
     #=======================================================================
     # vectorlayer checks
     #=======================================================================
-    if isinstance(vtest, QgsVectorLayer):
+    if isinstance(lay_test, QgsVectorLayer):
         assert dptest.featureCount()==dptrue.featureCount()
-        assert vtest.wkbType() == dptrue.wkbType()
+        assert lay_test.wkbType() == dptrue.wkbType()
         
         #data checks
         if test_data:
-            true_df, test_df = vlay_get_fdf(vtrue), vlay_get_fdf(vtest)
+            true_df, test_df = vlay_get_fdf(lay_true), vlay_get_fdf(lay_test)
             
             if ignore_fid:
                 true_df = true_df.sort_values(true_df.columns[0],  ignore_index=True) #sort by first column and reset index
@@ -246,23 +248,29 @@ def compare_layers(vtest, vtrue, #two containers of layers
             
             assert_frame_equal(true_df, test_df,check_names=False)
             
-    elif isinstance(vtest, QgsRasterLayer):
+    elif isinstance(lay_test, QgsRasterLayer):
+        
+        #compare spatial meta
+        if not wrkr is None and test_spatial:
+            matching, msg = wrkr.rlay_check_match(lay_test, lay_true)
+            if not matching:
+                raise AssertionError('test layer (%s) spatial meta does not match \n    %s'%(lay_test.name(), msg))
         
         #compare stats
-        testStats_d = rasterstats(vtest) #getRasterStatistics(vtest.source())
-        trueStats_d = rasterstats(vtrue) # getRasterStatistics(vtrue.source())
+        testStats_d = rasterstats(lay_test) #getRasterStatistics(lay_test.source())
+        trueStats_d = rasterstats(lay_true) # getRasterStatistics(lay_true.source())
         
         compare_dicts(testStats_d, trueStats_d, index_l=['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'])
  
         
         """
-        rasterstats(vtest)
+        rasterstats(lay_test)
         """
-        #getRasterMetadata(vtest.source())
+        #getRasterMetadata(lay_test.source())
         
         if test_data:
-            ar_test = rlay_to_array(vtest.source())
-            ar_true = rlay_to_array(vtrue.source())
+            ar_test = rlay_to_array(lay_test.source())
+            ar_true = rlay_to_array(lay_true.source())
             
             assert_equal(ar_test, ar_true)
             

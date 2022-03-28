@@ -51,7 +51,7 @@ add tests
 #===============================================================================
 # imports-----------
 #===============================================================================
-import os, datetime, copy, shutil
+import os, datetime, copy, shutil, gc
 import pandas as pd
  
 start =  datetime.datetime.now()
@@ -587,6 +587,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # run
         #=======================================================================
+        dem = self.retrieve('dem', logger=log) #just for checking
+        
         #hydrocorrected DEM
         dem_hyd = self.retrieve('dem_hyd', logger=log)
         
@@ -599,6 +601,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
+        assert_func(lambda:  self.rlay_check_match(hand_rlay,dem, logger=log))
+        
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
@@ -664,6 +668,8 @@ class Session(TComs, baseSession):
         assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%ofp
         
         rlay = self.rlay_load(ofp, logger=log)
+        
+        assert_func(lambda:  self.rlay_check_match(rlay, dem_rlay, logger=log), msg=dkey)
         
         if self.exit_summary:
  
@@ -821,6 +827,7 @@ class Session(TComs, baseSession):
         log=logger.getChild('rImax')
         start =  datetime.datetime.now()
         
+        dem_rlay = self.retrieve('dem', logger=log) #just for checking
  
         #=======================================================================
         # add minimum water bodies to FiC inundation
@@ -841,10 +848,7 @@ class Session(TComs, baseSession):
         #get hydrauilc maximum
         inun_hmax = self.retrieve('inunHmax')
         
- 
-        
-        
-        
+
         #=======================================================================
         # reduce inun by the hydrauilc maximum
         #=======================================================================
@@ -855,11 +859,13 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
+        assert_func(lambda:  self.rlay_check_match(inun2_rlay,dem_rlay, logger=log))
+        
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
         
-        return
+        return tdelta
     
     
         
@@ -1039,6 +1045,10 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
+        
+        assert_func(lambda:  self.rlay_check_match(rlay,hand_rlay, logger=log))
+        
+        
         if write:
             self.ofp_d[dkey] = ofp
  
@@ -1287,6 +1297,10 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
+        
+        assert_func(lambda:  self.rlay_check_match(rlay,hand_rlay, logger=log))
+        
+        
         if self.exit_summary:
  
             self.smry_d[dkey] = pd.Series({'hval':hval}).to_frame()
@@ -1350,6 +1364,8 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
+        
+        assert_func(lambda:  self.rlay_check_match(rlay,inun1_rlay, logger=log))
  
         
         if write:self.ofp_d[dkey]=ofp
@@ -1433,20 +1449,15 @@ class Session(TComs, baseSession):
     #===========================================================================
     
     def run_HANDgrid(self, #get mosaic of depths (from HAND values)
-                  inun2_fp=None,
-                  hand_fp=None,
-                   ndb_fp=None, #nodata boundary polygon
-                   inun2r_fp=None,
-                   dem_fp=None,
-                   
-                   hval_prec=0.1,# (vertical) precision of hvals to discretize
-                   
-                   #cap_samples() bounds
-                   hv_min=None, hv_max=None,
+ 
                    
                   logger=None,
                   ):
+        """
+        a raster of smoothed HAND values
+            this approximates the event HAND with rolling values
         
+        """
 
         
 
@@ -1455,99 +1466,37 @@ class Session(TComs, baseSession):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('rHgrid')
+        log=logger.getChild('rHg')
         start =  datetime.datetime.now()
-        
-#==============================================================================
-#        ofp_d_old = copy.copy(self.afp_d)
-#        #=======================================================================
-#        # datafile ssetup
-#        #=======================================================================
-# 
-#        
-#        if inun2_fp is None: inun2_fp=self.afp_d['inun2_fp']
-#        if hand_fp is None: hand_fp=self.afp_d['hand_fp']
-#        if ndb_fp is None: ndb_fp=self.afp_d['ndb_fp']
-#        if inun2r_fp is  None: inun2r_fp=self.afp_d['inun2r_fp']
-#        if dem_fp is None: dem_fp=self.afp_d['dem_fp']
-#        
-#        
-#        if hv_min is None: hv_min=self.hv_min
-#        if hv_max is None: hv_max=self.hv_max
-# 
-# 
-#        self.mstore.removeAllMapLayers() 
-#==============================================================================
+ 
         self.clear_all() #release everything from memory and reset the data containers
-        """
-        self.compiled_fp_d
-        self.mstore_log()
-        self.data_d.keys()
-        """
+ 
+        dem_rlay = self.retrieve('dem', logger=log) #just for chcecking
         #=======================================================================
         # get rolling hand values
         #=======================================================================
-        """
-        a raster of smoothed HAND values
-            this approximates the event HAND with rolling values
-        
-        """
-        beach2_rlay = self.retrieve('beach2')
-        
-        hgRaw_rlay = self.retrieve('hgRaw')
-        
-        
-        hvgrid = self.retrieve('hgSmooth')
-        return
-        
-        #=======================================================================
-        # hvgrid_fp = self.build_hvgrid(inun2_fp=inun2_fp, inun2r_fp=inun2r_fp,
-        #                               hand_fp=hand_fp,ndb_fp=ndb_fp,
-        #                               sample_spacing=None, #use default. #None=dem_psize x 5
-        #                               max_grade = 0.1, #maximum hand value grade to allow 
-        #                               hval_prec=hval_prec,
-        #                               hv_min=hv_min, hv_max=hv_max, #value caps
-        #                               logger=log)
-        #=======================================================================
-        
-        
-        #=======================================================================
-        # get rolling WSL
-        #=======================================================================
-        #build a HAND inundation for each value on the hvgrid
-        hinun_pick = self.build_hiSet(hvgrid_fp=hvgrid_fp, hand_fp=hand_fp, logger=log,
-                                      hval_prec=hval_prec,
-                                      )
-        
-        #buidl the HAND WSL set
-        """convert each of the above into depth rasters"""
-        hwsl_pick = self.build_hwslSet(hinun_pick=hinun_pick, dem_fp=dem_fp, logger=log)
-        
-        #mask and mosaic to get event wsl
-        """using the approriate mask derived from teh hvgrid
-            mosaic togehter the corresponding HAND wsl rasters
-            extents here should match the hvgrid"""
-        wslM_fp = self.build_wsl(hwsl_pick=hwsl_pick, hvgrid_fp=hvgrid_fp, logger=log)
-        
-        #=======================================================================
-        # #get depths
-        #=======================================================================
-        dep_fp = self.build_depths(wslM_fp=wslM_fp,dem_fp=dem_fp,inun2r_fp=inun2r_fp,
-                                   logger=log)
-         
 
+        beach2_rlay = self.retrieve('beach2', logger=log)
+        
+        hgRaw_rlay = self.retrieve('hgRaw', logger=log)
+        
+        
+        hvgrid = self.retrieve('hgSmooth', logger=log)
+        
         #=======================================================================
         # wrap
         #=======================================================================
         
-        #get just those datalayers built by this function
-        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
-        log.info('built %i datalayers'%len(ofp_d))
+        assert_func(lambda:  self.rlay_check_match(hvgrid,dem_rlay, logger=log))
         
+        tdelta = datetime.datetime.now() - start
         
-        self._log_datafiles(d=ofp_d, log=log)
+        log.info('finished in %s'%tdelta)
         
-        return datetime.datetime.now() - start
+        return tdelta
+ 
+        
+
     
         
     def build_beach2(self, #beach values (on inun2 w/ some refinement)
@@ -1614,6 +1563,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
+        
+        
         
         if write:
             self.ofp_d[dkey] = self.vlay_write(samp_cap_vlay,ofp,  logger=log)
@@ -1712,14 +1663,15 @@ class Session(TComs, baseSession):
              
              #datalayesr
              beach2_vlay=None,
-             dem_vlay=None, #for reference
+             dem_rlay=None, #for reference
              inun2_rlay=None,
              fieldName=None, #field name with sample values
              
              #parameters (interploate)
              distP=2.0, #distance coeffiocient#I think this is unitless
-             interpResolution=None,
+
              pts_cnt = 10, #number of points to include in seawrches
+             radius=None, #Search Radius in map units
  
              
                #gen
@@ -1744,14 +1696,14 @@ class Session(TComs, baseSession):
         
         layname, ofp = self.get_outpars(dkey, write)
         
-        meta_d = {'distP':distP, 'interp_resolution':interpResolution, 'pts_cnt':pts_cnt}
+        
         
         
         #=======================================================================
         # retrieve
         #=======================================================================
-        if dem_vlay is None:
-            dem_vlay = self.retrieve('dem')
+        if dem_rlay is None:
+            dem_rlay = self.retrieve('dem')
             
         if beach2_vlay is None:
             beach2_vlay=self.retrieve('beach2')
@@ -1768,45 +1720,60 @@ class Session(TComs, baseSession):
             assert len(fnl)==1
             fieldName = fnl[0]
         
+ 
         
-        if interpResolution is None:
-            interpResolution=self.dem_psize
+        if radius is None:
+            radius=self.dem_psize*4
             
-        assert isinstance(distP, float)
-        assert isinstance(interpResolution, int)
+        meta_d = {'distP':distP, 'pts_cnt':pts_cnt, 'radius':radius}
         #=======================================================================
         # #build interpolated surface from edge points-----
         #=======================================================================
         log.info('IDW Interpolating HAND values from \'%s\' (%i)\n '%(
                         beach2_vlay.name(), beach2_vlay.dataProvider().featureCount()) +\
-                        '    distP=%.2f, resolution=%i'%(distP, interpResolution))
+                        '    distP=%.2f, radius=%.2f'%(distP, radius))
         
         
         #===================================================================
-        # get interpolated raster
+        # get interpolated raster-----
         #===================================================================
-        """couldnt figure out how to configure the input field"""
+        #=======================================================================
+        # native
+        #=======================================================================
+        """couldnt figure out how to configure the input field
         #===================================================================
         # interp_rlay = self.idwinterpolation(pts_vlay, coln, resolution, distP=distP, 
         #                                     logger=log)
-        #===================================================================
-        """tried a bit to get this to work... could be worth more effort as its probably faster"""
-        #===================================================================
-        # interp_rlay = Whitebox(out_dir=self.out_dir, logger=logger
-        #      ).IdwInterpolation(smpl_vlay_fp, self.smpl_fieldName,
-        #                         weight=distP, cell_size=resolution,
-        #                         logger=log, out_fp=ofp)
-        #===================================================================
-        """GRASS.. a bit slow"""
-        interp_raw_fp = self.vSurfIdw(beach2_vlay, fieldName, distP=distP,
-                      pts_cnt=pts_cnt, cell_size=interpResolution, extents=dem_vlay.extent(),
-                      logger=log, 
-                      output=os.path.join(self.temp_dir, 'vsurfidw.tif'),
-                      )
+        #==================================================================="""
+        #=======================================================================
+        # whitebox
+        #=======================================================================
+        #convert to shapefile
+        shp_fp = self.vlay_write(beach2_vlay, os.path.join(self.temp_dir, '%s.shp'%beach2_vlay.name()), driverName='ESRI Shapefile')
+        
+        #run tool
+        interp_raw_fp = Whitebox(logger=logger
+                               ).IdwInterpolation(shp_fp, fieldName,
+                                weight=distP, 
+                                radius=radius,
+                                min_points=pts_cnt,
+                                #cell_size=resolution,
+                                ref_lay_fp=dem_rlay.source(),
+                                out_fp=os.path.join(self.temp_dir, 'wbt_IdwInterpolation_%s.tif'%dkey))
+                               
+ 
+        """GRASS.. a bit slow
+        #=======================================================================
+        # interp_raw_fp = self.vSurfIdw(beach2_vlay, fieldName, distP=distP,
+        #               pts_cnt=pts_cnt, cell_size=resolution, extents=dem_rlay.extent(),
+        #               logger=log, 
+        #               output=os.path.join(self.temp_dir, 'vsurfidw.tif'),
+        #               )
+        #======================================================================="""
         assert os.path.exists(interp_raw_fp)
         
+ 
         
-   
         #=======================================================================
         # #re-interpolate interior regions-----
         #=======================================================================
@@ -1816,6 +1783,10 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
+        
+        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))
+        
+        
         if write:
             self.ofp_d[dkey] = ofp
  
@@ -1837,7 +1808,7 @@ class Session(TComs, baseSession):
              
              range_thresh=None, #maximum range (between HAND cell values) to allow
                 #None: calc from max_slope and resolution
-             max_grade = 0.05, #maximum hand value grade to allow 
+             max_grade = 0.1, #maximum hand value grade to allow 
              
              neighborhood_size = 7,
              
@@ -2001,8 +1972,7 @@ class Session(TComs, baseSession):
         #===================================================================
         # copy to result path
         #===================================================================
-        """TODO: replace with something that can mround"""
-        #self.roundraster(rlay_fp_i, prec=1, logger=log, output=ofp)
+ 
         self.rlay_mround(rlay_fp_i, output=ofp, logger=log, multiple=hval_prec)
 
         #===================================================================
@@ -2024,6 +1994,10 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
+        
+        assert_func(lambda:  self.rlay_check_match(rlay,hgRaw_vlay, logger=log))
+        
+        
         if write:
             self.ofp_d[dkey] = ofp
  
@@ -2183,7 +2157,52 @@ class Session(TComs, baseSession):
         return False, ofp, rval, fail_cnt
     
 
+    #===========================================================================
+    # PHASE3: Rolling WSL grid-----------
+    #===========================================================================
+    
 
+    
+    def run_wslRoll(self,
+                    hval_prec=0.1,# (vertical) precision of hvals to discretize
+                    ):    
+        #=======================================================================
+        # get rolling WSL
+        #=======================================================================
+        #build a HAND inundation for each value on the hvgrid
+        hinun_pick = self.build_hiSet(hvgrid_fp=hvgrid_fp, hand_fp=hand_fp, logger=log,
+                                      hval_prec=hval_prec,
+                                      )
+        
+        #buidl the HAND WSL set
+        """convert each of the above into depth rasters"""
+        hwsl_pick = self.build_hwslSet(hinun_pick=hinun_pick, dem_fp=dem_fp, logger=log)
+        
+        #mask and mosaic to get event wsl
+        """using the approriate mask derived from teh hvgrid
+            mosaic togehter the corresponding HAND wsl rasters
+            extents here should match the hvgrid"""
+        wslM_fp = self.build_wsl(hwsl_pick=hwsl_pick, hvgrid_fp=hvgrid_fp, logger=log)
+        
+        #=======================================================================
+        # #get depths
+        #=======================================================================
+        dep_fp = self.build_depths(wslM_fp=wslM_fp,dem_fp=dem_fp,inun2r_fp=inun2r_fp,
+                                   logger=log)
+         
+
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        
+        #get just those datalayers built by this function
+        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
+        log.info('built %i datalayers'%len(ofp_d))
+        
+        
+        self._log_datafiles(d=ofp_d, log=log)
+        
+        return datetime.datetime.now() - start
     
     def build_hiSet(self, #get HAND derived inundations
                     *args,
@@ -2470,7 +2489,8 @@ class Session(TComs, baseSession):
     def clear_all(self): #clear all the loaded data
         self.data_d = dict()
         self.mstore.removeAllMapLayers()
-        self.compiled_fp_d.update(self.ofp_d) #copy everything over to compiled
+        self.compiled_fp_d.update(self.ofp_d) #copy everything over to compile
+        gc.collect()
         
     def get_outpars(self, dkey, write, ext='.tif'
                     ):

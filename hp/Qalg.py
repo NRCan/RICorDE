@@ -1627,12 +1627,20 @@ class QAlgos(object):
                               
                               crsOut = None, #crs to re-project to
                               resolution=None,
-                              compression = 'none',
-                              nodata_val=None,
+                              compression = None,
+                              nodata_val=-9999,
+                              resampling='Nearest neighbour', #resampling method
+                              extents=None,
  
-                              output = 'TEMPORARY_OUTPUT',
+ 
+                              output = 'TEMPORARY_OUTPUT', #always writes to file
                               logger = None,
                               ):
+        """
+                        bbox_str = '%.3f, %.3f, %.3f, %.3f [%s]'%(
+                    rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum(),
+                    self.aoi_vlay.crs().authid())
+        """
 
         
         #=======================================================================
@@ -1640,12 +1648,21 @@ class QAlgos(object):
         #=======================================================================
         if logger is None: logger = self.logger
         log = logger.getChild('warpreproject')
+        if compression is None: compression=self.compression
         
-        #=======================================================================
-        # if layname is None:
-        #     layname = '%s_rproj'%rlay_raw.name()
-        #=======================================================================
-            
+        resamp_d = {0:'Nearest neighbour',
+                    1:'Bilinear',
+                    2:'Cubic',
+                    3:'Cubic spline',
+                    4:'Lanczos windowed sinc',
+                    5:'Average',
+                    6:'Mode',
+                    7:'Maximum',
+                    8:'Minimum',
+                    9:'Median',
+                    10:'First quartile',
+                    11:'Third quartile'}
+ 
             
         algo_nm = 'gdal:warpreproject'
             
@@ -1672,30 +1689,35 @@ class QAlgos(object):
             os.remove(output)
 
             
-            
+        if not resolution is None:
+            assert isinstance(resolution, int), 'got bad type in resolution: %s'%type(int)
         #=======================================================================
         # run algo        
         #=======================================================================
+        opts = self.compress_d[compression]
+        if opts is None: opts = ''
 
         
         ins_d =  {
              'DATA_TYPE' : 0,#use input
              'EXTRA' : '',
              'INPUT' : rlay_raw,
-             'MULTITHREADING' : True,
+             'MULTITHREADING' : False,
              'NODATA' : nodata_val,
-             'OPTIONS' : self.compress_d[compression],
+             'OPTIONS' : opts,
              'OUTPUT' : output,
-             'RESAMPLING' : 0,#nearest neighbour
+             'RESAMPLING' : {v:k for k,v in resamp_d.items()}[resampling],
              'SOURCE_CRS' : None,
              'TARGET_CRS' : crsOut,
-             'TARGET_EXTENT' : None,
+             'TARGET_EXTENT' : extents,
              'TARGET_EXTENT_CRS' : None,
              'TARGET_RESOLUTION' : resolution,
           }
         
+ 
         log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
         
+ 
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
         
  
@@ -1704,7 +1726,7 @@ class QAlgos(object):
             """failing intermittently"""
             raise Error('failed to get a result')
         
- 
+        log.debug('finished w/ %s'%res_d)
           
         return res_d['OUTPUT']
     

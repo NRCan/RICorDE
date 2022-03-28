@@ -65,7 +65,7 @@ from hp.dirz import force_open_dir
 #from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
     QgsRasterLayer, QgsWkbTypes, vlay_get_fdf, QgsVectorLayer, vlay_get_fdata, \
-    vlay_get_geo
+    vlay_get_geo, QgsMapLayer
     
 from hp.oop import Session as baseSession
      
@@ -274,6 +274,10 @@ class Session(TComs, baseSession):
                 resample=True
         
         meta_d = {'raw_fp':dem_fp, 'dem_psize':dem_psize, 'psize_raw':psize_raw}
+        
+        
+        rlay2 = self.rlay_warp(rlay_fp, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=True,
+                                     resampling=resampling, logger=log)
             
  
         #=======================================================================
@@ -436,12 +440,20 @@ class Session(TComs, baseSession):
         
                   
     
+
+
+    
+    
+
     def build_rlay(self, #build raster from some water polygon
                         fp,
                         dkey=None,
                         write=None,
                         ref_lay=None,
                         aoi_vlay=None,
+                        
+                        resampling='Maximum', #resampling method
+                        
                         clean_inun_kwargs={},
                         ):
         """
@@ -527,99 +539,14 @@ class Session(TComs, baseSession):
         # warp-----
         #=======================================================================
         
-        #=======================================================================
-        # load the layer
-        #=======================================================================
-        rlay1= self.rlay_load(rlay_fp, logger=log)
-        reso_raw = self.rlay_get_resolution(rlay1)
+        rlay1 = self.rlay_warp(rlay_fp, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=False,
+                                     resampling=resampling, logger=log, ofp=ofp)
         
-        meta_d['resolution_raw'] = reso_raw
-        #=======================================================================
-        # parameters
-        #=======================================================================
-
-        if aoi_vlay is None:
-            """get the ndb from the dem"""
-            raise Error('not implemnted')
-        
-        else:
-            clip=True
-            
-        reproj=False
-        if not rlay1.crs()==self.qproj.crs():
-            reproj=True
-            
-        resample=False
-        if not dem_psize == reso_raw:
-            resample=True
-        
-        #=======================================================================
-        # execute
-        #=======================================================================
-        if resample or clip or reproj:
-            #===================================================================
-            # defaults
-            #===================================================================
-            msg = 'warping %s (%s) w/ resol=%.4f'%(dkey, rlay1.name(), reso_raw)
-            if clip:
-                msg = msg + ' +clipping extents to %s'%aoi_vlay.name()
-            if resample:
-                msg = msg + ' +resampling to %.2f'%dem_psize
-            if reproj:
-                msg = msg + ' +reproj to %s'%self.qproj.crs().authid()
-
-            log.info(msg)
- 
-            mstore.addMapLayer(rlay1)
- 
-            #===================================================================
-            # warp
-            #===================================================================
-            """custom cliprasterwithpolygon"""
-            ins_d = {   'ALPHA_BAND' : False,
-                    'CROP_TO_CUTLINE' : clip,
-                    'DATA_TYPE' : 6, #float32
-                    'EXTRA' : '',
-                    'INPUT' : rlay1,
-                    
-                    'MASK' : aoi_vlay,
-                    'MULTITHREADING' : True,
-                    'NODATA' : -9999,
-                    'OPTIONS' : '', #no compression
-                    'OUTPUT' : ofp,
-                    
-                    'KEEP_RESOLUTION' : not resample,  #will ignore x and y res
-                    'SET_RESOLUTION' : resample,
-                    'X_RESOLUTION' : dem_psize,
-                    'Y_RESOLUTION' : dem_psize,
-                    
-                    'SOURCE_CRS' : None,
-                    'TARGET_CRS' : self.qproj.crs(),
-
-                     }
-                    
-            algo_nm = 'gdal:cliprasterbymasklayer'
-            log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
-            res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
-            log.debug('finished w/ \n    %s'%res_d)
-            
-            if not os.path.exists(res_d['OUTPUT']):
-                """failing intermittently"""
-                raise Error('failed to get a result')
-        
-        
-        #=======================================================================
-        # checks
-        #=======================================================================
-        rlay2 = self.rlay_load(ofp, logger=log)
-        assert os.path.exists(ofp)
-        assert_func(lambda:  self.rlay_check_match(rlay2, ref_lay, logger=log), msg=dkey)
-        
-        assert_func(lambda:  self.mask_check(rlay2), msg=dkey)
+        assert_func(lambda:  self.mask_check(rlay1), msg=dkey)
         
  
         if dkey == 'pwb_rlay':
-            assert_func(lambda: self.check_pwb(rlay2))
+            assert_func(lambda: self.check_pwb(rlay1))
         
         #=======================================================================
         # wrap
@@ -628,15 +555,167 @@ class Session(TComs, baseSession):
             assert not dkey in self.smry_d
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         
-        rlay2.setName(layname)
-        log.info('finished on %s'%rlay2.name())
+ 
+        log.info('finished on %s'%rlay1.name())
         mstore.removeAllMapLayers()
         
-        return rlay2
+        if write: self.ofp_d[dkey] = ofp
+        
+        return rlay1
     """
     self.mstore_log()
     """
-    
+    def rlay_warp(self,  #special implementation of gdalwarp processing tools
+                  input_raster, #filepath or layer
+                   ref_lay=None,
+                   aoi_vlay=None,
+                   
+                   clip=None, reproj=None, resample=None,decompres=None,
+                   
+                   #parameters
+                   resampling='Maximum', #resampling method
+                   compress=None,
+                   
+                  
+                  logger=None, ofp=None,
+                  ):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('rlay_warp')
+        
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        rlay_raw = self.get_layer(input_raster, logger=log)
+        
+        if ofp is None: ofp=os.path.join(self.temp_dir, '%s_warp.tif'%rlay_raw.name())
+        
+
+            
+        if aoi_vlay is None: aoi_vlay=self.aoi_vlay
+        
+        """I guess were allowing this...
+        assert ref_lay.extent()==aoi_vlay.extent()"""
+        
+        mstore = QgsMapLayerStore()
+        #=======================================================================
+        # parameters
+        #=======================================================================
+        if clip is None:
+            if aoi_vlay is None:
+                """get the ndb from the dem"""
+                raise Error('not implemnted')
+            else:
+                clip = True
+             
+        if reproj is None:   
+            reproj = False
+            if not rlay_raw.crs() == self.qproj.crs():
+                reproj = True
+                
+        if decompres is None:
+            decompres=False
+        
+        if decompres:
+            if compress is None: 
+                compress='none'
+                
+        if compress is None: compress=self.compress
+            
+        meta_d = {'crs':rlay_raw.crs().authid, 'compress':compress}
+        #=======================================================================
+        # clip or reproject----
+        #=======================================================================
+        """because we want to specify custom resampling... doing this in two stages"""
+        if clip or reproj or decompres:
+            #===================================================================
+            # defaults
+            #===================================================================
+            msg = 'warping (%s) ' % (rlay_raw.name())
+            if clip:
+                msg = msg + ' +clipping extents to %s' % aoi_vlay.name()
+            if reproj:
+                msg = msg + ' +reproj to %s' % self.qproj.crs().authid()
+                
+            if decompres:
+                msg = msg + ' +decompress'
+                
+            log.info(msg)
+            mstore.addMapLayer(rlay_raw)
+            #===================================================================
+            # clip and reproject
+            #===================================================================
+            """custom cliprasterwithpolygon"""
+            ins_d = {'ALPHA_BAND':False, 
+                'CROP_TO_CUTLINE':clip, 
+                'DATA_TYPE':6, #float32
+                'EXTRA':'', 
+                'INPUT':rlay_raw, 
+                'MASK':aoi_vlay, 
+                'MULTITHREADING':True, 
+                'NODATA':-9999, 
+                'OPTIONS':self.compress_d[compress], #no compression
+                'OUTPUT':'TEMPORARY_OUTPUT', 
+                'KEEP_RESOLUTION':False, #will ignore x and y res
+                'SET_RESOLUTION':False, 
+                'X_RESOLUTION':None, 
+                'Y_RESOLUTION':None, 
+                'SOURCE_CRS':None, 
+                'TARGET_CRS':self.qproj.crs()}
+            algo_nm = 'gdal:cliprasterbymasklayer'
+            log.debug('executing \'%s\' with ins_d: \n    %s \n\n' % (algo_nm, ins_d))
+            res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
+            log.debug('finished w/ \n    %s' % res_d)
+            if not os.path.exists(res_d['OUTPUT']):
+                """failing intermittently"""
+                raise Error('failed to get a result')
+            rlay2 = res_d['OUTPUT']
+        else:
+            rlay2 = rlay_raw
+        #=======================================================================
+        # resample-----
+        #=======================================================================
+        if ref_lay is None: 
+            ref_lay=self.retrieve('dem', logger=log)
+            
+            
+        reso_raw = self.rlay_get_resolution(rlay2)
+        dem_psize = self.rlay_get_resolution(ref_lay)
+            
+        if resample is None:
+            #===================================================================
+            # get parameters
+            #===================================================================
+
+            meta_d.update({'reso_raw':reso_raw, 'reso_ref':dem_psize})
+ 
+            resample = False
+            if not dem_psize == reso_raw:
+                resample = True
+                
+        #===================================================================
+        # resample
+        #===================================================================
+        if resample:
+            log.info('resampling from %.4f to %.2f w/ %s'%(reso_raw, dem_psize, resampling))
+            rlay3 = self.warpreproject(rlay2, resolution=int(dem_psize), compression=compress, 
+                resampling=resampling, logger=log, extents=ref_lay.extent(),
+                output=ofp)
+            if isinstance(rlay2, QgsMapLayer):mstore.addMapLayer(rlay2)
+        else:
+            rlay3 = self.get_layer(rlay2, logger=log)
+            self.rlay_write(rlay3, ofp=ofp, logger=log)
+            
+        #=======================================================================
+        # checks
+        #=======================================================================
+ 
+        assert_func(lambda:self.rlay_check_match(rlay3, ref_lay, logger=log))
+        return self.get_layer(rlay3, logger=log)
     #===========================================================================
     # PHASE0: Build HAND---------
     #===========================================================================

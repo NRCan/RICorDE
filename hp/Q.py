@@ -538,7 +538,7 @@ class Qproj(QAlgos, Basic):
         
         if newLayerName is None: newLayerName = rlayer.name()
         
-        log = logger.getChild('write_rlay')
+        log = logger.getChild('rlay_write')
         #=======================================================================
         # filepaths
         #=======================================================================

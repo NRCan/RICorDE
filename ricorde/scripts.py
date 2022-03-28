@@ -244,7 +244,8 @@ class Session(TComs, baseSession):
         if not dem_psize is  None:
             assert isinstance(dem_psize, int), 'got bad pixel size request on the dem (%s)'%dem_psize
             
- 
+        layname, ofp = self.get_outpars(dkey, write)
+        
         mstore=QgsMapLayerStore()
         
         #=======================================================================
@@ -253,7 +254,7 @@ class Session(TComs, baseSession):
         rlay_raw= self.rlay_load(dem_fp, logger=log)
         
         #=======================================================================
-        # confi parameters----------
+        # warp----------
         #=======================================================================
         #=======================================================================
         # config resolution
@@ -275,122 +276,28 @@ class Session(TComs, baseSession):
         
         meta_d = {'raw_fp':dem_fp, 'dem_psize':dem_psize, 'psize_raw':psize_raw}
         
+        #=======================================================================
+        # execute
+        #=======================================================================
         
-        rlay2 = self.rlay_warp(rlay_fp, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=True,
-                                     resampling=resampling, logger=log)
+        rlay1, d = self.rlay_warp(rlay_raw, ref_lay=rlay_raw, aoi_vlay=aoi_vlay, decompres=True,
+                               resample=resample, resampling='Mean', ofp=ofp,
+                               logger=log)
             
  
-        #=======================================================================
-        # clip
-        #=======================================================================
-        clip=False
-        if not aoi_vlay is None:
-            if not aoi_vlay.extent()==rlay_raw.extent():
-                clip=True
-                
-        #=======================================================================
-        # reproject
-        #=====================================================================
-        reproj=False
-        if not rlay_raw.crs()==self.qproj.crs():
-            reproj=True
-            
-        #=======================================================================
-        # compression
-        #=======================================================================
-        decompres=False
-        if not self.getRasterCompression(rlay_raw.source()) is None:
-            decompres = True
-            
-        meta_d.update({'clip':clip, 'resample':resample, 'reproj':reproj, 'decompres':decompres})
-        #=======================================================================
-        # warp-----
-        #=======================================================================
-        if resample or clip or reproj or decompres:
-            #===================================================================
-            # defaults
-            #===================================================================
-            msg = 'warping DEM (%s) w/ resol=%.4f'%(rlay_raw.name(), psize_raw)
-            if clip:
-                msg = msg + ' +clipping extents to %s'%aoi_vlay.name()
-            if resample:
-                msg = msg + ' +resampling to %.2f'%dem_psize
-            if reproj:
-                msg = msg + ' +reproj to %s'%self.qproj.crs().authid()
-            if decompres:
-                msg = msg + ' +decompress'
-            log.info(msg)
- 
-            mstore.addMapLayer(rlay_raw)
-            
-            if write:
-                ofp = os.path.join(self.wrk_dir, '%s_%ix%i_%s.tif'%(self.layName_pfx,int(dem_psize), int(dem_psize), dkey))
-                
-            else:
-                ofp=os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-                
-            if os.path.exists(ofp):
-                assert overwrite
-                os.remove(ofp)
-            
-            #===================================================================
-            # warp
-            #===================================================================
-            """custom cliprasterwithpolygon"""
-            ins_d = {   'ALPHA_BAND' : False,
-                    'CROP_TO_CUTLINE' : clip,
-                    'DATA_TYPE' : 6, #float32
-                    'EXTRA' : '',
-                    'INPUT' : rlay_raw,
-                    
-                    'MASK' : aoi_vlay,
-                    'MULTITHREADING' : True,
-                    'NODATA' : -9999,
-                    'OPTIONS' : '', #no compression
-                    'OUTPUT' : ofp,
-                    
-                    'KEEP_RESOLUTION' : not resample,  #will ignore x and y res
-                    'SET_RESOLUTION' : resample,
-                    'X_RESOLUTION' : dem_psize,
-                    'Y_RESOLUTION' : dem_psize,
-                    
-                    'SOURCE_CRS' : None,
-                    'TARGET_CRS' : self.qproj.crs(),
-
-                     }
-                    
-            algo_nm = 'gdal:cliprasterbymasklayer'
-            log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
         
-            res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
-            
-            log.debug('finished w/ \n    %s'%res_d)
-            
-            if not os.path.exists(res_d['OUTPUT']):
-                """failing intermittently"""
-                raise Error('failed to get a result')
- 
-            
-            #===================================================================
-            # wrap
-            #===================================================================
-            self.ofp_d[dkey] = ofp
-            rlay = self.rlay_load(ofp, logger=log)
-            
-            log.info('finished building \'%s\' w/ \n    %s'%(dkey, ofp))
+        meta_d.update(d)
 
-
-            
-        else:
-            rlay=rlay_raw
-
-        #use loader to attach common parameters
+        #=======================================================================
+        # #use loader to attach common parameters
+        #=======================================================================
         """for consistency between compiled loads and builds"""
-        self.load_dem(rlay=rlay, logger=log, dkey=dkey)
+        self.load_dem(rlay=rlay1, logger=log, dkey=dkey)
         #=======================================================================
         # wrap
         #=======================================================================
         if self.exit_summary: self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+        if write: self.ofp_d[dkey] = ofp
         mstore.removeAllMapLayers()
  
  
@@ -539,9 +446,15 @@ class Session(TComs, baseSession):
         # warp-----
         #=======================================================================
         
-        rlay1 = self.rlay_warp(rlay_fp, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=False,
+        rlay1, d = self.rlay_warp(rlay_fp, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=False,
                                      resampling=resampling, logger=log, ofp=ofp)
         
+        
+        meta_d.update(d)
+        
+        #=======================================================================
+        # checks
+        #=======================================================================
         assert_func(lambda:  self.mask_check(rlay1), msg=dkey)
         
  
@@ -594,7 +507,8 @@ class Session(TComs, baseSession):
         
         if ofp is None: ofp=os.path.join(self.temp_dir, '%s_warp.tif'%rlay_raw.name())
         
-
+        if ref_lay is None: 
+            ref_lay=self.retrieve('dem', logger=log)
             
         if aoi_vlay is None: aoi_vlay=self.aoi_vlay
         
@@ -619,6 +533,9 @@ class Session(TComs, baseSession):
                 
         if decompres is None:
             decompres=False
+            if not self.getRasterCompression(rlay_raw.source()) is None:
+                decompres = True
+            
         
         if decompres:
             if compress is None: 
@@ -676,11 +593,12 @@ class Session(TComs, baseSession):
             rlay2 = res_d['OUTPUT']
         else:
             rlay2 = rlay_raw
+        
+        rlay2 = self.get_layer(rlay2)
         #=======================================================================
         # resample-----
         #=======================================================================
-        if ref_lay is None: 
-            ref_lay=self.retrieve('dem', logger=log)
+
             
             
         reso_raw = self.rlay_get_resolution(rlay2)
@@ -696,6 +614,10 @@ class Session(TComs, baseSession):
             resample = False
             if not dem_psize == reso_raw:
                 resample = True
+                
+            """seems to trip often because the aoi extents dont match the dem?"""
+            if not rlay2.extent()==ref_lay.extent():
+                resample=True
                 
         #===================================================================
         # resample
@@ -715,7 +637,7 @@ class Session(TComs, baseSession):
         #=======================================================================
  
         assert_func(lambda:self.rlay_check_match(rlay3, ref_lay, logger=log))
-        return self.get_layer(rlay3, logger=log)
+        return self.get_layer(rlay3, logger=log), meta_d
     #===========================================================================
     # PHASE0: Build HAND---------
     #===========================================================================

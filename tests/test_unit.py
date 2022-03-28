@@ -31,8 +31,8 @@ def test_02pwb(session, true_dir, dem, write, base_dir):
     dkey = 'pwb_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
     
-
-@pytest.mark.parametrize('proj_d',['fred01','fred02'], indirect=True) #raster and polygon inundations
+@pytest.mark.dev
+@pytest.mark.parametrize('proj_d',['fred01','fred02', 'fred03'], indirect=True) #raster and polygon inundations
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 def test_03inun(session, true_dir, dem, write, base_dir):
     dkey = 'inun_rlay'
@@ -207,7 +207,7 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0327_beach2.gpkg'] ) #from test_hand
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   

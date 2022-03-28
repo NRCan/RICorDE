@@ -25,19 +25,21 @@ rproj_lib = {
             'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
             'inun_fp':'test_tag_0326_inun_rlay.tif',
             'pwb_fp':'test_tag_0326_pwb_rlay.tif',     
-            'crsid':'EPSG:3979', 
-       
-                
+            'crsid':'EPSG:3979',                
                 },
         'fred02':{ #vector layers
             'aoi_fp':'aoi01T_fred_20220325.geojson',
             'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
             'inun_fp':'inun_fred_aoi01T_0325.geojson',
             'pwb_fp':'pwater_fred_aoi01T_0325.geojson',     
-            'crsid':'EPSG:3979', 
-    
-                
+            'crsid':'EPSG:3979',                
                 },
+        'fred03':{#messy rasters
+            'aoi_fp':'aoi01T_fred_20220325.geojson',
+            'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
+            'inun_fp':'test_fred03_0328_inun_rlay.tif',#reproject to EPSG4326 w/ a nasty resolution
+            'crsid':'EPSG:3979', 
+            },
         }
 
 @pytest.fixture(scope='session')

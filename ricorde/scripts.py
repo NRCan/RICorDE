@@ -461,20 +461,13 @@ class Session(TComs, baseSession):
         #load the reference layer
         if ref_lay is None:
             ref_lay = self.retrieve('dem', logger=log)
+            
+        dem_psize = self.dem_psize
         
         mstore = QgsMapLayerStore()
         
         #output
-        layname = '%s_%s'%(self.layName_pfx, dkey) 
-        if write:
-            ofp = os.path.join(self.wrk_dir, layname+'.tif')
-            self.ofp_d[dkey] = ofp
-        else:
-            ofp=os.path.join(self.temp_dir, layname+'.tif')
-            
-        if os.path.exists(ofp):
-            assert self.overwrite
-            os.remove(ofp)
+        layname, ofp = self.get_outpars(dkey, write)
 
         meta_d = {'dkey':dkey,'raw_fp':fp,'ref_lay':ref_lay.source(),'aoi_vlay':aoi_vlay}
         #=======================================================================
@@ -527,34 +520,106 @@ class Session(TComs, baseSession):
                                           )
             
             log.debug('\'%s\' saved to \n    %s'%(dkey, rlay_fp))
+            
+            
+
+        #=======================================================================
+        # warp-----
+        #=======================================================================
+        
         #=======================================================================
         # load the layer
         #=======================================================================
-        rlay= self.rlay_load(rlay_fp, logger=log)
+        rlay1= self.rlay_load(rlay_fp, logger=log)
+        reso_raw = self.rlay_get_resolution(rlay1)
+        
+        meta_d['resolution_raw'] = reso_raw
+        #=======================================================================
+        # parameters
+        #=======================================================================
+
+        if aoi_vlay is None:
+            """get the ndb from the dem"""
+            raise Error('not implemnted')
+        
+        else:
+            clip=True
+            
+        reproj=False
+        if not rlay1.crs()==self.qproj.crs():
+            reproj=True
+            
+        resample=False
+        if not dem_psize == reso_raw:
+            resample=True
         
         #=======================================================================
-        # clip
+        # execute
         #=======================================================================
-        if not aoi_vlay is None:
-            rlay1 = self.slice_aoi(rlay, aoi_vlay=aoi_vlay, logger=log, output=ofp)
-            mstore.addMapLayer(rlay)
-        else:
-            log.warning('no AOI provided')
-            shutil.copyfile(rlay.source(),ofp)
-            rlay1=rlay
+        if resample or clip or reproj:
+            #===================================================================
+            # defaults
+            #===================================================================
+            msg = 'warping %s (%s) w/ resol=%.4f'%(dkey, rlay1.name(), reso_raw)
+            if clip:
+                msg = msg + ' +clipping extents to %s'%aoi_vlay.name()
+            if resample:
+                msg = msg + ' +resampling to %.2f'%dem_psize
+            if reproj:
+                msg = msg + ' +reproj to %s'%self.qproj.crs().authid()
+
+            log.info(msg)
  
+            mstore.addMapLayer(rlay1)
  
+            #===================================================================
+            # warp
+            #===================================================================
+            """custom cliprasterwithpolygon"""
+            ins_d = {   'ALPHA_BAND' : False,
+                    'CROP_TO_CUTLINE' : clip,
+                    'DATA_TYPE' : 6, #float32
+                    'EXTRA' : '',
+                    'INPUT' : rlay1,
+                    
+                    'MASK' : aoi_vlay,
+                    'MULTITHREADING' : True,
+                    'NODATA' : -9999,
+                    'OPTIONS' : '', #no compression
+                    'OUTPUT' : ofp,
+                    
+                    'KEEP_RESOLUTION' : not resample,  #will ignore x and y res
+                    'SET_RESOLUTION' : resample,
+                    'X_RESOLUTION' : dem_psize,
+                    'Y_RESOLUTION' : dem_psize,
+                    
+                    'SOURCE_CRS' : None,
+                    'TARGET_CRS' : self.qproj.crs(),
+
+                     }
+                    
+            algo_nm = 'gdal:cliprasterbymasklayer'
+            log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
+            res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
+            log.debug('finished w/ \n    %s'%res_d)
+            
+            if not os.path.exists(res_d['OUTPUT']):
+                """failing intermittently"""
+                raise Error('failed to get a result')
+        
+        
         #=======================================================================
         # checks
         #=======================================================================
+        rlay2 = self.rlay_load(ofp, logger=log)
         assert os.path.exists(ofp)
-        assert_func(lambda:  self.rlay_check_match(rlay1, ref_lay, logger=log), msg=dkey)
+        assert_func(lambda:  self.rlay_check_match(rlay2, ref_lay, logger=log), msg=dkey)
         
-        assert_func(lambda:  self.mask_check(rlay1), msg=dkey)
+        assert_func(lambda:  self.mask_check(rlay2), msg=dkey)
         
  
         if dkey == 'pwb_rlay':
-            assert_func(lambda: self.check_pwb(rlay1))
+            assert_func(lambda: self.check_pwb(rlay2))
         
         #=======================================================================
         # wrap
@@ -563,11 +628,11 @@ class Session(TComs, baseSession):
             assert not dkey in self.smry_d
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         
-        rlay1.setName(layname)
-        log.info('finished on %s'%rlay1.name())
+        rlay2.setName(layname)
+        log.info('finished on %s'%rlay2.name())
         mstore.removeAllMapLayers()
         
-        return rlay1
+        return rlay2
     """
     self.mstore_log()
     """
@@ -1812,7 +1877,7 @@ class Session(TComs, baseSession):
              neighborhood_size = 7,
              
              max_iter=20, #maximum number of smoothing iterations to allow
-             hval_prec=0.2, #reserved for mround
+             precision=0.2, #reserved for mround
              
              
                #gen
@@ -1855,7 +1920,7 @@ class Session(TComs, baseSession):
             range_thresh = min(max_grade*resolution, 2.0)
             
             
-        meta_d.update({'smooth_resolution':resolution, 'smooth_range_thresh':range_thresh})
+        meta_d.update()
             
         log.info('applying low-pass filter and downsampling (%.2f) from %s'%(
             resolution, hgRaw_vlay.name()))
@@ -1864,11 +1929,12 @@ class Session(TComs, baseSession):
         #=======================================================================
         # run smoothing
         #=======================================================================
-        self.rlay_smooth(
-            
-            )
+        d = self.rlay_smooth(hgRaw_vlay,
+            neighborhood_size=neighborhood_size, resolution=resolution,
+            max_iter=max_iter, range_thresh=range_thresh, precision=precision,
+            debug=debug,logger=log, ofp=ofp)
 
-            
+        meta_d.update(d) 
         #=======================================================================
         # wrap
         #=======================================================================
@@ -1881,7 +1947,6 @@ class Session(TComs, baseSession):
             self.ofp_d[dkey] = ofp
  
         if self.exit_summary:
-            df.copy() #add tot he summary sheet
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
  
  
@@ -1889,21 +1954,29 @@ class Session(TComs, baseSession):
     
     def rlay_smooth(self,
                     vlay_raw,
+                    neighborhood_size=None,
+                    circular_neighborhood=True,
+                    resolution=None,
                     
+                    max_iter=10, 
+                    range_thresh=None,
+                    
+                    precision=3,
                     #gen
-                    logger=None,
+                    logger=None, debug=False, ofp=None,
                     ):
         #=======================================================================
         # ddefaults
         #=======================================================================
         if logger is None: logger=self.logger
-        k
+        log = logger.getChild('rsmth')
+        meta_d={'smooth_resolution':resolution, 'smooth_range_thresh':range_thresh, 'max_iter':max_iter}
         #===================================================================
         # smooth initial
         #===================================================================
         smooth_rlay_fp1 = self.rNeighbors(vlay_raw,
                         neighborhood_size=neighborhood_size, 
-                        circular_neighborhood=True,
+                        circular_neighborhood=circular_neighborhood,
                         cell_size=resolution,
                         #output=ofp, 
                         logger=log)
@@ -1916,7 +1989,7 @@ class Session(TComs, baseSession):
         getting a new mask from teh smoothed as this has grown outward
         """
         mask_fp = self.mask_build(smooth_rlay_fp1, logger=log,
-                        ofp=os.path.join(self.temp_dir, 'inun31_mask.tif'))
+                        ofp=os.path.join(self.temp_dir, 'rsmooth_mask.tif'))
         
 
         #===================================================================
@@ -2008,7 +2081,7 @@ class Session(TComs, baseSession):
         # copy to result path
         #===================================================================
  
-        self.rlay_mround(rlay_fp_i, output=ofp, logger=log, multiple=hval_prec)
+        self.rlay_mround(rlay_fp_i, output=ofp, logger=log, multiple=precision)
 
         #===================================================================
         # build animations
@@ -2016,12 +2089,12 @@ class Session(TComs, baseSession):
         if debug:
             from hp.animation import capture_images
             capture_images(
-                os.path.join(self.out_dir, dkey, self.layName_pfx+'_shvals_avg.gif'),
+                os.path.join(self.out_dir,   self.layName_pfx+'_shvals_avg.gif'),
                 os.path.join(temp_dir, 'avg')
                 )
             
             capture_images(
-                os.path.join(self.out_dir, dkey, self.layName_pfx+'_shvals_range.gif'),
+                os.path.join(self.out_dir,   self.layName_pfx+'_shvals_range.gif'),
                 os.path.join(temp_dir, 'range')
                 )
  

@@ -1627,7 +1627,7 @@ class QAlgos(object):
                               
                               crsOut = None, #crs to re-project to
                               resolution=None,
-                              compression = None,
+                              compress = None,
                               nodata_val=-9999,
                               resampling='Nearest neighbour', #resampling method
                               extents=None,
@@ -1648,7 +1648,7 @@ class QAlgos(object):
         #=======================================================================
         if logger is None: logger = self.logger
         log = logger.getChild('warpreproject')
-        if compression is None: compression=self.compression
+        if compress is None: compress=self.compress
         
         resamp_d = {0:'Nearest neighbour',
                     1:'Bilinear',
@@ -1694,7 +1694,7 @@ class QAlgos(object):
         #=======================================================================
         # run algo        
         #=======================================================================
-        opts = self.compress_d[compression]
+        opts = self.compress_d[compress]
         if opts is None: opts = ''
 
         
@@ -2110,6 +2110,7 @@ class QAlgos(object):
                        ):
         """
         for buffered mask layers... the buffered cells have a value of 2
+        WARNING: this changes the extents
         """
  
         #=======================================================================

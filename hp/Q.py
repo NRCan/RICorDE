@@ -1443,9 +1443,7 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # check
         #=======================================================================
-        if not self.rlay_check_match(rlay, mask_rlay, logger=log):
-            """still works I guess?"""
-            log.warning('mask and base layer doesnt match')
+        assert_func(lambda:  self.rlay_check_match(rlay,mask_rlay, logger=log))
         #=======================================================================
         # handle inverstion
         #=======================================================================

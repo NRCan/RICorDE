@@ -633,7 +633,7 @@ class Session(TComs, baseSession):
             else:
                 extents=None
             
-            rlay3 = self.warpreproject(rlay2, resolution=int(resolution), compression=compress, 
+            rlay3 = self.warpreproject(rlay2, resolution=int(resolution), compress=compress, 
                 resampling=resampling, logger=log, extents=extents,
                 output=ofp)
             if isinstance(rlay2, QgsMapLayer):mstore.addMapLayer(rlay2)
@@ -1009,7 +1009,9 @@ class Session(TComs, baseSession):
         #=======================================================================
  
         log.info('building \'%s\' from \n    %s'%(dkey,{'pwb_rlay':pwb_rlay.name(), 'inun_rlay':inun_rlay.name()}))
-
+        
+        assert_func(lambda:  self.rlay_check_match(pwb_rlay,inun_rlay, logger=log))
+        assert_func(lambda:  self.rlay_check_match(pwb_rlay,HAND_mask, logger=log))
             
  
         #===================================================================
@@ -1020,22 +1022,29 @@ class Session(TComs, baseSession):
 
         #raw buffer (buffered cells have value=2)
         if buff_dist>0:
+            #grass buffer
             pwb_buff1_fp = self.rBuffer(pwb_rlay, logger=log, dist=buff_dist,
                                         output = os.path.join(self.temp_dir, '%s_buff1.tif'%pwb_rlay.name()))
             
-            #assert_func(lambda:  self.rlay_check_match(pwb_buff1_fp,HAND_mask, logger=log))
+            #get back on same extents
+            pwb_buff2_fp = self.warpreproject(pwb_buff1_fp, extents=pwb_rlay.extent(), logger=log)
+ 
+            
+            assert_func(lambda:  self.rlay_check_match(pwb_buff2_fp,pwb_rlay, logger=log))
             
             #convert to a mask again
-            pwb_buff2_fp = self.mask_build(pwb_buff1_fp, logger=log)
+            pwb_buff3_fp = self.mask_build(pwb_buff2_fp, logger=log)
+            
+            assert_func(lambda:  self.rlay_check_match(pwb_buff3_fp,pwb_rlay, logger=log))
         else:
-            pwb_buff2_fp = pwb_rlay
+            pwb_buff3_fp = pwb_rlay
         
  
         
         #=======================================================================
         # merge inundation and pwb
         #=======================================================================
-        inun1_1_fp = self.mask_combine([pwb_buff2_fp, inun_rlay], logger=log,
+        inun1_1_fp = self.mask_combine([pwb_buff3_fp, inun_rlay], logger=log,
                                      ofp = os.path.join(self.temp_dir, 'inun1_1.tif'))
         
         
@@ -1159,8 +1168,11 @@ class Session(TComs, baseSession):
         #buffer 1 pixel
         buff_fp = self.rBuffer(inun_rlay, logger=log, dist=pixel_size)
         
+        #reproject get back on same extents
+        buff_f2 = self.warpreproject(buff_fp, extents=inun_rlay.extent(), logger=log)
+        
         #retrieve buffered pixels
-        mask1_fp = self.mask_build(buff_fp, logger=log, thresh=1.5, thresh_type='lower')
+        mask1_fp = self.mask_build(buff_f2, logger=log, thresh=1.5, thresh_type='lower')
         
         #=======================================================================
         # sample the base
@@ -2510,7 +2522,7 @@ class Session(TComs, baseSession):
         if not compress=='none':
             dep3a_fp = self.mask_apply(dep2_fp, inun2r_fp, logger=log)
             
-            dep3_fp = self.warpreproject(dep3a_fp, compression=compress, nodata_val=-9999,
+            dep3_fp = self.warpreproject(dep3a_fp, compress=compress, nodata_val=-9999,
                                          output=ofp, logger=log)
             
         else:

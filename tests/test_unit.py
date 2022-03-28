@@ -56,7 +56,7 @@ def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
 
 
 @pytest.mark.parametrize('pwb_rlay',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0328_pwb_rlay.tif'] ) #from test_pwb
-@pytest.mark.parametrize('dem_hyd',[r'test_04demHyd_fred01_test_01de0\working\test_tag_0327_dem_hyd.tif'] ) #from test_pwb
+@pytest.mark.parametrize('dem_hyd',[r'test_04demHyd_fred01_test_01de0\working\test_tag_0328_dem_hyd.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 def test_04hand(session, true_dir, pwb_rlay, write, base_dir, dem_hyd):
     
@@ -74,7 +74,7 @@ def test_04hand(session, true_dir, pwb_rlay, write, base_dir, dem_hyd):
     
     
 
-@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_05handMask(session, true_dir, hand_fp, write, base_dir):
     
@@ -89,9 +89,9 @@ def test_05handMask(session, true_dir, hand_fp, write, base_dir):
 
 
 @pytest.mark.parametrize('buff_dist',[10] ) #othwerwise the dem needs to be loaded
-@pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0327_HAND_mask.tif'] ) #from test_hand_mask
+@pytest.mark.parametrize('handM_fp',[r'test_05handMask_fred01_test_040\working\test_tag_0328_HAND_mask.tif'] ) #from test_hand_mask
 @pytest.mark.parametrize('pwb_fp',[r'test_02pwb_test_01dem_None_fre0\working\test_tag_0328_pwb_rlay.tif'] ) #from test_pwb
-@pytest.mark.parametrize('inun_fp',[r'test_03inun_test_01dem_None_fr1\working\test_tag_0327_inun_rlay.tif'] )  
+@pytest.mark.parametrize('inun_fp',[r'test_03inun_test_01dem_None_fr1\working\test_tag_0328_inun_rlay.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp, inun_fp):
     
@@ -108,8 +108,8 @@ def test_06inun1(session, true_dir, handM_fp, write, base_dir, buff_dist, pwb_fp
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
-@pytest.mark.parametrize('inun1',[r'test_06inun1_fred01_test_03inu0\working\test_tag_0327_inun1.tif'] )  
+@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('inun1',[r'test_06inun1_fred01_test_03inu0\working\test_tag_0328_inun1.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_07beach1(session, true_dir, write, base_dir, inun1, hand_fp):
     
@@ -125,7 +125,7 @@ def test_07beach1(session, true_dir, write, base_dir, inun1, hand_fp):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.parametrize('beach1',[r'test_07beach1_fred01_test_06in0\working\test_tag_0327_beach1.tif'] )  
+@pytest.mark.parametrize('beach1',[r'test_07beach1_fred01_test_06in0\working\test_tag_0328_beach1.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_08b1Bounds(session, true_dir, write, base_dir, beach1):
     
@@ -154,8 +154,8 @@ def test_08b1Bounds(session, true_dir, write, base_dir, beach1):
  
     
 
-@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
-@pytest.mark.parametrize('beach1',[r'test_07beach1_fred01_test_06in0\working\test_tag_0327_beach1.tif'] )  
+@pytest.mark.parametrize('hand_fp',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('beach1',[r'test_07beach1_fred01_test_06in0\working\test_tag_0328_beach1.tif'] )  
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_08inunHmax(session, true_dir, write, base_dir, beach1, hand_fp):
     
@@ -171,8 +171,8 @@ def test_08inunHmax(session, true_dir, write, base_dir, beach1, hand_fp):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.parametrize('inunHmax',[r'test_08inunHmax_fred01_test_070\working\test_tag_0327_inunHmax.tif'] ) 
-@pytest.mark.parametrize('inun1',[r'test_06inun1_fred01_test_03inu0\working\test_tag_0327_inun1.tif'] )   
+@pytest.mark.parametrize('inunHmax',[r'test_08inunHmax_fred01_test_070\working\test_tag_0328_inunHmax.tif'] ) 
+@pytest.mark.parametrize('inun1',[r'test_06inun1_fred01_test_03inu0\working\test_tag_0328_inun1.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     
@@ -188,9 +188,9 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.parametrize('b1Bounds',[r'test_08b1Bounds_fred01_test_070\working\test_tag_0327_b1Bounds.pickle'] ) #from test_hand
-@pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0327_HAND.tif'] ) #from test_hand
-@pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
+@pytest.mark.parametrize('b1Bounds',[r'test_08b1Bounds_fred01_test_070\working\test_tag_0328_b1Bounds.pickle'] ) #from test_hand
+@pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
     """todo.. output this as a geojson"""
@@ -210,9 +210,9 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
 @pytest.mark.dev
 @pytest.mark.parametrize('radius',[30] )   #speed things up
 @pytest.mark.parametrize('pts_cnt',[3] )   #speed things up
-@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0327_beach2.gpkg'] ) #from test_hand
+@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0328_beach2.gpkg'] ) #from test_hand
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
-@pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
+@pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt, radius):
     """3 parameters were not really testing here"""

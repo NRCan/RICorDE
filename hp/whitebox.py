@@ -27,18 +27,25 @@ mod_logger = logging.getLogger(__name__)
 
 class Whitebox(object):
     
-    exe_fp = r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe'
+    exe_d = {
+        'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
+        'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
+        }
     
     def __init__(self,
                  out_dir=None,
                  logger=mod_logger,
                  overwrite=True,
+                 version='v1.4.0',
+                 max_procs=4, 
                  ):
         
         if out_dir is None: out_dir = get_temp_dir()
         self.out_dir=out_dir
         self.logger=logger.getChild('wbt')
         self.overwrite =overwrite
+        self.exe_fp=self.exe_d[version]
+        self.max_procs=max_procs
 
         assert os.path.exists(self.exe_fp), 'bad exe: \n    %s'%self.exe_fp
         
@@ -269,6 +276,7 @@ class Whitebox(object):
                 '--weight=%.2f'%weight,
                 '--radius=%.2f'%radius,
                 '--min_points=%i'%min_points,
+                '--max_procs=%i'%self.max_procs,
                 ]
         
         if ref_lay_fp is None:

@@ -1751,7 +1751,7 @@ class Session(TComs, baseSession):
         shp_fp = self.vlay_write(beach2_vlay, os.path.join(self.temp_dir, '%s.shp'%beach2_vlay.name()), driverName='ESRI Shapefile')
         
         #run tool
-        interp_raw_fp = Whitebox(logger=logger
+        interp_raw_fp = Whitebox(logger=logger, version='v2.0.0', #1.4 wont cap processors
                                ).IdwInterpolation(shp_fp, fieldName,
                                 weight=distP, 
                                 radius=radius,
@@ -1861,11 +1861,47 @@ class Session(TComs, baseSession):
             resolution, hgRaw_vlay.name()))
  
         
+        #=======================================================================
+        # run smoothing
+        #=======================================================================
+        self.rlay_smooth(
+            
+            )
+
+            
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        rlay = self.rlay_load(ofp, logger=log)
         
+        assert_func(lambda:  self.rlay_check_match(rlay,hgRaw_vlay, logger=log))
+        
+        
+        if write:
+            self.ofp_d[dkey] = ofp
+ 
+        if self.exit_summary:
+            df.copy() #add tot he summary sheet
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+ 
+ 
+        return rlay
+    
+    def rlay_smooth(self,
+                    vlay_raw,
+                    
+                    #gen
+                    logger=None,
+                    ):
+        #=======================================================================
+        # ddefaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        k
         #===================================================================
         # smooth initial
         #===================================================================
-        smooth_rlay_fp1 = self.rNeighbors(hgRaw_vlay,
+        smooth_rlay_fp1 = self.rNeighbors(vlay_raw,
                         neighborhood_size=neighborhood_size, 
                         circular_neighborhood=True,
                         cell_size=resolution,
@@ -1906,7 +1942,7 @@ class Session(TComs, baseSession):
             # #check range and smoth
             #===============================================================
             try:
-                check, rlay_fp_i, rvali, fail_pct = self.smooth_iter(rlay_fp_i, 
+                check, rlay_fp_i, rvali, fail_pct = self._smooth_iter(rlay_fp_i, 
                                                            range_thresh=range_thresh,
                                                            mask=mask_fp,
                                                            logger=log.getChild(str(i)),
@@ -1914,7 +1950,7 @@ class Session(TComs, baseSession):
                                                            sfx='%03d'%i,
                                                            debug=debug)
             except Exception as e:
-                log.warning('smooth_iter %i failed w/ \n    %s'%(i, e))
+                log.warning('_smooth_iter %i failed w/ \n    %s'%(i, e))
                 fail_cnt=10
                 rvali=0
 
@@ -1948,7 +1984,7 @@ class Session(TComs, baseSession):
         #===================================================================
         # #wrap
         #===================================================================
-        meta_d.update({'smooth_iters':i, 'smooth_rval':round(rvali, 3)})
+        meta_d.update({'_smooth_iters':i, 'smooth_rval':round(rvali, 3)})
         df = pd.DataFrame.from_dict(rvals_d, orient='index')
 
         #sucess
@@ -1988,26 +2024,8 @@ class Session(TComs, baseSession):
                 os.path.join(self.out_dir, dkey, self.layName_pfx+'_shvals_range.gif'),
                 os.path.join(temp_dir, 'range')
                 )
-            
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        rlay = self.rlay_load(ofp, logger=log)
-        
-        assert_func(lambda:  self.rlay_check_match(rlay,hgRaw_vlay, logger=log))
-        
-        
-        if write:
-            self.ofp_d[dkey] = ofp
  
-        if self.exit_summary:
-            df.copy() #add tot he summary sheet
-            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
- 
- 
-        return rlay
- 
-    def smooth_iter(self,  #check if range threshold is satisifed... or smooth 
+    def _smooth_iter(self,  #check if range threshold is satisifed... or smooth 
                     rlay_fp, 
                     range_thresh=1.0,
                     neighborhood_size=3,

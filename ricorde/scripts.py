@@ -1888,7 +1888,7 @@ class Session(TComs, baseSession):
              hgRaw_vlay=None,
              
              #parameters
-              resolution=None,
+              resolution=None, #resolution for rNeigbour averaging
              
              range_thresh=None, #maximum range (between HAND cell values) to allow
                 #None: calc from max_slope and resolution
@@ -1949,7 +1949,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # run smoothing
         #=======================================================================
-        d = self.rlay_smooth(hgRaw_vlay,
+        rlay, d = self.rlay_smooth(hgRaw_vlay,
             neighborhood_size=neighborhood_size, resolution=resolution,
             max_iter=max_iter, range_thresh=range_thresh, precision=precision,
             debug=debug,logger=log, ofp=ofp)
@@ -1958,9 +1958,9 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
-        rlay = self.rlay_load(ofp, logger=log)
+ 
         
-        assert_func(lambda:  self.rlay_check_match(rlay,hgRaw_vlay, logger=log))
+        
         
         
         if write:
@@ -1973,10 +1973,10 @@ class Session(TComs, baseSession):
         return rlay
     
     def rlay_smooth(self,
-                    vlay_raw,
+                    rlay_raw,
                     neighborhood_size=None,
                     circular_neighborhood=True,
-                    resolution=None,
+                    resolution=None, #for rNeighbors
                     
                     max_iter=10, 
                     range_thresh=None,
@@ -1994,7 +1994,7 @@ class Session(TComs, baseSession):
         #===================================================================
         # smooth initial
         #===================================================================
-        smooth_rlay_fp1 = self.rNeighbors(vlay_raw,
+        smooth_rlay_fp1 = self.rNeighbors(rlay_raw,
                         neighborhood_size=neighborhood_size, 
                         circular_neighborhood=circular_neighborhood,
                         cell_size=resolution,
@@ -2031,6 +2031,8 @@ class Session(TComs, baseSession):
         #===================================================================
         fail_cnt = 0 #number of failures to smoothen
         for i in range(0,max_iter):
+            assert_func(lambda:  self.rlay_check_match(rlay_fp_i,mask_fp, logger=log))
+            """stopped here"""
             #===============================================================
             # #check range and smoth
             #===============================================================
@@ -2098,11 +2100,21 @@ class Session(TComs, baseSession):
         
  
         #===================================================================
-        # copy to result path
+        # post
         #===================================================================
- 
-        self.rlay_mround(rlay_fp_i, output=ofp, logger=log, multiple=precision)
+        #round values
+        rlay_mround_fp = self.rlay_mround(rlay_fp_i,  logger=log, multiple=precision)['OUTPUT']
+        
+        #repeoject to extents and original resolution
+        ofp = self.warpreproject(rlay_mround_fp, output=ofp,extents=rlay_raw.extent(), 
+                                 resolution = int(self.rlay_get_resolution(rlay_raw)),
+                                  logger=log)
 
+ 
+     
+        res_rlay = self.rlay_load(ofp, logger=log)
+        assert_func(lambda:  self.rlay_check_match(res_rlay,rlay_raw, logger=log))
+ 
         #===================================================================
         # build animations
         #===================================================================
@@ -2117,6 +2129,8 @@ class Session(TComs, baseSession):
                 os.path.join(self.out_dir,   self.layName_pfx+'_shvals_range.gif'),
                 os.path.join(temp_dir, 'range')
                 )
+            
+        return res_rlay, meta_d
  
     def _smooth_iter(self,  #check if range threshold is satisifed... or smooth 
                     rlay_fp, 

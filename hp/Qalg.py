@@ -1690,7 +1690,7 @@ class QAlgos(object):
 
             
         if not resolution is None:
-            assert isinstance(resolution, int), 'got bad type in resolution: %s'%type(int)
+            assert isinstance(resolution, int), 'got bad type in resolution: %s'%type(resolution)
         #=======================================================================
         # run algo        
         #=======================================================================

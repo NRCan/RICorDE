@@ -207,7 +207,7 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('radius',[30] )   #speed things up
 @pytest.mark.parametrize('pts_cnt',[3] )   #speed things up
 @pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0328_beach2.gpkg'] ) #from test_hand
@@ -229,24 +229,22 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
-
-#===============================================================================
-# @pytest.mark.parametrize('resolution',[6] ) #too slow otherwise
-# @pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
-# @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-# def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution):
-#     
-#     #set the compiled references
-#     session.compiled_fp_d={
-#         'hgRaw':os.path.join(base_dir, beach2),
-#  
-#         }
-#     
-#     dkey = 'hgSmooth'
-#     test_rlay = session.retrieve(dkey, write=write, interpResolution=interpResolution)
-# 
-#     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
-#===============================================================================
+@pytest.mark.dev
+@pytest.mark.parametrize('resolution',[6] ) #too slow otherwise
+@pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution):
+     
+    #set the compiled references
+    session.compiled_fp_d={
+        'hgRaw':os.path.join(base_dir, hgRaw),
+  
+        }
+     
+    dkey = 'hgSmooth'
+    test_rlay = session.retrieve(dkey, write=write, resolution=resolution)
+ 
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================
 # commons--------
 #===============================================================================

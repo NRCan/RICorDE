@@ -1419,7 +1419,8 @@ class Qproj(QAlgos, Basic):
                    rlay, #layer to mask
                    mask_rlay, #mask raseter
                         #1=dont mask; 
-                        #0 or nan = mask 
+                        #0 or nan = mask
+                    allow_approximate=False, 
                    invert_mask=False,
                    layname=None,
                    logger=None,
@@ -1443,7 +1444,8 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # check
         #=======================================================================
-        assert_func(lambda:  self.rlay_check_match(rlay,mask_rlay, logger=log))
+        if allow_approximate:
+            assert_func(lambda:  self.rlay_check_match(rlay,mask_rlay, logger=log))
         #=======================================================================
         # handle inverstion
         #=======================================================================

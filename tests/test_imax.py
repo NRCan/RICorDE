@@ -213,7 +213,7 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0327_2x2_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0327_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_11beach2Interp(session, true_dir, write, base_dir, beach2, dem, inun2, interpResolution):
+def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, interpResolution):
     
     #set the compiled references
     session.compiled_fp_d={

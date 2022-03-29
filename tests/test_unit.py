@@ -229,7 +229,7 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('resolution',[8] )
 @pytest.mark.parametrize('precision',[0.4] )  
 @pytest.mark.parametrize('range_thresh',[2.7] ) 
@@ -327,7 +327,7 @@ def test_14wslMosaic(session, true_dir, write, base_dir,
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
 
-
+@pytest.mark.dev
 @pytest.mark.parametrize('wslMosaic',[r'test_14wslMosaic_fred01_test_10\working\test_tag_0329_wslMosaic.tif'] ) 
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   

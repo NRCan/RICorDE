@@ -2944,7 +2944,7 @@ class Session(TComs, baseSession):
     #===========================================================================
     # PHASE4: Depth-----------
     #===========================================================================
-    def run_depth(self,
+    def run_depths(self,
  
                     ):
         
@@ -2959,17 +2959,14 @@ class Session(TComs, baseSession):
         #=======================================================================
         dep_rlay = self.retrieve('depths')
         
-        return
-        dep_fp = self.build_depths(wslM_fp=wslM_fp,dem_fp=dem_fp,inun2r_fp=inun2r_fp,
-                                   logger=log)
-         
+ 
 
         #=======================================================================
         # wrap
         #=======================================================================
         dem_rlay = self.retrieve('HAND', logger=log) #just for checking
         
-        assert dem_rlay.extent()==wsl_rlay.extent()
+        assert dem_rlay.extent()==dep_rlay.extent()
         
         tdelta = datetime.datetime.now() - start
         

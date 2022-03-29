@@ -229,7 +229,7 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('resolution',[8] ) #too slow otherwise
 @pytest.mark.parametrize('precision',[0.4] )  
 @pytest.mark.parametrize('range_thresh',[2.7] ) #too slow otherwise
@@ -249,7 +249,7 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-
+@pytest.mark.dev
 @pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0329_hgSmooth.tif'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
@@ -264,9 +264,25 @@ def test_12hInunSet(session, true_dir, write, base_dir,
         }
      
     dkey = 'hInunSet'
-    test_rlay = session.retrieve(dkey, write=write)
- 
-    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
+    res_d = session.retrieve(dkey, write=write, 
+                             compress='med',
+                                #med: 361 KB
+                                #none: 8.23 MB,  1.36s
+                             )
+    
+    
+    #===========================================================================
+    # check against trues
+    #===========================================================================
+    true_fp = search_fp(os.path.join(true_dir, 'working'), '.pickle', dkey) #find the data file.
+    true_d = retrieve_data(dkey, true_fp, session)
+    
+    for hval, test_rlay_fp in res_d.items():
+        assert hval in true_d, 'hval not in true set: %s'%hval
+        true_rlay_fp=res_d[hval]
+        
+        compare_layers(test_rlay_fp, true_rlay_fp, wrkr=session, test_data=False)
+        
 #===============================================================================
 # commons--------
 #===============================================================================

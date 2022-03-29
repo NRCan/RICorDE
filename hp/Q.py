@@ -1229,11 +1229,11 @@ class Qproj(QAlgos, Basic):
         log.debug('saved result to: \n    %s'%ofp1)
         
         #=======================================================================
-        # compression
+        # compress
         #=======================================================================
         if not compress == 'none':
             assert not ofp1==ofp
-            res = self.warpreproject(ofp1, compression=compress, output=ofp, logger=log)
+            res = self.warpreproject(ofp1, compress=compress, output=ofp, logger=log)
             assert ofp==res
             
         assert os.path.exists(ofp)

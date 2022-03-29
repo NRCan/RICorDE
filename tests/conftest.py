@@ -13,7 +13,9 @@ import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal
 idx = pd.IndexSlice
 
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsWkbTypes, QgsRasterLayer
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsWkbTypes, QgsRasterLayer, \
+    QgsMapLayer
+    
 import processing
 from ricorde.scripts import Session
 from hp.Q import vlay_get_fdf
@@ -47,7 +49,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=True
+    write=False
     #===========================================================================
     # write key
     #===========================================================================
@@ -230,7 +232,16 @@ def compare_layers(lay_test, lay_true, #two containers of layers
                    wrkr=None,
                    ):
     
- 
+    #===========================================================================
+    # setup
+    #===========================================================================
+    if isinstance(lay_test, str):
+        lay_test = wrkr.get_layer(lay_test)
+    if isinstance(lay_true, str):
+        lay_true = wrkr.get_layer(lay_true)
+        
+    assert isinstance(lay_test, QgsMapLayer)
+    assert isinstance(lay_true, QgsMapLayer)
         
     dptest, dptrue = lay_test.dataProvider(), lay_true.dataProvider()
     
@@ -279,6 +290,8 @@ def compare_layers(lay_test, lay_true, #two containers of layers
             ar_true = rlay_to_array(lay_true.source())
             
             assert_equal(ar_test, ar_true)
+    else:
+        raise TypeError('unexpected type: %s'%type(lay_test))
             
 def compare_dicts(dtest, dtrue, index_l = None,
                  ):

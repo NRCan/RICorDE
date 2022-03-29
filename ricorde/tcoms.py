@@ -414,7 +414,7 @@ class TComs(Qproj):
     def get_hand_inun(self, #get an inundation raster from a hand rasterand value
                       hand_rlay, 
                       hval,
-                      compress=None, #use Session compression
+ 
                       **kwargs):
         
         
@@ -433,7 +433,7 @@ class TComs(Qproj):
         
         return self.rcalc1(hand_rlay, formula, 
                            [rcentry] , 
-                           compress=compress, 
+ 
                            **kwargs)
         
 

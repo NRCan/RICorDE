@@ -170,7 +170,7 @@ class Session(TComs, baseSession):
                 'build':lambda **kwargs:self.build_hgSmooth(**kwargs),
                 },
             'hInunSet':{
-                #'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'compiled':lambda **kwargs:self.load_pick(**kwargs),
                 'build':lambda **kwargs:self.build_hiSet(**kwargs),
                 },
  
@@ -2369,7 +2369,8 @@ class Session(TComs, baseSession):
                 resolution=None, #resolution for inundation rasters
                 
                #gen
-              dkey=None, logger=None,write=None, debug=False,
+              dkey=None, logger=None,write=None, debug=False, 
+              compress=None, #could result in large memory usage
                   ):
  
         """
@@ -2382,11 +2383,12 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         if write is None: write=self.write
+
         log=logger.getChild('b.%s'%dkey)
  
         assert dkey=='hInunSet'
         
-        layname, ofp = self.get_outpars(dkey, write)
+        layname, ofp = self.get_outpars(dkey, write, ext='.pickle')
         meta_d = dict()
         
  
@@ -2410,8 +2412,7 @@ class Session(TComs, baseSession):
             hand_rlay=self.retrieve('HAND')
             
         
-        log.info('on %s  \n    %s'%(hgSmooth_rlay.name(),  
-                                                     self.rlay_get_props(hgSmooth_rlay)))
+        log.info('on %s:  %s'%(hgSmooth_rlay.name(),self.rlay_get_props(hgSmooth_rlay)))
         
         #=======================================================================
         # downsample the hand layer
@@ -2458,8 +2459,10 @@ class Session(TComs, baseSession):
             log.debug('(%i/%i) getting hinun for %.2f'%(i+1, len(uq_vals), hval))
             
             #get this hand inundation
+ 
             rlay_fp = self.get_hand_inun(hand1_rlay, hval, logger=log,
-                               ofp = os.path.join(out_dir, '%03d_hinun_%03d.tif'%(i, hval*100))
+                               ofp = os.path.join(out_dir, '%03d_hinun_%03d.tif'%(i, hval*100)),
+                               compress=compress
                                )
             
             stats_d = self.rasterlayerstatistics(rlay_fp, logger=log)

@@ -21,7 +21,7 @@ from osgeo import ogr, gdal_array, gdal
 import numpy as np
 
 
-from qgis.core import QgsVectorLayer, QgsMapLayerStore
+from qgis.core import QgsVectorLayer, QgsMapLayerStore, QgsRasterLayer
 
 from hp.exceptions import Error
 
@@ -178,6 +178,8 @@ def get_nodata_val(rlay_fp):
 
 def rlay_to_array(rlay_fp, dtype=np.dtype('float32')):
     """context managger?"""
+    if isinstance(rlay_fp, QgsRasterLayer):
+        rlay_fp = rlay_fp.source()
     #get raw data
     ds = gdal.Open(rlay_fp)
     band = ds.GetRasterBand(1)

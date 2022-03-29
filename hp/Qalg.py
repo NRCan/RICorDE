@@ -1649,6 +1649,7 @@ class QAlgos(object):
         if logger is None: logger = self.logger
         log = logger.getChild('warpreproject')
         if compress is None: compress=self.compress
+        if output is None: output='TEMPORARY_OUTPUT'
         
         resamp_d = {0:'Nearest neighbour',
                     1:'Bilinear',

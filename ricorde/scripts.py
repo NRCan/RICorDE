@@ -51,8 +51,9 @@ add tests
 #===============================================================================
 # imports-----------
 #===============================================================================
-import os, datetime, copy, shutil, gc
+import os, datetime, copy, shutil, gc, pickle
 import pandas as pd
+import numpy as np
  
 start =  datetime.datetime.now()
 
@@ -167,6 +168,10 @@ class Session(TComs, baseSession):
             'hgSmooth':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_hgSmooth(**kwargs),
+                },
+            'hInunSet':{
+                #'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_hiSet(**kwargs),
                 },
  
              
@@ -903,6 +908,8 @@ class Session(TComs, baseSession):
         logger=self.logger
         log=logger.getChild('rImax')
         start =  datetime.datetime.now()
+        
+        self.clear_all() #release everything from memory and reset the data containers
         
         dem_rlay = self.retrieve('dem', logger=log) #just for checking
  
@@ -1898,7 +1905,7 @@ class Session(TComs, baseSession):
              neighborhood_size = 7,
              
              max_iter=20, #maximum number of smoothing iterations to allow
-             precision=0.2, #reserved for mround
+             precision=0.2,  #prevision of resulting HAND values (value to round to nearest multiple of)
              
              
                #gen
@@ -1950,22 +1957,25 @@ class Session(TComs, baseSession):
         #=======================================================================
         # run smoothing
         #=======================================================================
-        rlay, d, smry_df = self.rlay_smooth(hgRaw_vlay,
+        rlay_smooth, d, smry_df = self.rlay_smooth(hgRaw_vlay,
             neighborhood_size=neighborhood_size, resolution=resolution,
-            max_iter=max_iter, range_thresh=range_thresh, precision=precision,
-            debug=debug,logger=log, ofp=ofp)
+            max_iter=max_iter, range_thresh=range_thresh, 
+            debug=debug,logger=log)
 
         meta_d.update(d) 
+        
+        #=======================================================================
+        # round values
+        #=======================================================================
+        rlay_mround_fp = self.rlay_mround(rlay_smooth,  logger=log, multiple=precision,
+                                          output=ofp)['OUTPUT']
+        rlay = self.rlay_load(rlay_mround_fp, logger=log)
         #=======================================================================
         # wrap
         #=======================================================================
- 
-        
-        
-        
-        
+
         if write:
-            self.ofp_d[dkey] = ofp
+            self.ofp_d[dkey] = rlay_mround_fp
  
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
@@ -1983,7 +1993,7 @@ class Session(TComs, baseSession):
                     max_iter=10, 
                     range_thresh=None,
                     
-                    precision=3,
+ 
                     #gen
                     logger=None, debug=False, ofp=None,
                     ):
@@ -1994,6 +2004,8 @@ class Session(TComs, baseSession):
         log = logger.getChild('rsmth')
         meta_d={'smooth_resolution':resolution, 'smooth_range_thresh':range_thresh, 'max_iter':max_iter}
         log.info('on \'%s\'  %s\n    %s'%(rlay_raw.name(), self.rlay_get_props(rlay_raw), meta_d))
+        
+ 
         #===================================================================
         # smooth initial
         #===================================================================
@@ -2109,11 +2121,11 @@ class Session(TComs, baseSession):
         #===================================================================
         # post
         #===================================================================
-        #round values
-        rlay_mround_fp = self.rlay_mround(rlay_fp_i,  logger=log, multiple=precision)['OUTPUT']
-        
+        assert os.path.exists(rlay_fp_i), 'failed to get a result: %s'%rlay_fp_i
         #repeoject to extents and original resolution
-        ofp = self.warpreproject(rlay_mround_fp, output=ofp,extents=rlay_raw.extent(), 
+        ofp = self.warpreproject(rlay_fp_i, 
+                                 output=ofp,
+                                 extents=rlay_raw.extent(), 
                                  resolution = int(self.rlay_get_resolution(rlay_raw)),
                                   logger=log)
 
@@ -2297,10 +2309,22 @@ class Session(TComs, baseSession):
     
     def run_wslRoll(self,
                     hval_prec=0.1,# (vertical) precision of hvals to discretize
-                    ):    
+                    ):
+        
+        #=======================================================================
+        # defaults    
+        #=======================================================================
+        logger=self.logger
+        log=logger.getChild('rWSL')
+        self.clear_all() #release everything from memory and reset the data containers
+        
         #=======================================================================
         # get rolling WSL
         #=======================================================================
+        hinun_pick = self.retrieve('hInunSet', logger=log)
+        
+        return
+        
         #build a HAND inundation for each value on the hvgrid
         hinun_pick = self.build_hiSet(hvgrid_fp=hvgrid_fp, hand_fp=hand_fp, logger=log,
                                       hval_prec=hval_prec,
@@ -2337,46 +2361,180 @@ class Session(TComs, baseSession):
         return datetime.datetime.now() - start
     
     def build_hiSet(self, #get HAND derived inundations
-                    *args,
-              logger=None,
+                #input layers
+                hgSmooth_rlay=None,
+                hand_rlay=None,
+                
+                #parameters
+                resolution=None, #resolution for inundation rasters
+                
+               #gen
+              dkey=None, logger=None,write=None, debug=False,
+                  ):
  
-              **kwargs):
-        
+        """
+        TODO: performance improvements
+            reduce resolution?
+            temporal raster?
+        """
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.hiset')
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+ 
+        assert dkey=='hInunSet'
         
-        fp_key = 'hinun_pick'
+        layname, ofp = self.get_outpars(dkey, write)
+        meta_d = dict()
+        
  
         #=======================================================================
-        # build
+        # setup
         #=======================================================================
-        if not fp_key in self.fp_d:
-            log.info('building HAND inundation set \n \n')
-            
-            from ricorde.hand_inun import HIses as SubSession
-            
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d,
-                            fp_d=self.fp_d) as wrkr:
-            
-                ofp, meta_d = wrkr.run_hinunSet(*args, **kwargs)
-            
-            
-            self.ofp_d[fp_key] = ofp
-            self.meta_d.update({'run_hinunSet':meta_d})
+    
+        #directory
+        out_dir = os.path.join(self.wrk_dir, dkey)
+        if not os.path.exists(out_dir):os.makedirs(out_dir)
         
-        else:
-            ofp = self.fp_d[fp_key]
+        mstore=QgsMapLayerStore()
+        
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if hgSmooth_rlay is None:
+            hgSmooth_rlay=self.retrieve('hgSmooth')
+        if hand_rlay is None:
+            hand_rlay=self.retrieve('HAND')
+            
+        
+        log.info('on %s  \n    %s'%(hgSmooth_rlay.name(),  
+                                                     self.rlay_get_props(hgSmooth_rlay)))
+        
+        #=======================================================================
+        # downsample the hand layer
+        #=======================================================================
+        hres = self.rlay_get_resolution(hand_rlay)
 
-                
+        if resolution is None:
+            resolution=hres
+ 
+        #reproject with new resolution
+        if not hres == resolution:
+            log.info('downsampling \'%s\' from %.2f to %.2f'%(
+                hand_rlay.name(), hres,  resolution))
+             
+            hand1_rlay = self.warpreproject(hand_rlay, resolution=resolution,
+                                           logger=log)
+            
+            mstore.addMapLayer(hand1_rlay)
+        else:
+            hand1_rlay = hand_rlay
+            
+ 
+        #get total grid size
+        hand_cell_cnt = self.rlay_get_cellCnt(hand1_rlay)
+        
+        #=======================================================================
+        # get grid values
+        #=======================================================================
+        """use the native to avoid new values
+        rlay = self.roundraster(hvgrid_fp, logger=log, prec=hval_prec)"""
+        
+        uq_vals = self.rlay_uq_vals(hgSmooth_rlay, prec=1)
+        
+
+        #=======================================================================
+        # get inundation rasters
+        #=======================================================================
+        log.info('building %i HAND inundation rasters (%.2f to %.2f) reso=%.1f'%(
+            len(uq_vals), min(uq_vals), max(uq_vals), resolution))
+        res_d = dict()
+        
+        """TODO: paralleleize this"""
+        for i, hval in enumerate(uq_vals):
+            log.debug('(%i/%i) getting hinun for %.2f'%(i+1, len(uq_vals), hval))
+            
+            #get this hand inundation
+            rlay_fp = self.get_hand_inun(hand1_rlay, hval, logger=log,
+                               ofp = os.path.join(out_dir, '%03d_hinun_%03d.tif'%(i, hval*100))
+                               )
+            
+            stats_d = self.rasterlayerstatistics(rlay_fp, logger=log)
+            res_d[i] = {**{'hval':hval,'fp':rlay_fp,
+                                      'flooded_pct':(stats_d['SUM']/float(hand_cell_cnt))*100,
+                                       'error':np.nan},
+                                        **stats_d, }
+            
+            log.info('(%i/%i) got hinun for hval=%.2f w/ %.2f pct flooded'%(
+                i+1, len(uq_vals), hval, res_d[i]['flooded_pct']))
+            
+        #===================================================================
+        # build animations
+        #===================================================================
+        if debug:
+            from hp.animation import capture_images
+            capture_images(
+                os.path.join(self.out_dir, self.layName_pfx+'_hand_inuns.gif'),
+                out_dir
+                )
+ 
         #=======================================================================
         # wrap
         #=======================================================================
-        log.info('got \'%s\' \n    %s'%(fp_key, ofp))
+        meta_d.update({'uq_vals_cnt':len(uq_vals), 'hinun_set_resol':resolution,
+                     'hvgrid_uq_vals':copy.copy(uq_vals)})
         
-        return ofp
+        df = pd.DataFrame.from_dict(res_d, orient='index')
+
+        res2_d = df.set_index('hval')['fp'].to_dict()
+
+        if write:
+            self.ofp_d[dkey] = self.write_pick(res2_d, ofp, logger=log)
+ 
+            
+ 
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+            self.smry_d['%s_stats'%dkey] = df
+ 
+ 
+        return res2_d
+    
+ 
+        
+ 
+#===============================================================================
+#         #=======================================================================
+#         # build
+#         #=======================================================================
+#         if not fp_key in self.fp_d:
+#             log.info('building HAND inundation set \n \n')
+#             
+#             from ricorde.hand_inun import HIses as SubSession
+#             
+#             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
+#                             fp_d=self.fp_d) as wrkr:
+#             
+#                 ofp, meta_d = wrkr.run_hinunSet(*args, **kwargs)
+#             
+#             
+#             self.ofp_d[fp_key] = ofp
+#             self.meta_d.update({'run_hinunSet':meta_d})
+#         
+#         else:
+#             ofp = self.fp_d[fp_key]
+# 
+#                 
+#         #=======================================================================
+#         # wrap
+#         #=======================================================================
+#         log.info('got \'%s\' \n    %s'%(fp_key, ofp))
+#         
+#         return ofp
+#===============================================================================
     
     def build_hwslSet(self, #get set of HAND derived wsls (from hand inundations)
                     *args,

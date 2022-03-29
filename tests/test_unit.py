@@ -231,10 +231,11 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt
     
 @pytest.mark.dev
 @pytest.mark.parametrize('resolution',[8] ) #too slow otherwise
+@pytest.mark.parametrize('precision',[0.4] )  
 @pytest.mark.parametrize('range_thresh',[2.7] ) #too slow otherwise
 @pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range_thresh):
+def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range_thresh, precision):
      
     #set the compiled references
     session.compiled_fp_d={
@@ -243,7 +244,27 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
         }
      
     dkey = 'hgSmooth'
-    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=5, range_thresh=range_thresh)
+    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=5, range_thresh=range_thresh, precision=precision)
+ 
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
+    
+    
+
+@pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0329_hgSmooth.tif'] ) #from test_hand
+@pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_12hInunSet(session, true_dir, write, base_dir, 
+                    hgSmooth, HAND):
+     
+    #set the compiled references
+    session.compiled_fp_d={
+        'hgSmooth':os.path.join(base_dir, hgSmooth),
+        'HAND':os.path.join(base_dir, HAND),
+  
+        }
+     
+    dkey = 'hInunSet'
+    test_rlay = session.retrieve(dkey, write=write)
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================

@@ -686,14 +686,14 @@ class Qproj(QAlgos, Basic):
         return ofp
     
     def rlay_load(self, fp,  #load a raster layer and apply an aoi clip
-                  aoi_vlay = None,
+  
                   logger=None,
-                  dkey=None,
+                  dkey=None, #dummy recievor for retrieve calls
                   
                   #crs handling
                   set_proj_crs = False, #set the project crs from this layer
                   reproj=False,
-                  **clipKwargs):
+                  ):
         
         #=======================================================================
         # defautls
@@ -745,23 +745,7 @@ class Qproj(QAlgos, Basic):
         else:
             rlay1 = rlay_raw
         
-        #=======================================================================
-        # aoi
-        #=======================================================================
 
-        if not aoi_vlay is None:
-
-            log.debug('clipping with %s'%aoi_vlay.name())
-
-            rlay2 = self.cliprasterwithpolygon(rlay1,aoi_vlay, 
-                               logger=log, layname=rlay1.name(), **clipKwargs)
-            
-            #remove the raw
-            
-            mstore.addMapLayer(rlay1) #add the layers to the store
-            
-        else:
-            rlay2 = rlay1
 
         #=======================================================================
         # wrap
@@ -769,7 +753,7 @@ class Qproj(QAlgos, Basic):
         mstore.removeAllMapLayers() #remove all the layers
             
         
-        return rlay2
+        return rlay1
     #===========================================================================
     # AOI methods--------
     #===========================================================================
@@ -1700,6 +1684,18 @@ class Qproj(QAlgos, Basic):
         mstore.removeAllMapLayers()
         
         return res
+    
+    def rlay_get_props(self, obj):
+        mstore = QgsMapLayerStore()
+        layer = self.get_layer(obj, mstore=mstore)
+        
+        props_str = '%sw x %sh (%.4f, %.4f) %s '%(
+            layer.width(), layer.height(), 
+            layer.rasterUnitsPerPixelX(), layer.rasterUnitsPerPixelY(),
+            layer.crs().authid())
+            
+        mstore.removeAllMapLayers()
+        return props_str
     
     def rlay_get_cellCnt(self,
                          rlay,

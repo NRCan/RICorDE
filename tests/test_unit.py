@@ -230,10 +230,11 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
 @pytest.mark.dev
-@pytest.mark.parametrize('resolution',[6] ) #too slow otherwise
+@pytest.mark.parametrize('resolution',[8] ) #too slow otherwise
+@pytest.mark.parametrize('range_thresh',[2.7] ) #too slow otherwise
 @pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution):
+def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range_thresh):
      
     #set the compiled references
     session.compiled_fp_d={
@@ -242,7 +243,7 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution):
         }
      
     dkey = 'hgSmooth'
-    test_rlay = session.retrieve(dkey, write=write, resolution=resolution)
+    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=5, range_thresh=range_thresh)
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================

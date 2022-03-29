@@ -61,11 +61,12 @@ import processing
 
 from hp.exceptions import Error, assert_func
 from hp.dirz import force_open_dir
+
  
 #from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
     QgsRasterLayer, QgsWkbTypes, vlay_get_fdf, QgsVectorLayer, vlay_get_fdata, \
-    vlay_get_geo, QgsMapLayer
+    vlay_get_geo, QgsMapLayer, view
     
 from hp.oop import Session as baseSession
      
@@ -1937,10 +1938,10 @@ class Session(TComs, baseSession):
             
         if range_thresh is  None:
             """capped at 2.0 for low resolution runs""" 
-            range_thresh = min(max_grade*resolution, 2.0)
+            range_thresh = round(min(max_grade*resolution, 2.0),2)
             
             
-        meta_d.update()
+ 
             
         log.info('applying low-pass filter and downsampling (%.2f) from %s'%(
             resolution, hgRaw_vlay.name()))
@@ -1949,7 +1950,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # run smoothing
         #=======================================================================
-        rlay, d = self.rlay_smooth(hgRaw_vlay,
+        rlay, d, smry_df = self.rlay_smooth(hgRaw_vlay,
             neighborhood_size=neighborhood_size, resolution=resolution,
             max_iter=max_iter, range_thresh=range_thresh, precision=precision,
             debug=debug,logger=log, ofp=ofp)
@@ -1968,6 +1969,7 @@ class Session(TComs, baseSession):
  
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+            self.smry_d['%s_smoothing'%dkey] = smry_df
  
  
         return rlay
@@ -1991,6 +1993,7 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         log = logger.getChild('rsmth')
         meta_d={'smooth_resolution':resolution, 'smooth_range_thresh':range_thresh, 'max_iter':max_iter}
+        log.info('on \'%s\'  %s\n    %s'%(rlay_raw.name(), self.rlay_get_props(rlay_raw), meta_d))
         #===================================================================
         # smooth initial
         #===================================================================
@@ -2000,6 +2003,7 @@ class Session(TComs, baseSession):
                         cell_size=resolution,
                         #output=ofp, 
                         logger=log)
+        """this has a new extents"""
         
         assert os.path.exists(smooth_rlay_fp1)
         #===================================================================
@@ -2031,8 +2035,7 @@ class Session(TComs, baseSession):
         #===================================================================
         fail_cnt = 0 #number of failures to smoothen
         for i in range(0,max_iter):
-            assert_func(lambda:  self.rlay_check_match(rlay_fp_i,mask_fp, logger=log))
-            """stopped here"""
+ 
             #===============================================================
             # #check range and smoth
             #===============================================================
@@ -2080,6 +2083,8 @@ class Session(TComs, baseSession):
         # #wrap
         #===================================================================
         meta_d.update({'_smooth_iters':i, 'smooth_rval':round(rvali, 3)})
+        
+        #meta frame summarizing each iteration. rval=maximum range value
         df = pd.DataFrame.from_dict(rvals_d, orient='index')
 
         #sucess
@@ -2098,7 +2103,9 @@ class Session(TComs, baseSession):
             log.warning('FAILED smoothness in %i (%.2f>%.2f). taking i=%i\n    %s'%(
                 i,rvali, range_thresh, imin, df['rval'].to_dict()))
         
- 
+        """
+        view(df)
+        """
         #===================================================================
         # post
         #===================================================================
@@ -2130,7 +2137,7 @@ class Session(TComs, baseSession):
                 os.path.join(temp_dir, 'range')
                 )
             
-        return res_rlay, meta_d
+        return res_rlay, meta_d, df
  
     def _smooth_iter(self,  #check if range threshold is satisifed... or smooth 
                     rlay_fp, 
@@ -2196,6 +2203,7 @@ class Session(TComs, baseSession):
         #get the statistics
         stats_d = self.rasterlayerstatistics(range_fp)
         rval = stats_d['MAX']        
+        """what if we target the average instead?"""
         #=======================================================================
         # check critiera
         #=======================================================================

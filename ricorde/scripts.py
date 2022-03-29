@@ -746,7 +746,7 @@ class Session(TComs, baseSession):
         dem_hyd = self.retrieve('dem_hyd', logger=log)
         
         #get the hand layer
-        hand_rlay = self.retrieve('HAND', logger=log)  
+        hand_rlay = self.retrieve('HAND', logger=log, write_dir=self.out_dir)  
         
         #nodata boundary of hand layer (polygon)
         hand_mask = self.retrieve('HAND_mask', logger=log) 
@@ -841,8 +841,8 @@ class Session(TComs, baseSession):
                    demH_rlay=None, #hydro corrected DEM
                    pwb_rlay=None,
                    
-                   write=None,
-                   logger=None,
+                   #coms
+                   write=None,logger=None,write_dir=None,
 
                  ):
 
@@ -855,7 +855,8 @@ class Session(TComs, baseSession):
         #if dem_fp is None: dem_fp=self.dem_fp
         if write is None: write=self.write
         
-        layname, ofp = self.get_outpars(dkey, write)
+        
+        layname, ofp = self.get_outpars(dkey, write, write_dir=write_dir)
         #=======================================================================
         # retrieve
         #=======================================================================
@@ -971,7 +972,7 @@ class Session(TComs, baseSession):
     # PHASE1: Inundation Correction---------
     #===========================================================================
     def run_imax(self,
- 
+
                  ):
         #=======================================================================
         # defaults
@@ -989,26 +990,26 @@ class Session(TComs, baseSession):
         #=======================================================================
  
         
-        inun1_rlay = self.retrieve('inun1')
+        inun1_rlay = self.retrieve('inun1', logger=log)
         
         #=======================================================================
         # get hydrauilc maximum
         #=======================================================================
         #get initial HAND beach values
-        beach1_rlay=self.retrieve('beach1')
+        beach1_rlay=self.retrieve('beach1', logger=log)
  
         #get beach bounds
-        beach1_bounds = self.retrieve('b1Bounds')
+        beach1_bounds = self.retrieve('b1Bounds', logger=log)
         
         #get hydrauilc maximum
-        inun_hmax = self.retrieve('inunHmax')
+        inun_hmax = self.retrieve('inunHmax', logger=log)
         
 
         #=======================================================================
         # reduce inun by the hydrauilc maximum
         #=======================================================================
         #clip inun1 by hydrauilc  maximum (raster)
-        inun2_rlay = self.retrieve('inun2') 
+        inun2_rlay = self.retrieve('inun2', write_dir=self.out_dir, logger=log) 
         
 
         #=======================================================================
@@ -1485,7 +1486,7 @@ class Session(TComs, baseSession):
                     
                   
                #gen
-              dkey=None, logger=None,write=None,
+              dkey=None, logger=None,write=None,write_dir=None,
                   ):
  
         #=======================================================================
@@ -1500,7 +1501,7 @@ class Session(TComs, baseSession):
         assert dkey=='inun2'
         
  
-        layname, ofp = self.get_outpars(dkey, write)
+        layname, ofp = self.get_outpars(dkey, write, write_dir=write_dir)
  
         #=======================================================================
         # retrieve
@@ -1646,7 +1647,7 @@ class Session(TComs, baseSession):
             this approximates the event HAND with rolling values
         
         """
-        hvgrid = self.retrieve('hgSmooth', logger=log)
+        hvgrid = self.retrieve('hgSmooth', logger=log, write_dir=self.out_dir)
         
         #=======================================================================
         # wrap
@@ -1978,7 +1979,7 @@ class Session(TComs, baseSession):
              
              
                #gen
-              dkey=None, logger=None,write=None, debug=False,
+              dkey=None, logger=None,write=None, debug=False,write_dir=None,
                   ):
         """
         this is super nasty... must be a nice pre-built low-pass filter out there
@@ -1993,7 +1994,7 @@ class Session(TComs, baseSession):
  
         assert dkey=='hgSmooth'
         
-        layname, ofp = self.get_outpars(dkey, write)
+        layname, ofp = self.get_outpars(dkey, write, write_dir=write_dir)
         meta_d = dict()
         
  
@@ -2400,7 +2401,7 @@ class Session(TComs, baseSession):
 
         #buidl the HAND WSL set
         """convert each inundation layer into a WSL"""
-        hwsl_pick = self.retrieve('hWslSet')
+        hwsl_pick = self.retrieve('hWslSet', logger=log)
         
         
         
@@ -2412,7 +2413,7 @@ class Session(TComs, baseSession):
             mosaic togehter the corresponding HAND wsl rasters
             extents here should match the hvgrid"""
             
-        wsl_rlay = self.retrieve('wslMosaic')
+        wsl_rlay = self.retrieve('wslMosaic', logger=log, write_dir=self.out_dir)
             
         #=======================================================================
         # wrap
@@ -2759,7 +2760,7 @@ class Session(TComs, baseSession):
                 hvgrid_uq_vals=None,
  
                #gen
-              dkey=None, logger=None,write=None,  
+              dkey=None, logger=None,write=None,  write_dir=None,
               compress=None, #could result in large memory usage
                   ):
         """resolution is taken from hInunSet layers"""
@@ -2775,7 +2776,7 @@ class Session(TComs, baseSession):
  
         assert dkey=='wslMosaic'
         
-        layname, ofp = self.get_outpars(dkey, write, ext='.tif')
+        layname, ofp = self.get_outpars(dkey, write, ext='.tif', write_dir=write_dir)
         meta_d = dict()
         
         

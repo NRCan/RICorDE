@@ -245,6 +245,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
+        self._log_datafiles()
         
  
 
@@ -759,6 +760,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
+        self._log_datafiles()
         
         return
     
@@ -1020,7 +1022,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
-        
+        self._log_datafiles()
         return tdelta
     
     
@@ -1658,7 +1660,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
-        
+        self._log_datafiles()
         return 
  
         
@@ -1678,6 +1680,15 @@ class Session(TComs, baseSession):
                write_csv=False,
               dkey=None, logger=None,write=None,
                   ):
+        """
+        TODO:
+            add alterative for vector-based
+                polygonize
+                buffer (half resolution)
+                simplify
+                extract points (make sure we have some minimum interaval)
+            just retrieve the original methods?
+        """
  
         #=======================================================================
         # defaults
@@ -1729,7 +1740,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
-        
+        samp_cap_vlay.setName(layname)
+        log.info('finished on %s'%samp_cap_vlay.name())
         
         
         if write:
@@ -1836,9 +1848,9 @@ class Session(TComs, baseSession):
              #parameters (interploate)
              distP=2.0, #distance coeffiocient#I think this is unitless
 
-             pts_cnt = 10, #number of points to include in seawrches
+             pts_cnt = 5, #number of points to include in seawrches
              radius=None, #Search Radius in map units
- 
+             max_procs=4,
              
                #gen
               dkey=None, logger=None,write=None,
@@ -1849,6 +1861,20 @@ class Session(TComs, baseSession):
         2022-03-28:
             changed to use wbt
             changed to always match dem resolution
+            
+        because we're using rasters instead of polys there are way more points to interpolate
+            and this is much slower
+            would be nice if we could fiter the points somewhat...
+            
+            Points to Path (by fid) 
+                could help... but this follows rastser cell order
+            some other path search algo? 
+                probably very slow also...
+            divide layer?
+                wbt already parallelizes... so not sure this would be worth it
+                
+            switch back to vectorized inundations?
+                probably the best way to get fewer points
         """
  
         #=======================================================================
@@ -1915,6 +1941,7 @@ class Session(TComs, baseSession):
         
         #run tool
         interp_raw_fp = Whitebox(logger=logger, version='v2.0.0', #1.4 wont cap processors
+                                 max_procs=max_procs, 
                                ).IdwInterpolation(shp_fp, fieldName,
                                 weight=distP, 
                                 radius=radius,
@@ -2425,7 +2452,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
-        
+        self._log_datafiles()
         return 
     
 
@@ -3016,7 +3043,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
-        
+        self._log_datafiles()
         return 
     
     def build_depths(self,

@@ -726,7 +726,7 @@ class Qproj(QAlgos, Basic):
         # #CRS
         #=======================================================================
         if not rlay_raw.crs() == self.qproj.crs():
-            raise Error('\'%s\'  crs does not match project (%s v %s) \n    reproj=%s set_proj_crs=%s'%(
+            log.warning('\'%s\'  crs does not match project (%s v %s)'%(
                 rlay_raw.name(), rlay_raw.crs().authid(), self.qproj.crs().authid()))
             
 

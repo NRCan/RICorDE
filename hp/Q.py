@@ -507,11 +507,11 @@ class Qproj(QAlgos, Basic):
                         #'mapCanvas': use the current map Canvas
                         #QgsRectangle: use passed extents
                    
-                   
+                   compress = None,
                    resolution = 'raw', #resolution for output
                    nodata=-9999,
                    
-                   opts = ["COMPRESS=LZW"], #QgsRasterFileWriter.setCreateOptions
+                   opts = None, #["COMPRESS=LZW"], #QgsRasterFileWriter.setCreateOptions
                    
                    out_dir = None, #directory for puts
                    newLayerName = None,
@@ -537,6 +537,15 @@ class Qproj(QAlgos, Basic):
         if logger is None: logger=self.logger
         
         if newLayerName is None: newLayerName = rlayer.name()
+        
+        #compression
+        if compress is None: 
+            compress=self.compress
+        
+        if opts is None:
+            if not self.compress_d[compress] is None:
+                opts = [self.compress_d[compress]]
+ 
         
         log = logger.getChild('rlay_write')
         #=======================================================================
@@ -591,6 +600,8 @@ class Qproj(QAlgos, Basic):
                 rlayer.crs(), 
                 transformContext
                     ).transformBoundingBox(self.iface.mapCanvas().extent())
+        else:
+            raise Error('bad key')
                 
         assert isinstance(extent, QgsRectangle), 'expected extent=QgsRectangle. got \"%s\''%extent
         
@@ -1582,6 +1593,8 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if stats_d is None:
             stats_d = self.rasterlayerstatistics(rlay)
+            
+        #get_nodata_val(rlay)
  
             
         ser = pd.Series({k:v for k,v in stats_d.items() if k in ['MAX', 'MEAN', 'MIN', 'RANGE','SUM_OF_SQUARES', 'STD_DEV' ]}, dtype=float, name='actual')

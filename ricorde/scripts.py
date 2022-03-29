@@ -311,8 +311,10 @@ class Session(TComs, baseSession):
         # execute
         #=======================================================================
         
-        rlay1, d = self.rlay_warp(rlay_raw, ref_lay=None, aoi_vlay=aoi_vlay, decompres=True,
+        rlay1, d = self.rlay_warp(rlay_raw, ref_lay=None, aoi_vlay=aoi_vlay, 
+                                  decompres=True,
                                resample=resample, resolution=resolution, resampling='Average', ofp=ofp,
+                               compress='none',
                                logger=log)
             
  
@@ -327,7 +329,10 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
-        if self.exit_summary: self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+ 
+        
+        if self.exit_summary: 
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         if write: self.ofp_d[dkey] = ofp
         mstore.removeAllMapLayers()
  
@@ -353,11 +358,13 @@ class Session(TComs, baseSession):
         # load
         #=======================================================================
         if rlay is None:
-            if fp is None:
-                fp = self.dem_fp
-            
+            assert isinstance(fp, str), type(fp)
             rlay = self.rlay_load(fp, logger=log)
             
+        #=======================================================================
+        # check
+        #=======================================================================
+        assert self.getRasterCompression(rlay.source()) is None, 'dem has some compression: %s'%rlay.name()
         assert isinstance(rlay, QgsRasterLayer), type(rlay)
         #=======================================================================
         # attach parameters
@@ -389,6 +396,20 @@ class Session(TComs, baseSession):
                         aoi_vlay=None,
                         
                         resampling='Maximum', #resampling method
+                                        #===========================================================
+                                        # 0:'Nearest neighbour',
+                                        # 1:'Bilinear',
+                                        # 2:'Cubic',
+                                        # 3:'Cubic spline',
+                                        # 4:'Lanczos windowed sinc',
+                                        # 5:'Average',
+                                        # 6:'Mode',
+                                        # 7:'Maximum',
+                                        # 8:'Minimum',
+                                        # 9:'Median',
+                                        # 10:'First quartile',
+                                        # 11:'Third quartile'}
+                                        #===========================================================    
                         
                         clean_inun_kwargs={},
                         ):
@@ -470,27 +491,43 @@ class Session(TComs, baseSession):
             log.debug('\'%s\' saved to \n    %s'%(dkey, rlay_fp))
             
             
-
+        #=======================================================================
+        # convert to a binary mask
+        #=======================================================================
+        """downsampling only works on zero-type inundation layers"""
+        assert_func(lambda:  self.mask_check(rlay_fp,nullType='native'), msg=dkey)
+        
+        rlay2 = self.fillnodata(rlay_fp, fval=0, logger=log)
+        
+        assert_func(lambda:  self.mask_check(rlay2,nullType='zeros'), msg=dkey)
+        
         #=======================================================================
         # warp-----
         #=======================================================================
         
-        rlay1, d = self.rlay_warp(rlay_fp, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=False,
-                                     resampling=resampling, logger=log, ofp=ofp)
+        rlay3, d = self.rlay_warp(rlay2, ref_lay=ref_lay, aoi_vlay=aoi_vlay, decompres=False,
+                                     resampling=resampling, logger=log, 
+                                     #ofp=ofp,
+                                     )
         
         
         meta_d.update(d)
         
+        #convert badztck
+        rlay4_fp = self.mask_build(rlay3, logger=log, ofp=ofp)
+        rlay4 = self.rlay_load(rlay4_fp, logger=log)
         #=======================================================================
         # checks
         #=======================================================================
-        assert_func(lambda:self.rlay_check_match(rlay1, ref_lay, logger=log))
+        assert_func(lambda:  self.mask_check(rlay4, nullType='native'), msg=dkey)
         
-        assert_func(lambda:  self.mask_check(rlay1), msg=dkey)
+        assert_func(lambda:self.rlay_check_match(rlay4, ref_lay, logger=log))
+        
+        
         
  
         if dkey == 'pwb_rlay':
-            assert_func(lambda: self.check_pwb(rlay1))
+            assert_func(lambda: self.check_pwb(rlay4))
         
         #=======================================================================
         # wrap
@@ -500,12 +537,12 @@ class Session(TComs, baseSession):
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         
  
-        log.info('finished on %s'%rlay1.name())
+        log.info('finished on %s'%rlay4.name())
         mstore.removeAllMapLayers()
         
         if write: self.ofp_d[dkey] = ofp
         
-        return rlay1
+        return rlay4
     """
     self.mstore_log()
     """
@@ -569,8 +606,7 @@ class Session(TComs, baseSession):
             
         
         if decompres:
-            if compress is None: 
-                compress='none'
+            compress='none'
                 
         if compress is None: compress=self.compress
             
@@ -606,7 +642,7 @@ class Session(TComs, baseSession):
                 'MASK':aoi_vlay, 
                 'MULTITHREADING':True, 
                 'NODATA':-9999, 
-                'OPTIONS':self.compress_d[compress], #no compression
+                'OPTIONS':self.compress_d[compress],  
                 'OUTPUT':'TEMPORARY_OUTPUT', 
                 'KEEP_RESOLUTION':False, #will ignore x and y res
                 'SET_RESOLUTION':False, 
@@ -657,6 +693,7 @@ class Session(TComs, baseSession):
         #===================================================================
         # resample
         #===================================================================
+        mstore.addMapLayer(rlay2)
         if resample:
             log.info('resampling from %.4f to %.2f w/ %s'%(reso_raw, resolution, resampling))
             
@@ -665,20 +702,27 @@ class Session(TComs, baseSession):
             else:
                 extents=None
             
-            rlay3 = self.warpreproject(rlay2, resolution=int(resolution), compress=compress, 
+            rlay3_fp = self.warpreproject(rlay2, resolution=int(resolution), compress=compress, 
                 resampling=resampling, logger=log, extents=extents,
                 output=ofp)
-            if isinstance(rlay2, QgsMapLayer):mstore.addMapLayer(rlay2)
-        else:
-            rlay3 = self.get_layer(rlay2, logger=log)
-            self.rlay_write(rlay3, ofp=ofp, logger=log)
             
+            
+            
+            
+        else:
+            rlay3_fp = self.rlay_write(rlay2, ofp=ofp, logger=log, compress=compress)
+            """reloading here.. but this gives a consistent source"""
+            
+        rlay3 = self.rlay_load(ofp, logger=log)  
         #=======================================================================
         # checks
         #=======================================================================
+        assert rlay3.source()==ofp
  
+        if decompres:
+            assert self.getRasterCompression(rlay3.source()) is None, 'failed to decompress'
         
-        return self.get_layer(rlay3, logger=log), meta_d
+        return rlay3, meta_d
     #===========================================================================
     # PHASE0: Build HAND---------
     #===========================================================================
@@ -2983,7 +3027,7 @@ class Session(TComs, baseSession):
                  precision=1, #rounding to apply for delta calc
  
                #gen
-              dkey=None, logger=None,write=None,  
+              dkey=None, logger=None,write=None,  write_dir=None,
               compress=None, #could result in large memory usage
                   ):
         """resolution is taken from hInunSet layers"""
@@ -2998,8 +3042,8 @@ class Session(TComs, baseSession):
         log=logger.getChild('b.%s'%dkey)
  
         assert dkey=='depths'
-        
-        layname, ofp = self.get_outpars(dkey, write, ext='.tif')
+        if write_dir is None: write_dir=self.out_dir
+        layname, ofp = self.get_outpars(dkey, write, ext='.tif', write_dir=write_dir)
         meta_d = dict()
         
  
@@ -3145,12 +3189,15 @@ class Session(TComs, baseSession):
         self.compiled_fp_d.update(self.ofp_d) #copy everything over to compile
         gc.collect()
         
-    def get_outpars(self, dkey, write, ext='.tif'
+    def get_outpars(self, dkey, write, ext='.tif', write_dir=None,
                     ):
-                #output
+        
         layname = '%s_%s'%(self.layName_pfx, dkey) 
         if write:
-            ofp = os.path.join(self.wrk_dir, layname+ext)
+            if write_dir is None:
+                write_dir=self.wrk_dir
+            
+            ofp = os.path.join(write_dir, layname+ext)
             
         else:
             ofp=os.path.join(self.temp_dir, layname+ext)

@@ -1415,7 +1415,7 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # check
         #=======================================================================
-        if allow_approximate:
+        if not allow_approximate:
             assert_func(lambda:  self.rlay_check_match(rlay,mask_rlay, logger=log))
         #=======================================================================
         # handle inverstion

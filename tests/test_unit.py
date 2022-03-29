@@ -308,7 +308,7 @@ def test_13hWslSet(session, true_dir, write, base_dir,
     
     layer_d_post(dkey, true_dir, session, test_d, test_data=False)
     
-@pytest.mark.dev
+ 
 @pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0329_hgSmooth.tif'] ) #from test_hand
 @pytest.mark.parametrize('hWslSet',[r'test_13hWslSet_fred01_test_01d0\working\test_tag_0329_hWslSet.pickle'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
@@ -325,7 +325,27 @@ def test_14wslMosaic(session, true_dir, write, base_dir,
     test_rlay = session.retrieve(dkey, write=write)
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
-    
+
+
+@pytest.mark.dev
+@pytest.mark.parametrize('wslMosaic',[r'test_14wslMosaic_fred01_test_10\working\test_tag_0329_wslMosaic.tif'] ) 
+@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
+@pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_15depths(session, true_dir, write, base_dir, 
+                     wslMosaic, dem, inun2):
+     
+    #set the compiled references
+    session.compiled_fp_d={
+        'wslMosaic':os.path.join(base_dir, wslMosaic),
+        'dem':os.path.join(base_dir, dem),
+        'inun2':os.path.join(base_dir, inun2),
+        }
+     
+    dkey = 'depths'
+    test_rlay = session.retrieve(dkey, write=write)
+ 
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 #===============================================================================
 # commons--------
 #===============================================================================

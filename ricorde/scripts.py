@@ -181,7 +181,10 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_wsl(**kwargs),
                 },
- 
+            'depths':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_depths(**kwargs),
+                },
              
             }
         
@@ -215,8 +218,16 @@ class Session(TComs, baseSession):
         
     def run_dataPrep(self, #clean and load inputs into memory
                      ):
-        
-        self.mstore.removeAllMapLayers()
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        log = self.logger.getChild('rDataPrep')
+
+        start =  datetime.datetime.now()
+        self.clear_all() #release everything from memory and reset the data containers
+        #=======================================================================
+        # execute
+        #=======================================================================
         
         self.retrieve('dem')
  
@@ -224,9 +235,16 @@ class Session(TComs, baseSession):
  
         self.retrieve('inun_rlay')
         
+        #=======================================================================
+        # wrap
+        #=======================================================================
         self.mstore_log(logger=self.logger.getChild('rDataPrep'))
         
         assert len(self.mstore.mapLayers())==3, 'count mismatch in mstore'
+        
+        tdelta = datetime.datetime.now() - start
+        
+        log.info('finished in %s'%tdelta)
         
  
 
@@ -674,6 +692,7 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         log=logger.getChild('rHand')
         start =  datetime.datetime.now()
+        self.clear_all() #release everything from memory and reset the data containers
         #=======================================================================
         # run
         #=======================================================================
@@ -1204,10 +1223,9 @@ class Session(TComs, baseSession):
                beach1_rlay = None,
 
                           
-                #hand value stats
-               qhigh=0.9, cap=7.0, 
-               
-               qlow=0.1, floor=0.5, 
+                #hand value stats for bouding beach1 samples
+               qhigh=0.9, cap=7.0,  #uppers               
+               qlow=0.1, floor=0.5, #lowers
                
                #gen
               dkey=None, logger=None,write=None,
@@ -1553,17 +1571,10 @@ class Session(TComs, baseSession):
     #===========================================================================
     
     def run_HANDgrid(self, #get mosaic of depths (from HAND values)
- 
-                   
+
                   logger=None,
                   ):
-        """
-        a raster of smoothed HAND values
-            this approximates the event HAND with rolling values
-        
-        """
 
-        
 
         
         #=======================================================================
@@ -1575,16 +1586,22 @@ class Session(TComs, baseSession):
  
         self.clear_all() #release everything from memory and reset the data containers
  
+        
+        #=======================================================================
+        # execute
+        #=======================================================================
         dem_rlay = self.retrieve('dem', logger=log) #just for chcecking
-        #=======================================================================
-        # get rolling hand values
-        #=======================================================================
 
         beach2_rlay = self.retrieve('beach2', logger=log)
         
         hgRaw_rlay = self.retrieve('hgRaw', logger=log)
         
         
+        """
+        a raster of smoothed HAND values
+            this approximates the event HAND with rolling values
+        
+        """
         hvgrid = self.retrieve('hgSmooth', logger=log)
         
         #=======================================================================
@@ -1597,7 +1614,7 @@ class Session(TComs, baseSession):
         
         log.info('finished in %s'%tdelta)
         
-        return tdelta
+        return 
  
         
 
@@ -1610,7 +1627,7 @@ class Session(TComs, baseSession):
              inun2_rlay=None,
              
              #parameters
-             bounds=None, 
+             bounds=None,  # hi/low quartiles from beach1
              
                #gen
                write_csv=False,
@@ -1634,7 +1651,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # retrieve
         #=======================================================================
-        if bounds is None: # hi/low quartiles from beach1
+        if bounds is None: 
             bounds = self.retrieve('b1Bounds')
             
         if hand_rlay is None:
@@ -1904,7 +1921,7 @@ class Session(TComs, baseSession):
              hgRaw_vlay=None,
              
              #parameters
-              resolution=None, #resolution for rNeigbour averaging
+              resolution=None, #resolution for rNeigbour averaging. not output
              
              range_thresh=None, #maximum range (between HAND cell values) to allow
                 #None: calc from max_slope and resolution
@@ -2324,11 +2341,15 @@ class Session(TComs, baseSession):
         #=======================================================================
         logger=self.logger
         log=logger.getChild('rWSL')
+        start =  datetime.datetime.now()
+ 
         self.clear_all() #release everything from memory and reset the data containers
         
         #=======================================================================
         # get rolling WSL
         #=======================================================================
+        
+        
         #build a HAND inundation for each value on the hvgrid
         hinun_pick = self.retrieve('hInunSet', logger=log)
         
@@ -2349,29 +2370,20 @@ class Session(TComs, baseSession):
             
         wsl_rlay = self.retrieve('wslMosaic')
             
-            
-        return
-        wslM_fp = self.build_wsl(hwsl_pick=hwsl_pick, hvgrid_fp=hvgrid_fp, logger=log)
-        
-        #=======================================================================
-        # #get depths
-        #=======================================================================
-        dep_fp = self.build_depths(wslM_fp=wslM_fp,dem_fp=dem_fp,inun2r_fp=inun2r_fp,
-                                   logger=log)
-         
-
         #=======================================================================
         # wrap
         #=======================================================================
+        dem_rlay = self.retrieve('HAND', logger=log) #just for checking
         
-        #get just those datalayers built by this function
-        ofp_d = {k:v for k,v in self.ofp_d.items() if not k in ofp_d_old.keys()}
-        log.info('built %i datalayers'%len(ofp_d))
+        assert dem_rlay.extent()==wsl_rlay.extent()
         
+        tdelta = datetime.datetime.now() - start
         
-        self._log_datafiles(d=ofp_d, log=log)
+        log.info('finished in %s'%tdelta)
         
-        return datetime.datetime.now() - start
+        return 
+    
+
     
     def build_hiSet(self, #get HAND derived inundations
                 #input layers
@@ -2380,6 +2392,7 @@ class Session(TComs, baseSession):
                 
                 #parameters
                 resolution=None, #resolution for inundation rasters
+                    #same resolution is used for hWslSet and wslMosaic
                     #allowsing downsampling here
                 
                #gen
@@ -2922,111 +2935,165 @@ class Session(TComs, baseSession):
             
  
         if self.exit_summary:
-            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+            self.smry_d[dkey] = pd.Series(meta_d, dtype=float).to_frame()
             self.smry_d['%s_masking'%dkey] = df
  
         mstore.removeAllMapLayers()
         return rlay
     
-    def build_depths(self,
-                     wslM_fp='',
-                     dem_fp='',
-                     inun2r_fp='', #hydro corrected inundation
-                     resolution=None, #depth resolution. None=match dem
-                     compress=None,
-                     prec=3,
-                     logger=None,
-                     ):
+    #===========================================================================
+    # PHASE4: Depth-----------
+    #===========================================================================
+    def run_depth(self,
+ 
+                    ):
         
+        #=======================================================================
+        # defaults    
+        #=======================================================================
+        logger=self.logger
+        log=logger.getChild('rDep')
+        self.clear_all() #release everything from memory and reset the data containers
+        #=======================================================================
+        # #get depths
+        #=======================================================================
+        dep_rlay = self.retrieve('depths')
+        
+        return
+        dep_fp = self.build_depths(wslM_fp=wslM_fp,dem_fp=dem_fp,inun2r_fp=inun2r_fp,
+                                   logger=log)
+         
+
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        dem_rlay = self.retrieve('HAND', logger=log) #just for checking
+        
+        assert dem_rlay.extent()==wsl_rlay.extent()
+        
+        tdelta = datetime.datetime.now() - start
+        
+        log.info('finished in %s'%tdelta)
+        
+        return 
+    
+    def build_depths(self,
+                 #input layers
+                 wslM_rlay=None,
+                 dem_rlay=None,
+                 inun2_rlay=None,
+                 
+                 precision=1, #rounding to apply for delta calc
+ 
+               #gen
+              dkey=None, logger=None,write=None,  
+              compress=None, #could result in large memory usage
+                  ):
+        """resolution is taken from hInunSet layers"""
+ 
+ 
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.dep')
-        if prec is None: prec=self.prec
+        if write is None: write=self.write
+
+        log=logger.getChild('b.%s'%dkey)
+ 
+        assert dkey=='depths'
         
-        ofp = os.path.join(self.out_dir, self.layName_pfx + '_dep.tif')
+        layname, ofp = self.get_outpars(dkey, write, ext='.tif')
+        meta_d = dict()
         
-        if os.path.exists(ofp):
-            assert self.overwrite
-            os.remove(ofp)
+ 
+                
+        temp_dir = os.path.join(self.temp_dir, dkey)
+        if not os.path.exists(temp_dir):os.makedirs(temp_dir)
+                
+        mstore=QgsMapLayerStore()
         
-        if resolution is None:
-            resolution = int(self.get_resolution(dem_fp))
-            
+                    
         if compress is None:
             compress=self.compress
-        log.info('on \'%s\' and \'%s\' with resolution=%.2f'%(
-                 os.path.basename(wslM_fp), os.path.basename(dem_fp), resolution))
-        #=======================================================================
-        # precheck
-        #=======================================================================
-        assert os.path.exists(wslM_fp), wslM_fp
-        assert os.path.exists(dem_fp), dem_fp
         
+ 
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if wslM_rlay is None:
+            wslM_rlay = self.retrieve('wslMosaic')
+            
+        if dem_rlay is None:
+            dem_rlay = self.retrieve('dem')
+            
+        if inun2_rlay is None:
+            inun2_rlay = self.retrieve('inun2')
+
+        log.info('on \'%s\' and \'%s\' with %s'%(
+                 wslM_rlay.name(), dem_rlay.name(), self.rlay_get_props(wslM_rlay)))
+ 
+        
+        """no... resolution will match the wsl mosaic (which inherited resolution from hInunSet
+        if the user wants another projection... they can do this on their own
         #=======================================================================
         # fix resolution
+        #======================================================================="""
+        
         #=======================================================================
-        resl_raw =  self.get_resolution(wslM_fp)
+        # check
+        #=======================================================================
+        """resolution doesnt have to match here"""
+        assert wslM_rlay.extent()==dem_rlay.extent()
         
-        if not resl_raw==float(resolution):
-        
-            wsl1_fp = self.warpreproject(wslM_fp, resolution=resolution,
-                                         logger=log)
-            
-            """
-            
-            self.get_resolution(wsl1_fp)
-            """
-        
-        else:
-            
-            wsl1_fp=wslM_fp
+
+        assert_func(lambda:self.rlay_check_match(inun2_rlay, dem_rlay, logger=log))
         #=======================================================================
         # get depths
         #=======================================================================
-        dep1_fp = self.get_delta(wsl1_fp, dem_fp, logger=log)
+        dep1_fp = self.get_delta(wslM_rlay, dem_rlay, logger=log)
         
         """best to force some rounding before the zero value filtering"""
-        dep1b_fp = self.roundraster(dep1_fp, prec=prec, logger=log)
+        dep1b_fp = self.roundraster(dep1_fp, prec=precision, logger=log)
         
         dep2_fp = self.get_positives(dep1b_fp, logger=log)
         
-        
-        
-        
+ 
         #=======================================================================
         # mask to only those within hydrauilc maximum (and handle compression)
         #=======================================================================
-        if not compress=='none':
-            dep3a_fp = self.mask_apply(dep2_fp, inun2r_fp, logger=log)
-            
-            dep3_fp = self.warpreproject(dep3a_fp, compress=compress, nodata_val=-9999,
-                                         output=ofp, logger=log)
-            
-        else:
-            dep3_fp = self.mask_apply(dep2_fp, inun2r_fp, logger=log, ofp=ofp)
+ 
+        dep3_fp = self.mask_apply(dep2_fp, inun2_rlay, logger=log, ofp=ofp,
+                                  allow_approximate=True, 
+                                  )
                 
         #=======================================================================
         # summary
         #=======================================================================
-        stats_d = self.rasterlayerstatistics(dep3_fp)
+        rlay = self.rlay_load(dep3_fp, logger=log)
+        
+        stats_d = self.rasterlayerstatistics(rlay)
         stats_d2 = {'range':stats_d['RANGE'], 'min':stats_d['MIN'], 'max':stats_d['MAX']}
         stats_d2 = {k:round(v,2) for k,v in stats_d2.items()}
         
         cell_cnt = self.rlay_get_cellCnt(dep3_fp)
         
-        self.meta_d['build_depths'] = {**{'resolution':resolution, 'wet_cells':cell_cnt}, **stats_d2}
+        meta_d = {**{'resolution':self.rlay_get_resolution(rlay), 'wet_cells':cell_cnt}, **stats_d2}
+        
         #=======================================================================
         # wrap
         #=======================================================================
-        
-        self.ofp_d['dep_fp'] = dep3_fp
-        
-        
-        log.info('finished on\n    %s'%dep3_fp)
-        
-        return dep3_fp
+        log.info('finished on %s \n    %s'%(rlay.name(), meta_d))
+        if write:self.ofp_d[dkey] = rlay.source()
+ 
+            
+ 
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d, dtype=float).to_frame()
+ 
+ 
+        mstore.removeAllMapLayers()
+        return rlay
         
     #===============================================================================
     # CHECKS-----
@@ -3175,7 +3242,7 @@ class Session(TComs, baseSession):
                 #========================================== =========================
                 # rasters
                 #===================================================================
-                if QgsRasterLayer.isValidRasterFileName(fp):
+                if fp.endswith('.tif'):
                     res_d[fp_key].update(self.rasterlayerstatistics(fp))
                     rlay = self.rlay_load(fp, logger=log)
                     self.mstore.addMapLayer(rlay)

@@ -177,6 +177,10 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.load_pick(**kwargs),
                 'build':lambda **kwargs:self.build_hwslSet(**kwargs),
                 },
+            'wslMosaic':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_wsl(**kwargs),
+                },
  
              
             }
@@ -2328,26 +2332,25 @@ class Session(TComs, baseSession):
         #build a HAND inundation for each value on the hvgrid
         hinun_pick = self.retrieve('hInunSet', logger=log)
         
-        
-        
-        
-        #=======================================================================
-        # hinun_pick = self.build_hiSet(hvgrid_fp=hvgrid_fp, hand_fp=hand_fp, logger=log,
-        #                               hval_prec=hval_prec,
-        #                               )
-        #=======================================================================
+
         #buidl the HAND WSL set
+        """convert each inundation layer into a WSL"""
         hwsl_pick = self.retrieve('hWslSet')
         
-        return
         
-        """convert each of the above into depth rasters"""
-        hwsl_pick = self.build_hwslSet(hinun_pick=hinun_pick, dem_fp=dem_fp, logger=log)
+        
+        
+ 
         
         #mask and mosaic to get event wsl
         """using the approriate mask derived from teh hvgrid
             mosaic togehter the corresponding HAND wsl rasters
             extents here should match the hvgrid"""
+            
+        wsl_rlay = self.retrieve('wslMosaic')
+            
+            
+        return
         wslM_fp = self.build_wsl(hwsl_pick=hwsl_pick, hvgrid_fp=hvgrid_fp, logger=log)
         
         #=======================================================================
@@ -2387,7 +2390,7 @@ class Session(TComs, baseSession):
         """
         TODO: performance improvements
             reduce resolution?
-            temporal raster?
+            different raster format? netCDF
         """
         #=======================================================================
         # defaults
@@ -2688,57 +2691,242 @@ class Session(TComs, baseSession):
         return res2_d
     
     def build_wsl(self, #get set of HAND derived wsls (from hand inundations)
-                    *args,
-                    hvgrid_uq_vals=None,
-              logger=None,
-              **kwargs):
-        
+
+                    
+                #input layers
+                hwsl_fp_d=None,
+                hgSmooth_rlay=None,
+ 
+                
+                #parameters
+                hvgrid_uq_vals=None,
+ 
+               #gen
+              dkey=None, logger=None,write=None,  
+              compress=None, #could result in large memory usage
+                  ):
+        """resolution is taken from hInunSet layers"""
+ 
+ 
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.wsl')
-        
-        #pull from run_hinunSet
+        if write is None: write=self.write
 
-                
-            
-        
-        fp_key = 'wslM_fp'
-        
-        #=======================================================================
-        # build
-        #=======================================================================
-        if not fp_key in self.fp_d:
-            log.info('building wsl mosaic')
-            
-            if hvgrid_uq_vals is None:
-                if 'hvgrid_uq_vals' in self.meta_d: 
-                    hvgrid_uq_vals=self.meta_d['hvgrid_uq_vals']
-            
-            
-            
-            
-            from ricorde.hand_inun import HIses as SubSession
-            
-            with SubSession(session=self, logger=logger, inher_d=self.childI_d,
-                            fp_d=self.fp_d) as wrkr:
-            
-                ofp = wrkr.run_wsl_mosaic(*args, 
-                                          hvgrid_uq_vals=hvgrid_uq_vals,
-                                          **kwargs)
+        log=logger.getChild('b.%s'%dkey)
  
-            self.ofp_d[fp_key] = ofp
-        else:
-            ofp = self.fp_d[fp_key]
-
+        assert dkey=='wslMosaic'
+        
+        layname, ofp = self.get_outpars(dkey, write, ext='.tif')
+        meta_d = dict()
+        
+        
+        if hvgrid_uq_vals is None:
+            #????
+            if 'hvgrid_uq_vals' in self.meta_d: 
+                hvgrid_uq_vals=self.meta_d['hvgrid_uq_vals']
+                
+        temp_dir = os.path.join(self.temp_dir, dkey)
+        if not os.path.exists(temp_dir):os.makedirs(temp_dir)
+                
+        mstore=QgsMapLayerStore()
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        if hgSmooth_rlay is None:
+            hgSmooth_rlay=self.retrieve('hgSmooth')
+            
+        if hwsl_fp_d is None:
+            hwsl_fp_d = self.retrieve('hWslSet')
+        
+            
+        #sort it
+        hwsl_fp_d = dict(sorted(hwsl_fp_d.copy().items()))
+ 
+        #check these
+        for hval, hwsl_fp in hwsl_fp_d.items():
+            assert os.path.exists(hwsl_fp), 'hval %.2f bad fp in pickel:\n    %s'%(hval, hwsl_fp)
+            assert QgsRasterLayer.isValidRasterFileName(hwsl_fp),  \
+                'hval %.2f bad fp in pickel:\n    %s'%(hval, hwsl_fp)
+                
+        resolution = self.rlay_get_resolution(hwsl_fp)
+        #=======================================================================
+        # round the hv grid
+        #=======================================================================
+        """
+        NO! multiple roundings might cause issues.. just use the raw and check it
+        
+        grid precision needs to match the hvals for the mask production
+        """
                 
         #=======================================================================
-        # wrap
+        # check hand grid values
         #=======================================================================
-        log.info('got %s \n    %s'%(fp_key, ofp))
+        #get the values
+        if hvgrid_uq_vals is None:
+            """usually set by run_hinunSet()"""
+            hvgrid_uq_vals = self.rlay_uq_vals(hgSmooth_rlay, prec=1)
+                
+        #check against the pickel
+        miss_l = set(hwsl_fp_d.keys()).symmetric_difference(hvgrid_uq_vals)
+        assert len(miss_l)==0, '%i value mismatch between hwsl_pick  and hvgrid (%s) \n    %s'%(
+            len(miss_l),  hgSmooth_rlay.name(), miss_l)
         
-        return ofp
+        """
+        ar = rlay_to_array(hvgrid_fp)
+        view(pd.Series(ar.reshape(1, ar.size).tolist()[0]).dropna().value_counts())
+        """
+ 
+        #=======================================================================
+        # loop and mask
+        #=======================================================================
+        log.info('masking %i'%len(hwsl_fp_d))
+        res_d = dict()
+        first=True
+        mask_j_fp, hval_j=None, 0
+        
+        for i, (hval, wsl_fp) in enumerate(hwsl_fp_d.items()): #order matters now
+            log.debug('    (%i/%i) hval=%.2f on %s'%(
+                i, len(hwsl_fp_d)-1, hval, os.path.basename(wsl_fp)))
+            
+            #check montonoticy
+            assert hval>hval_j
+            hval_j=hval
+            
+            assert os.path.exists(wsl_fp), 'bad wsl_fp on %i'%(i, wsl_fp)
+            #===================================================================
+            # #get donut mask for this hval
+            #===================================================================
+            #mask those less than the hval (threshold mask)
+            mask_i_fp = self.mask_build(hgSmooth_rlay, logger=log,
+                                      thresh=hval, thresh_type='upper',                                      
+                          ofp=os.path.join(temp_dir, 'mask','mask_i_%03d_%03d.tif'%(i, hval*100))
+                          )
+            
+            #take this for the first
+            if first:
+                mask_fp = mask_i_fp
+                first=False
+                
+            #remove cells previously  masked (to get donut maskk)
+            else:
+                mask_fp = self.mask_apply(
+                    mask_i_fp, #everything less than the current hval  (big wsl)
+                    mask_j_fp, #everything less than the previous hval (small wsl)
+                    invert_mask=True,   #take out small wsl from big
+                    logger=log,
+                          ofp=os.path.join(temp_dir, 'mask','mask_dnt_%03d_%03d.tif'%(i, hval*100))
+                                          )
+            mask_j_fp = mask_i_fp #set the previous threshold mask
+            
+            
+            #get mask stats
+            assert os.path.exists(mask_fp)
+            cell_cnt = self.rasterlayerstatistics(mask_fp, logger=log)['SUM']
+            
+            d={'hval':hval, 'mask_cell_cnt':cell_cnt,'wsl_fp':wsl_fp,'mask_fp':mask_fp,
+               'error':np.nan}
+            
+            log.info('    (%i/%i) hval=%.2f on %s got %i wet cells'%(
+                i, len(hwsl_fp_d)-1, hval, os.path.basename(wsl_fp), cell_cnt))
+            #===================================================================
+            # check cell co unt
+            #===================================================================
+            if not cell_cnt>0:
+                """this shouldnt trip any more
+                if it does... need to switch to mask_build with a range"""
+                log.error('identified no hval=%.2f cells'%hval)
+                d['error'] = 'no wet cells'
+                
+            #===================================================================
+            # apply the donut mask
+            #===================================================================
+            else:
+ 
+                wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
+                                  ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(i, hval*100)),
+                                  allow_empty=True, #whether to allow an empty wsl. can happen for small masks
+                                  )
+                
+                stats_d = self.rasterlayerstatistics(wsli_fp, logger=log, allow_empty=True)
+                
+                assert os.path.exists(wsli_fp)                
+                d = {**d, **{ 'wsl_maskd_fp':wsli_fp},**stats_d}
+ 
+
+
+            #wrap
+            res_d[i] = d
+        
+        #=======================================================================
+        # get valids
+        #=======================================================================
+        """some hval grid cells wind up not having any valid wsl values"""
+        df = pd.DataFrame.from_dict(res_d, orient='index')
+        df['valid']= np.logical_and(
+            df['mask_cell_cnt']>0, #seems like a decent flag
+            df['SUM']>0)
+        
+        fp_d = df.loc[df['valid'], 'wsl_maskd_fp'].to_dict()
+        
+
+        if not len(fp_d)>0:
+            with pd.option_context('display.max_rows', None, 
+                           'display.max_columns', None,
+                           'display.width',1000):
+                log.debug(df)
+            raise Error('failed to get any valid masked HAND wsls for mosaicing... see logger')
+ 
+        #=======================================================================
+        # merge masked
+        #=======================================================================
+        
+        log.info('merging %i (of %i) rasters w/ valid wsls'%(len(fp_d), len(df)))
+ 
+        
+        wsl1_fp = self.mergeraster(list(fp_d.values()), compression='none',
+                         logger=log,
+                         output=os.path.join(temp_dir, 'wsl_merged.tif'))
+        
+        #=======================================================================
+        # apply a filter
+        #=======================================================================
+        """as we want to preserve heterogeneity in teh WSL raster... this is just a single filter"""
+        wsl2_fp = self.rNeighbors(wsl1_fp,
+                        neighborhood_size=5, 
+                        circular_neighborhood=True,
+                        #$cell_size=resolution, #use the input
+                        #output=ofp, 
+                        logger=log)
+        
+        assert os.path.exists(wsl2_fp)
+        
+        #reproject
+        wsl3_fp = self.warpreproject(wsl2_fp, resolution=int(resolution), compress=compress, extents=hgSmooth_rlay.extent(), logger=log,
+                           output=ofp)
+        
+        rlay = self.rlay_load(wsl3_fp, logger=log)
+        
+        #=======================================================================
+        # check
+        #=======================================================================
+        assert hgSmooth_rlay.extent()==rlay.extent(), 'extents dont match'
+        assert_func(lambda:  self.rlay_check_match(hwsl_fp, rlay, logger=log), msg='%s does not match hWslSet'%dkey)
+        #=======================================================================
+        # output
+        #=======================================================================
+        log.info('finished on %s'%rlay.name())
+        if write:self.ofp_d[dkey] = rlay.source()
+ 
+            
+ 
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+            self.smry_d['%s_masking'%dkey] = df
+ 
+        mstore.removeAllMapLayers()
+        return rlay
     
     def build_depths(self,
                      wslM_fp='',

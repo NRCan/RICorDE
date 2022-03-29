@@ -1174,7 +1174,8 @@ class Qproj(QAlgos, Basic):
         else:
             ofp1 = os.path.join(self.temp_dir,layname+'_raw.tif')
             
-        assert os.path.exists(os.path.dirname(ofp1)), os.path.dirname(ofp1)
+        #create the subfolder if it doesnt exist
+        if not os.path.exists(os.path.dirname(ofp1)):os.makedirs(os.path.dirname(ofp1))
         #=======================================================================
         # assemble parameters
         #=======================================================================
@@ -1226,7 +1227,8 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # check again
         #=======================================================================
-        self.rlay_check_match(rlay, ofp, logger=log)
+        assert_func(lambda:  self.rlay_check_match(ofp, rlay, logger=log))
+ 
  
         #=======================================================================
         # wrap

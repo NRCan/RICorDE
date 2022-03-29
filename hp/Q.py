@@ -690,9 +690,9 @@ class Qproj(QAlgos, Basic):
                   logger=None,
                   dkey=None, #dummy recievor for retrieve calls
                   
-                  #crs handling
-                  set_proj_crs = False, #set the project crs from this layer
-                  reproj=False,
+ 
+
+                  mstore=None,
                   ):
         
         #=======================================================================
@@ -700,7 +700,7 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if logger is None: logger = self.logger
         log = logger.getChild('rlay_load')
-        mstore = QgsMapLayerStore() #build a new store
+
         
         assert os.path.exists(fp), 'requested file does not exist: \n    %s'%fp
         assert QgsRasterLayer.isValidRasterFileName(fp),  \
@@ -726,34 +726,19 @@ class Qproj(QAlgos, Basic):
         # #CRS
         #=======================================================================
         if not rlay_raw.crs() == self.qproj.crs():
-            log.warning('\'%s\'  match fail (%s v %s) \n    reproj=%s set_proj_crs=%s'%(
-                rlay_raw.name(), rlay_raw.crs().authid(), self.qproj.crs().authid(), reproj, set_proj_crs))
+            raise Error('\'%s\'  crs does not match project (%s v %s) \n    reproj=%s set_proj_crs=%s'%(
+                rlay_raw.name(), rlay_raw.crs().authid(), self.qproj.crs().authid()))
             
-            if reproj:
-                raise Error('not implemented')
-
-                mstore.addMapLayer(rlay_raw)
-
-                
-            elif set_proj_crs:
-                self.qproj.setCrs(rlay_raw.crs())
-                rlay1 = rlay_raw
-                
-            else:
-                rlay1 = rlay_raw
-                
-        else:
-            rlay1 = rlay_raw
-        
-
 
         #=======================================================================
         # wrap
         #=======================================================================
-        mstore.removeAllMapLayers() #remove all the layers
+
+        if not mstore is None:
+            mstore.addMapLayer(rlay_raw)
             
         
-        return rlay1
+        return rlay_raw
     #===========================================================================
     # AOI methods--------
     #===========================================================================

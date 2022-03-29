@@ -173,6 +173,10 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.load_pick(**kwargs),
                 'build':lambda **kwargs:self.build_hiSet(**kwargs),
                 },
+            'hWslSet':{
+                'compiled':lambda **kwargs:self.load_pick(**kwargs),
+                'build':lambda **kwargs:self.build_hwslSet(**kwargs),
+                },
  
              
             }
@@ -2308,7 +2312,7 @@ class Session(TComs, baseSession):
 
     
     def run_wslRoll(self,
-                    hval_prec=0.1,# (vertical) precision of hvals to discretize
+ 
                     ):
         
         #=======================================================================
@@ -2321,16 +2325,22 @@ class Session(TComs, baseSession):
         #=======================================================================
         # get rolling WSL
         #=======================================================================
+        #build a HAND inundation for each value on the hvgrid
         hinun_pick = self.retrieve('hInunSet', logger=log)
+        
+        
+        
+        
+        #=======================================================================
+        # hinun_pick = self.build_hiSet(hvgrid_fp=hvgrid_fp, hand_fp=hand_fp, logger=log,
+        #                               hval_prec=hval_prec,
+        #                               )
+        #=======================================================================
+        #buidl the HAND WSL set
+        hwsl_pick = self.retrieve('hWslSet')
         
         return
         
-        #build a HAND inundation for each value on the hvgrid
-        hinun_pick = self.build_hiSet(hvgrid_fp=hvgrid_fp, hand_fp=hand_fp, logger=log,
-                                      hval_prec=hval_prec,
-                                      )
-        
-        #buidl the HAND WSL set
         """convert each of the above into depth rasters"""
         hwsl_pick = self.build_hwslSet(hinun_pick=hinun_pick, dem_fp=dem_fp, logger=log)
         
@@ -2367,6 +2377,7 @@ class Session(TComs, baseSession):
                 
                 #parameters
                 resolution=None, #resolution for inundation rasters
+                    #allowsing downsampling here
                 
                #gen
               dkey=None, logger=None,write=None, debug=False, 
@@ -2397,8 +2408,12 @@ class Session(TComs, baseSession):
         #=======================================================================
     
         #directory
-        out_dir = os.path.join(self.wrk_dir, dkey)
-        if not os.path.exists(out_dir):os.makedirs(out_dir)
+        if write:
+            out_dir = os.path.join(self.wrk_dir, dkey)
+        else:
+            out_dir=os.path.join(self.temp_dir, dkey)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
         
         mstore=QgsMapLayerStore()
         
@@ -2431,6 +2446,7 @@ class Session(TComs, baseSession):
                                            logger=log)
             
             mstore.addMapLayer(hand1_rlay)
+            assert hand1_rlay.extent()==hand_rlay.extent()
         else:
             hand1_rlay = hand_rlay
             
@@ -2474,6 +2490,14 @@ class Session(TComs, baseSession):
             log.info('(%i/%i) got hinun for hval=%.2f w/ %.2f pct flooded'%(
                 i+1, len(uq_vals), hval, res_d[i]['flooded_pct']))
             
+        #=======================================================================
+        # check
+        #=======================================================================
+        inun_rlay_i = self.rlay_load(rlay_fp, logger=log, mstore=mstore)
+        
+        assert inun_rlay_i.extent()==hand_rlay.extent(), 'resulting inundation extents do not match'
+ 
+            
         #===================================================================
         # build animations
         #===================================================================
@@ -2503,81 +2527,165 @@ class Session(TComs, baseSession):
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
             self.smry_d['%s_stats'%dkey] = df
  
- 
+        mstore.removeAllMapLayers()
         return res2_d
     
  
-        
- 
-#===============================================================================
-#         #=======================================================================
-#         # build
-#         #=======================================================================
-#         if not fp_key in self.fp_d:
-#             log.info('building HAND inundation set \n \n')
-#             
-#             from ricorde.hand_inun import HIses as SubSession
-#             
-#             with SubSession(session=self, logger=logger, inher_d=self.childI_d,
-#                             fp_d=self.fp_d) as wrkr:
-#             
-#                 ofp, meta_d = wrkr.run_hinunSet(*args, **kwargs)
-#             
-#             
-#             self.ofp_d[fp_key] = ofp
-#             self.meta_d.update({'run_hinunSet':meta_d})
-#         
-#         else:
-#             ofp = self.fp_d[fp_key]
-# 
-#                 
-#         #=======================================================================
-#         # wrap
-#         #=======================================================================
-#         log.info('got \'%s\' \n    %s'%(fp_key, ofp))
-#         
-#         return ofp
-#===============================================================================
     
     def build_hwslSet(self, #get set of HAND derived wsls (from hand inundations)
-                    *args,
-              logger=None,
-              **kwargs):
-        
+                #input layers
+                hi_fp_d=None,
+                dem_rlay=None,
+                
+                #parameters
+                max_fail_cnt=5, #maximum number of wsl failures to allow
+               #gen
+              dkey=None, logger=None,write=None,  
+              compress=None, #could result in large memory usage
+                  ):
+        """resolution is taken from hInunSet layers"""
+ 
+ 
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('b.hwset')
-        
-        fp_key = 'hwsl_pick'
-        
-        #=======================================================================
-        # build
-        #=======================================================================
-        if not fp_key in self.fp_d:
-            log.info('building HAND wsl set')
-            
-            from ricorde.hand_inun import HIses as SubSession
-            
-            with SubSession(session=self, logger=log, inher_d=self.childI_d,
-                            fp_d=self.fp_d) as wrkr:
-            
-                ofp = wrkr.run_hwslSet(*args, **kwargs)
-            
-            
-            self.ofp_d[fp_key] = ofp
-        
-        else:
-            ofp = self.fp_d[fp_key]
+        if write is None: write=self.write
 
-                
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        log.info('got %s \n    %s'%(fp_key, ofp))
+        log=logger.getChild('b.%s'%dkey)
+ 
+        assert dkey=='hWslSet'
         
-        return ofp
+        layname, ofp = self.get_outpars(dkey, write, ext='.pickle')
+        meta_d = dict()
+        
+        #=======================================================================
+        # setup
+        #=======================================================================
+        #directory
+        if write:
+            out_dir = os.path.join(self.wrk_dir, dkey)
+        else:
+            out_dir=os.path.join(self.temp_dir, dkey)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        
+        mstore = QgsMapLayerStore()
+        
+        #=======================================================================
+        # retrieve
+        #=======================================================================
+        """NOTE: resolutions are allowed to not match (see build_hiSet())"""
+        if hi_fp_d is None:
+            hi_fp_d = self.retrieve('hInunSet')
+        if dem_rlay is None:
+            dem_rlay=self.retrieve('dem')
+
+ 
+        #check these
+        for hval, hi_fp_i in hi_fp_d.items():
+            assert os.path.exists(hi_fp_i), 'hval %.2f bad fp in pickel:\n    %s'%(hval, hi_fp_i)
+            assert QgsRasterLayer.isValidRasterFileName(hi_fp_i),  \
+                'hval %.2f bad fp in pickel:\n    %s'%(hval, hi_fp_i)
+            
+
+        #=======================================================================
+        # get matching DEM
+        #=======================================================================
+        ref_lay = self.rlay_load(hi_fp_i, mstore=mstore, logger=log)
+        matching, msg = self.rlay_check_match(ref_lay, dem_rlay)
+ 
+ 
+
+        #reproject with new resolution
+        if not matching:
+            """not tested
+            this should only affect resolution... no extents or crs"""
+            log.warning('warping DEM to match:\n%s'%msg)
+            dem1_rlay = self.rlay_warp(dem_rlay, ref_lay=ref_lay, logger=log)
+            
+        else:
+            dem1_rlay = dem_rlay
+
+        assert self.rlay_check_match(ref_lay, dem1_rlay, logger=log), 'HANDinun resolution does not match dem'
+        mstore.removeAllMapLayers()
+        
+        #=======================================================================
+        # get water level rasters----
+        #=======================================================================
+        log.info('building %i wsl rasters on \'%s\''%(
+            len(hi_fp_d), dem1_rlay.name()))
+        
+        res_d = dict()
+        fail_cnt = 0
+        for i, (hval, fp) in enumerate(hi_fp_d.items()):
+            log.info('(%i/%i) hval=%.2f on %s'%(
+                i,len(hi_fp_d)-1,hval, os.path.basename(fp)))
+            
+            try:
+            
+                #extrapolate in
+                wsl_fp = self.wsl_extrap_wbt(dem1_rlay.source(), fp, logger=log.getChild(str(i)),
+                            ofp = os.path.join(out_dir, '%03d_hwsl_%03d.tif'%(i, hval*100.0)), #result layer
+                            out_dir=os.path.join(self.temp_dir, dkey, str(i)), #dumping iter layers
+                            compress=compress,)
+                
+                #smooth
+                """would result in some negative depths?
+                    moved to the wsl mosaic"""
+ 
+                
+                
+                #get the stats
+                stats_d = self.rasterlayerstatistics(wsl_fp, logger=log)
+                res_d[i] = {**stats_d, **{'hval':hval,'inun_fp':fp,'fp':wsl_fp, 'error':np.nan}}
+            except Exception as e:
+                """
+                letting the calc proceed
+                    normally rGrowDistance fails on fringe hvals
+                    otherwise... the depth raster will look spotty
+                """
+                log.warning('failed to get wsl on %i hval=%.2f w/ \n    %s'%(i, hval, e))
+                res_d[i] = {'hval':hval,'inun_fp':fp, 'error':e}
+                
+                #check we aren't continuously failing
+                fail_cnt +=1
+                if fail_cnt>max_fail_cnt:
+                    raise Error('failed to get wsl too many times')
+            
+
+        #===================================================================
+        # build animations
+        #===================================================================
+        """not showing up in the gifs for some reason"""
+
+ 
+        if len(res_d)==0:
+            raise Error('failed to generate any WSLs')
+ 
+ 
+        #=======================================================================
+        # output
+        #=======================================================================
+        meta_d.update({'fail_cnt':fail_cnt})
+        
+        df = pd.DataFrame.from_dict(res_d, orient='index')
+
+        #write the reuslts pickel
+        """only taking those w/ successfulr asters"""
+        res2_d = df[df['error'].isna()].set_index('hval', drop=True)['fp'].to_dict()
+
+        if write:
+            self.ofp_d[dkey] = self.write_pick(res2_d, ofp, logger=log)
+ 
+            
+ 
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+            self.smry_d['%s_stats'%dkey] = df
+ 
+        mstore.removeAllMapLayers()
+        return res2_d
     
     def build_wsl(self, #get set of HAND derived wsls (from hand inundations)
                     *args,

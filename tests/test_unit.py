@@ -230,9 +230,9 @@ def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
 
-@pytest.mark.parametrize('resolution',[8] ) #too slow otherwise
+@pytest.mark.parametrize('resolution',[8] )
 @pytest.mark.parametrize('precision',[0.4] )  
-@pytest.mark.parametrize('range_thresh',[2.7] ) #too slow otherwise
+@pytest.mark.parametrize('range_thresh',[2.7] ) 
 @pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range_thresh, precision):
@@ -249,7 +249,7 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0329_hgSmooth.tif'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
@@ -264,28 +264,68 @@ def test_12hInunSet(session, true_dir, write, base_dir,
         }
      
     dkey = 'hInunSet'
-    res_d = session.retrieve(dkey, write=write, 
-                             compress='med',
-                                #med: 361 KB
-                                #none: 8.23 MB,  1.36s
+    
+    if write:
+        compress='med' #med: 361 KB, 2.33s
+    else:
+        compress='none' #none: 8.23 MB,  1.36s
+    
+    test_d = session.retrieve(dkey, write=write, 
+                             compress=compress,
+                               
+                               
                              )
     
+    layer_d_post(dkey, true_dir, session, test_d, test_data=False)
+
+
+
+@pytest.mark.dev
+@pytest.mark.parametrize('hInunSet',[r'test_12hInunSet_fred01_test_040\working\test_tag_0329_hInunSet.pickle'] ) 
+@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_13hWslSet(session, true_dir, write, base_dir, 
+                    hInunSet, dem):
+    """TODO: play with precursors so there are less hvals to calculate for this test"""
+     
+    #set the compiled references
+    session.compiled_fp_d={
+        'hInunSet':os.path.join(base_dir, hInunSet),
+        'dem':os.path.join(base_dir, dem),
+  
+        }
+     
+    dkey = 'hWslSet'
     
+    if write:
+        compress='med' #1.37 MB
+    else:
+        compress='none'
+    
+    test_d = session.retrieve(dkey, write=write, 
+                             compress=compress,
+                             )
+    
+    layer_d_post(dkey, true_dir, session, test_d, test_data=False)
+    
+    
+#===============================================================================
+# commons--------
+#===============================================================================
+def layer_d_post(dkey, true_dir, session, test_d, **kwargs): #checking layer_d
     #===========================================================================
     # check against trues
     #===========================================================================
     true_fp = search_fp(os.path.join(true_dir, 'working'), '.pickle', dkey) #find the data file.
     true_d = retrieve_data(dkey, true_fp, session)
     
-    for hval, test_rlay_fp in res_d.items():
+    for hval, test_rlay_fp in test_d.items():
         assert hval in true_d, 'hval not in true set: %s'%hval
-        true_rlay_fp=res_d[hval]
+        true_rlay_fp=true_d[hval]
         
-        compare_layers(test_rlay_fp, true_rlay_fp, wrkr=session, test_data=False)
+        compare_layers(test_rlay_fp, true_rlay_fp, wrkr=session, **kwargs)
         
-#===============================================================================
-# commons--------
-#===============================================================================
+        
 def water_rlay_tests(dkey, session, true_dir, dem, write, base_dir):  #common test for inun and pwb
     #set the compiled references
     session.compiled_fp_d.update({

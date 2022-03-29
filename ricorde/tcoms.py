@@ -15,7 +15,7 @@ import processing
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, QgsRasterLayer
 from osgeo import gdal
 
-from hp.exceptions import Error
+from hp.exceptions import Error, assert_func
 from hp.dirz import delete_dir
 
 from hp.whitebox import Whitebox
@@ -346,7 +346,11 @@ class TComs(Qproj):
                            ofp=None,
                            out_dir=None, #usually this is a temp dir passed b y controller
                            logger=None,
+                           compress=None,
                            ):
+        """
+        todo: flexible inputs
+        """
         #=======================================================================
         # defaults
         #=======================================================================
@@ -398,7 +402,7 @@ class TComs(Qproj):
             ofp=os.path.join(out_dir, 'wsl_result.tif')
             
         rlay3_fp = self.mask_apply(rlay2_fp, inun_fp, ofp=ofp,
-                                         invert_mask=False,
+                                         invert_mask=False, compress=compress,
                                          logger=log)
         
         #=======================================================================
@@ -431,10 +435,14 @@ class TComs(Qproj):
         f2 = '%s/%s'%(f1, f1)
         formula = f2.format(rcentry.ref, rcentry.ref)
         
-        return self.rcalc1(hand_rlay, formula, 
+        ofp= self.rcalc1(hand_rlay, formula, 
                            [rcentry] , 
  
                            **kwargs)
+        
+        assert_func(lambda:  self.rlay_check_match(ofp,hand_rlay))
+        
+        return ofp
         
 
     #===========================================================================

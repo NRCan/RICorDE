@@ -105,14 +105,14 @@ class Session(TComs, baseSession):
                  inun_fp=None, #inundation filepath (raster or polygon)
              
                  exit_summary=True,
-                 
+                 data_retrieve_hndls = {},
                  **kwargs):
         
         #=======================================================================
         # #retrieval handles----------
         #=======================================================================
  
-        data_retrieve_hndls = {
+        data_retrieve_hndls.update({
             'dem':{
                 'compiled':lambda **kwargs:self.load_dem(**kwargs), #only rasters
                 'build':lambda **kwargs:self.build_dem(**kwargs),
@@ -186,7 +186,7 @@ class Session(TComs, baseSession):
                 'build':lambda **kwargs:self.build_depths(**kwargs),
                 },
              
-            }
+            })
         
         #attach inputs
         self.dem_fp, self.pwb_fp, self.inun_fp = dem_fp, pwb_fp, inun_fp
@@ -1613,7 +1613,7 @@ class Session(TComs, baseSession):
              dist=None, #distance from boundary to exclude
              
                #gen
-               write_csv=None,
+               write_plotData=None,
               dkey=None, logger=None,write=None,
                   ):
         """
@@ -1631,7 +1631,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         if write is None: write=self.write
-        if write_csv is None: write_csv=write
+        if write_plotData is None: write_plotData=write
         log=logger.getChild('b.%s'%dkey)
         
  
@@ -1731,11 +1731,13 @@ class Session(TComs, baseSession):
         if write:
             self.ofp_d[dkey] = self.vlay_write(samp_cap_vlay,ofp,  logger=log)
             
-        if write_csv:
+        if write_plotData:
             """for plotting later"""
-            ofp = os.path.join(self.out_dir, '%s_%s_hvals.csv'%(self.layName_pfx, dkey))
-            df.to_csv(ofp)
-            log.info('wrote %s to %s'%(str(df.shape), ofp))
+
+            self.write_pick({'data':df, 'b1Bounds':bounds}, 
+                            out_fp=os.path.join(self.out_dir, '%s_%s_hvals.pickle'%(self.layName_pfx, dkey)),
+                             logger=log)
+            #log.info('wrote %s to %s'%(str(df.shape), ofp))
             
             
         if self.exit_summary:

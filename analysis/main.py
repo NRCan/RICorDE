@@ -12,20 +12,19 @@ print('start at %s'%start)
 from analysis.scripts import Session
 
 def runr(
-        name='someName',
+        name='Idai',
         tag='r1A',
-        b2_fp=None,
+        compiled_fp_d=dict(),
         **kwargs):
    
     with Session(name=name, tag=tag,
                  root_dir=r'C:\LS\10_OUT\2202_TC',
- 
+                 compiled_fp_d=compiled_fp_d,
  
                    **kwargs) as wrkr:
         
-        if not b2_fp is None:
-            wrkr.plot_beach_pts_capped(
-                data_fp=b2_fp)
+ 
+        wrkr.plot_beach_pts_capped()
             
         out_dir = wrkr.out_dir
         
@@ -37,7 +36,11 @@ def dev():
     
     return runr(
         tag='devA',
-        b2_fp = r'C:\LS\10_OUT\2202_TC\outs\dev\20220330\idai_dev_0330_beach2_hvals.csv',
+        compiled_fp_d = {
+            'b2Plotting': r'C:\\LS\\10_OUT\\2202_TC\\outs\\dev\\20220330\\idai_dev_0330_beach2_hvals.pickle',
+            
+            },
+ 
         )
 
 

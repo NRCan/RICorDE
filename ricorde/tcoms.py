@@ -369,7 +369,7 @@ class TComs(Qproj):
         #===================================================================
         rlay1_fp = self.mask_apply(dem_fp, inun_fp, 
                                          invert_mask=True,
-                                         logger=log,
+                                         logger=log, out_dir=out_dir,temp_dir=out_dir,
                      ofp=os.path.join(out_dir, 'dem_maskd.tif'))
  
         #=======================================================================

@@ -1272,7 +1272,7 @@ class Qproj(QAlgos, Basic):
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
-        log=logger.getChild('mask_invert')
+        log=logger.getChild('mask_build')
         
 
         
@@ -1408,7 +1408,7 @@ class Qproj(QAlgos, Basic):
                     allow_approximate=False, 
                    invert_mask=False,
                    layname=None,
-                   logger=None,
+                   logger=None, out_dir=None,temp_dir=None,
                    **kwargs):
         """
 
@@ -1425,6 +1425,9 @@ class Qproj(QAlgos, Basic):
         
         log.debug('masking \'%s\' w/ \'%s\' amd inverting mask=%s'%(
             rlay, mask_rlay ,invert_mask))
+        
+        if out_dir is None: out_dir=self.out_dir
+        if temp_dir is None: temp_dir=self.temp_dir
                 
         #=======================================================================
         # check
@@ -1438,7 +1441,7 @@ class Qproj(QAlgos, Basic):
         if invert_mask:
             
             mask_rlay1 = self.mask_invert(mask_rlay, logger=log,
-                          ofp=os.path.join(self.temp_dir, 
+                          ofp=os.path.join(temp_dir, 
                            '%s_invert.tif'%os.path.basename(mask_rlay).replace('.tif', '')),
                           )
         else:

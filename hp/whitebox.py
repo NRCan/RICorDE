@@ -229,7 +229,7 @@ class Whitebox(object):
         #=======================================================================
         # execute
         #=======================================================================
-        log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(rlay_fp)))
+        log.debug('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(rlay_fp)))
         self.__run__(args) #execute
         
         return out_fp

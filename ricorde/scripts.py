@@ -560,7 +560,7 @@ class Session(TComs, baseSession):
                    resolution=None,
                    
                   
-                  logger=None, ofp=None,
+                  logger=None, ofp=None,out_dir=None,
                   ):
         
         #=======================================================================
@@ -574,8 +574,9 @@ class Session(TComs, baseSession):
         # retrieve
         #=======================================================================
         rlay_raw = self.get_layer(input_raster, logger=log)
-        
-        if ofp is None: ofp=os.path.join(self.temp_dir, '%s_warp.tif'%rlay_raw.name())
+        if out_dir is None: out_dir=self.temp_dir
+        if ofp is None: 
+            ofp=os.path.join(out_dir, '%s_warp.tif'%rlay_raw.name())
         
  
             
@@ -1600,7 +1601,7 @@ class Session(TComs, baseSession):
              #datalayesr
              hand_rlay=None,
              inun2_rlay=None,
-             HAND_mask=None, #only needed for method=polygons
+ 
              
              #parameters
              method='pixels', #method for extracting beach points from the inundation ratser
@@ -1612,7 +1613,7 @@ class Session(TComs, baseSession):
              dist=None, #distance from boundary to exclude
              
                #gen
-               write_csv=False,
+               write_csv=None,
               dkey=None, logger=None,write=None,
                   ):
         """
@@ -1630,6 +1631,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         if write is None: write=self.write
+        if write_csv is None: write_csv=write
         log=logger.getChild('b.%s'%dkey)
         
  
@@ -1660,7 +1662,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         resolution = int(self.rlay_get_resolution(hand_rlay))
         if spacing is None:
-            spacing = resolution*6
+            spacing = resolution*4
             
         if dist is None:
             dist = resolution*2
@@ -2681,7 +2683,7 @@ class Session(TComs, baseSession):
         layname, ofp = self.get_outpars(dkey, write, ext='.pickle')
         meta_d = dict()
         
- 
+        
         #=======================================================================
         # setup
         #=======================================================================
@@ -2691,8 +2693,9 @@ class Session(TComs, baseSession):
             out_dir = os.path.join(self.wrk_dir, dkey)
         else:
             out_dir=os.path.join(self.temp_dir, dkey)
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        temp_dir = os.path.join(self.temp_dir, dkey)
+        if not os.path.exists(out_dir):os.makedirs(out_dir)
+        if not os.path.exists(temp_dir):os.makedirs(temp_dir)
         
         mstore=QgsMapLayerStore()
         
@@ -2846,8 +2849,9 @@ class Session(TComs, baseSession):
             out_dir = os.path.join(self.wrk_dir, dkey)
         else:
             out_dir=os.path.join(self.temp_dir, dkey)
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        temp_dir = os.path.join(self.temp_dir, dkey)
+        if not os.path.exists(out_dir):os.makedirs(out_dir)
+        if not os.path.exists(temp_dir):os.makedirs(temp_dir)
         
         mstore = QgsMapLayerStore()
         
@@ -2881,12 +2885,14 @@ class Session(TComs, baseSession):
             """not tested
             this should only affect resolution... no extents or crs"""
             log.warning('warping DEM to match:\n%s'%msg)
-            dem1_rlay = self.rlay_warp(dem_rlay, ref_lay=ref_lay, logger=log)
+            dem1_rlay = self.rlay_warp(dem_rlay, ref_lay=ref_lay, logger=log, out_dir=temp_dir)
             
         else:
             dem1_rlay = dem_rlay
 
-        assert self.rlay_check_match(ref_lay, dem1_rlay, logger=log), 'HANDinun resolution does not match dem'
+        assert_func(lambda:  self.rlay_check_match(ref_lay, dem1_rlay, logger=log), 
+                    msg='HANDinun resolution does not match dem')
+ 
         mstore.removeAllMapLayers()
         
         #=======================================================================
@@ -2901,12 +2907,14 @@ class Session(TComs, baseSession):
             log.info('(%i/%i) hval=%.2f on %s'%(
                 i,len(hi_fp_d)-1,hval, os.path.basename(fp)))
             
+            
+            
             try:
             
                 #extrapolate in
                 wsl_fp = self.wsl_extrap_wbt(dem1_rlay.source(), fp, logger=log.getChild(str(i)),
                             ofp = os.path.join(out_dir, '%03d_hwsl_%03d.tif'%(i, hval*100.0)), #result layer
-                            out_dir=os.path.join(self.temp_dir, dkey, str(i)), #dumping iter layers
+                            out_dir=os.path.join(temp_dir, dkey, str(i)), #dumping iter layers
                             compress=compress,)
                 
                 #smooth
@@ -3077,7 +3085,8 @@ class Session(TComs, baseSession):
             #mask those less than the hval (threshold mask)
             mask_i_fp = self.mask_build(hgSmooth_rlay, logger=log,
                                       thresh=hval, thresh_type='upper',                                      
-                          ofp=os.path.join(temp_dir, 'mask','mask_i_%03d_%03d.tif'%(i, hval*100))
+                          ofp=os.path.join(temp_dir, 'mask','mask_i_%03d_%03d.tif'%(i, hval*100)),
+                          out_dir=temp_dir,  
                           )
             
             #take this for the first
@@ -3091,8 +3100,8 @@ class Session(TComs, baseSession):
                     mask_i_fp, #everything less than the current hval  (big wsl)
                     mask_j_fp, #everything less than the previous hval (small wsl)
                     invert_mask=True,   #take out small wsl from big
-                    logger=log,
-                          ofp=os.path.join(temp_dir, 'mask','mask_dnt_%03d_%03d.tif'%(i, hval*100))
+                    logger=log, out_dir=temp_dir,temp_dir=temp_dir,
+                    ofp=os.path.join(temp_dir, 'mask','mask_dnt_%03d_%03d.tif'%(i, hval*100)),
                                           )
             mask_j_fp = mask_i_fp #set the previous threshold mask
             
@@ -3123,6 +3132,7 @@ class Session(TComs, baseSession):
                 wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
                                   ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(i, hval*100)),
                                   allow_empty=True, #whether to allow an empty wsl. can happen for small masks
+                                  out_dir=temp_dir, temp_dir=temp_dir
                                   )
                 
                 stats_d = self.rasterlayerstatistics(wsli_fp, logger=log, allow_empty=True)
@@ -3234,7 +3244,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
-        self._log_datafiles()
+        #self._log_datafiles()   no... this will happen on exit
         return 
     
     def build_depths(self,
@@ -3562,7 +3572,7 @@ class Session(TComs, baseSession):
         self.logger.debug('__exit__ \n \n \n \n')
         
         if self.exit_summary:
-            self._log_datafiles()
+            #self._log_datafiles()
             
             
             #=======================================================================

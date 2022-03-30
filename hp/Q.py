@@ -1363,6 +1363,7 @@ class Qproj(QAlgos, Basic):
                     ofp=None,
                     include_nulls=False, #whether to treat nulls as postiive in the result
                     layname='mask_invert',
+                    nullType='native',
                     **kwargs):
         """ surprised there isnt a builtin wayu to do this
         """
@@ -1375,6 +1376,8 @@ class Qproj(QAlgos, Basic):
  
         if include_nulls: 
             raise Error('not implememnted')
+        
+        assert_func(lambda:  self.mask_check(rlay, nullType=nullType))
         #=======================================================================
         # add 2 to nodata
         #=======================================================================
@@ -1838,7 +1841,7 @@ class Qproj(QAlgos, Basic):
             #rasters
             if ext=='.tif':
                 res =  self.rlay_load(obj, **kwargs)
-            elif ext in list(self.vlay_drivers.values()):
+            elif ext.replace('.','') in list(self.vlay_drivers.values()):
                 res = self.vlay_load(obj, **kwargs)
             else:
                 raise IOError('unrecognized extension: %s'%ext)
@@ -2110,7 +2113,7 @@ def vlay_get_fdf( #pull all the feature data and place into a df
     #===========================================================================
     # setups and defaults
     #===========================================================================
-    log = logger.getChild('vlay_get_fdf')
+    #log = logger.getChild('vlay_get_fdf')
     
     assert isinstance(vlay, QgsVectorLayer)
     all_fnl = [fieldn.name() for fieldn in vlay.fields().toList()]
@@ -2147,13 +2150,13 @@ def vlay_get_fdf( #pull all the feature data and place into a df
     if fmt=='dict' and not (len(fieldn_l)==len(all_fnl)):
         raise Error('dict results dont respect field slicing')
     
-    assert hasattr(feedback, 'setProgress')
+    #assert hasattr(feedback, 'setProgress')
     
     
     #===========================================================================
     # build the request
     #===========================================================================
-    feedback.setProgress(2)
+    #feedback.setProgress(2)
     if request is None:
         """WARNING: this doesnt seem to be slicing the fields.
         see Alg().deletecolumns()
@@ -2172,7 +2175,7 @@ def vlay_get_fdf( #pull all the feature data and place into a df
     request = request.setFlags(QgsFeatureRequest.NoGeometry) 
                
 
-    log.debug('extracting data from \'%s\' on fields: %s'%(vlay.name(), fieldn_l))
+    #log.debug('extracting data from \'%s\' on fields: %s'%(vlay.name(), fieldn_l))
     #===========================================================================
     # loop through each feature and extract the data
     #===========================================================================
@@ -2185,14 +2188,14 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         #zip values
         fid_attvs[feat.id()] = feat.attributes()
         
-        feedback.setProgress((indxr/fcnt)*90)
+        #feedback.setProgress((indxr/fcnt)*90)
 
 
     #===========================================================================
     # post checks
     #===========================================================================
     if not len(fid_attvs) == vlay.dataProvider().featureCount():
-        log.debug('data result length does not match feature count')
+        #log.debug('data result length does not match feature count')
 
         if not request.filterType()==3: #check if a filter fids was passed
             """todo: add check to see if the fiter request length matches tresult"""
@@ -2204,7 +2207,7 @@ def vlay_get_fdf( #pull all the feature data and place into a df
 
     #empty check 1
     if len(fid_attvs) == 0:
-        log.warning('failed to get any data on layer \'%s\' with request'%vlay.name())
+        #log.warning('failed to get any data on layer \'%s\' with request'%vlay.name())
         if not allow_none:
             raise Error('no data found!')
         else:
@@ -2219,8 +2222,10 @@ def vlay_get_fdf( #pull all the feature data and place into a df
     #===========================================================================
     # result formatting
     #===========================================================================
-    log.debug('got %i data elements for \'%s\''%(
-        len(fid_attvs), vlay.name()))
+    #===========================================================================
+    # log.debug('got %i data elements for \'%s\''%(
+    #     len(fid_attvs), vlay.name()))
+    #===========================================================================
     
     if fmt == 'dict':
         
@@ -2236,7 +2241,7 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         """if the requester worked... we probably  wouldnt have to do this"""
         df = df_raw.loc[:, tuple(fieldn_l)].replace([NULL], np.nan)
         
-        feedback.setProgress(95)
+        #feedback.setProgress(95)
         
         if isinstance(reindex, str):
             """
@@ -2247,12 +2252,13 @@ def vlay_get_fdf( #pull all the feature data and place into a df
             try:
                 df = df.join(pd.Series(df.index,index=df.index, name='fid'))
             except:
-                log.debug('failed to preserve the fids.. column already there?')
+                pass
+                #log.debug('failed to preserve the fids.. column already there?')
             
             #re-index by the passed key... should copy the fids over to 'index
             df = df.set_index(reindex, drop=True)
             
-            log.debug('reindexed data by \'%s\''%reindex)
+            #log.debug('reindexed data by \'%s\''%reindex)
             
         return df
     

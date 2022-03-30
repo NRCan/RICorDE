@@ -188,11 +188,17 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
+@pytest.mark.dev
+@pytest.mark.parametrize('method',[
+    #'pixels', 
+    'polygons'
+    ] ) #from test_hand
 @pytest.mark.parametrize('b1Bounds',[r'test_08b1Bounds_fred01_test_070\working\test_tag_0328_b1Bounds.pickle'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
+def test_10beach2(session, true_dir, write, base_dir, 
+                  HAND, inun2, b1Bounds, method):
     """todo.. output this as a geojson"""
     
     #set the compiled references
@@ -203,7 +209,7 @@ def test_10beach2(session, true_dir, write, base_dir, HAND, inun2, b1Bounds):
         }
     
     dkey = 'beach2'
-    test_rlay = session.retrieve(dkey, write=write)
+    test_rlay = session.retrieve(dkey, write=write, method=method)
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
     
@@ -327,7 +333,6 @@ def test_14wslMosaic(session, true_dir, write, base_dir,
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
 
-@pytest.mark.dev
 @pytest.mark.parametrize('wslMosaic',[r'test_14wslMosaic_fred01_test_10\working\test_tag_0329_wslMosaic.tif'] ) 
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   

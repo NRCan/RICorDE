@@ -1544,79 +1544,7 @@ class Session(TComs, baseSession):
 
         return rlay
     
-    def xxxbuild_inun2_vlay(self,
-                         inun2r_fp='',
-                         clean_kwargs={}, 
-                         logger=None,
-                         ):
-        
-        #=======================================================================
-        # defaults
-        #=======================================================================
-        if logger is None: logger=self.logger
-        log=logger.getChild('b.inun2')
 
-        fp_key = 'inun2_fp'
- 
-        
-        #=======================================================================
-        # build
-        #=======================================================================
-        if not fp_key in self.fp_d:
-            #===================================================================
-            # setup
-            #===================================================================
-            log.info('polygonize %s'%os.path.join(inun2r_fp))
- 
-            #filepaths
- 
-            ofp = os.path.join(self.out_dir, self.layName_pfx+'_inun2.gpkg')
-            if os.path.exists(ofp): 
-                assert self.overwrite
-                os.remove(ofp)
-            
-
-            #===================================================================
-            # convert to vlay
-            #===================================================================
-            """point sampler is set up for polygons...
-                    would improve performance to re-do point sampler for all raster"""
-
-            
-            inun3_raw_vlay_fp = self.polygonizeGDAL(inun2r_fp,  logger=log)
-            self.trash_fps.append(inun3_raw_vlay_fp)
- 
-            
-            #===================================================================
-            # clean
-            #===================================================================
- 
-            self.clean_inun_vlay(inun3_raw_vlay_fp, output=ofp, logger=log,**clean_kwargs)
-            
-            #===================================================================
-            # wrap
-            #===================================================================
-            self.ofp_d[fp_key]= ofp
-            
-        else:
-            ofp = self.fp_d[fp_key]
-
-        
-        #=======================================================================
-        # wrap
-        #=======================================================================
-         
-
-        
-        log.info('got  \'%s\' \n    %s'%(
-               fp_key, ofp))
-        
-        return ofp
-    
-    #===========================================================================
-    # PHASE2: Rolling HAND grid----------
-    #===========================================================================
-    
     def run_HANDgrid(self, #get mosaic of depths (from HAND values)
 
                   logger=None,
@@ -1672,9 +1600,16 @@ class Session(TComs, baseSession):
              #datalayesr
              hand_rlay=None,
              inun2_rlay=None,
+             HAND_mask=None, #only needed for method=polygons
              
              #parameters
+             method='pixels', #method for extracting beach points from the inundation ratser
              bounds=None,  # hi/low quartiles from beach1
+             fieldName='hvals',
+             
+             #parameters (polygon)
+             spacing=None, #sample resolution
+             dist=None, #distance from boundary to exclude
              
                #gen
                write_csv=False,
@@ -1718,25 +1653,72 @@ class Session(TComs, baseSession):
             
         mstore=QgsMapLayerStore()
         
+        meta_d = dict()
         
         #=======================================================================
-        # get raw samples
+        # parameter defaults 2
         #=======================================================================
-        samp_raw_fp = self.get_beach_rlay(
-            inun_rlay=inun2_rlay, base_rlay=hand_rlay, logger=log)
+        resolution = int(self.rlay_get_resolution(hand_rlay))
+        if spacing is None:
+            spacing = resolution*6
+            
+        if dist is None:
+            dist = resolution*2
+        #=======================================================================
+        # get raw samples----
+        #=======================================================================
+        #=======================================================================
+        # pixel based from donut raster
+        #=======================================================================
+        if method=='pixels':
+            #raster along edge of inundation where values match some base layer
+            samp_raw_fp = self.get_beach_rlay(
+                inun_rlay=inun2_rlay, base_rlay=hand_rlay, logger=log)
+            
+            #convert to points
+            
+            samp_raw_pts = self.pixelstopoints(samp_raw_fp, logger=log, fieldName=fieldName)
         
-        #convert to points
-        fieldName='hvals'
-        samp_raw_pts = self.pixelstopoints(samp_raw_fp, logger=log, fieldName=fieldName)
+        #=======================================================================
+        # polygon based
+        #=======================================================================
+        elif method=='polygons':
+            #vectorize inundation
+            inun2_vlay_fp, d = self.get_inun_vlay(inun2_rlay, logger=log)
+            meta_d.update(d)
+            
+            #setup
+            temp_dir = os.path.join(self.temp_dir, dkey)
+            if not os.path.exists(temp_dir): os.makedirs(temp_dir)
+ 
+            
+            #get these points )w/ some edge filtering
+            samp_raw_pts, d = self.get_beach_pts_poly(inun2_vlay_fp, 
+                  base_rlay=hand_rlay,
+                logger=log, 
+ 
+                spacing=spacing, dist=dist, fieldName=fieldName,
+                out_dir=temp_dir,
+                )
+        
+            meta_d.update(d)
+            
+            samp_raw_pts = self.get_layer(samp_raw_pts)
+            
+        else:
+            raise KeyError('unrecognized method')
+    
+            
         
         mstore.addMapLayer(samp_raw_pts)
         samp_raw_pts.setName('%s_samp_raw'%dkey)
         #=======================================================================
         # cap samples
         #=======================================================================
-        samp_cap_vlay, df, meta_d = self.get_capped_pts(samp_raw_pts, 
+        samp_cap_vlay, df, d = self.get_capped_pts(samp_raw_pts, 
                                    logger=log, fieldName=fieldName,
                             vmin=bounds['qlo'], vmax=bounds['qhi'])
+        meta_d.update(d)
         #=======================================================================
         # wrap
         #=======================================================================
@@ -1759,7 +1741,216 @@ class Session(TComs, baseSession):
  
  
         return samp_cap_vlay
+    
+    def get_inun_vlay(self, #retrieve an inundation polygon from an inundatino raster
+                      rlay_raw,
+                      
+                      #clean_inun_vlay parameters
+                          simp_dist=None,
+                        hole_size=None,
+                        island_size=None,
  
+                        
+                      logger=None):
+        
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('get_inun_vlay')
+        
+        log.info('on %s'%rlay_raw.name())
+        
+        assert_func(lambda:  self.mask_check(rlay_raw, nullType='native'))
+        
+        resolution = self.rlay_get_resolution(rlay_raw)
+        #=======================================================================
+        # #vectorize inundation
+        #=======================================================================
+        vlay1_fp = self.polygonizeGDAL(rlay_raw, logger=log)
+        
+        #=======================================================================
+        # clean
+        #=======================================================================
+        
+        vlay2_fp, meta_d = self.clean_inun_vlay(vlay1_fp, logger=log,
+                                 output=os.path.join(self.temp_dir, '%s_clean_inun.gpkg'%(rlay_raw.name())),
+                                  simp_dist=simp_dist,hole_size=hole_size,island_size=island_size,
+                                  dem_psize=int(resolution), #used for setting defaults
+                                  )
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        log.debug('finished on %s'%vlay2_fp)
+        return vlay2_fp, meta_d
+ 
+        
+    
+    def get_beach_pts_poly(self, #extract beach points from a polygon
+                             vlay_raw,
+                             base_rlay=None, #masking layer for edge filtering
+                             fieldName=None,
+                             
+                             #parameters
+                             spacing=None, #sample resolution
+                             dist=None, #distance from boundary to exclude
+                             
+                             out_dir=None,
+                             ofp=None,
+                             logger=None):
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('get_beach_pts_poly')
+        
+        mstore=QgsMapLayerStore()
+        meta_d={'spacing':spacing, 'dist':dist}
+        
+        vlay_raw = self.get_layer(vlay_raw, mstore=mstore)
+        assert isinstance(vlay_raw, QgsVectorLayer)
+        
+        if out_dir is None:
+            out_dir=self.out_dir
+        
+        
+        if ofp is None:
+            ofp = os.path.join(out_dir, '%s_beachPtsRaw.gpkg'%vlay_raw.name())
+            
+        log.debug('on %s'%vlay_raw)
+        #===================================================================
+        # points along edge
+        #===================================================================
+
+        pts_vlay1 = self.pointsalonglines(vlay_raw, logger=log, spacing=spacing)
+        """
+        view(pts_vlay_raw)
+        view(pts_vlay1)
+        """
+        meta_d['cnt_raw'] = pts_vlay1.dataProvider().featureCount()
+        #===================================================================
+        # #fix fid
+        #===================================================================
+        #remove all the fields
+
+        pts_vlay2 = self.deletecolumn(pts_vlay1, 
+                                      [f.name() for f in pts_vlay1.fields()], 
+                                      output=os.path.join(out_dir, '01_pointsalonglines.gpkg'),
+                                      logger=log)
+        
+        
+        #===================================================================
+        # #filter by raster edge
+        #===================================================================
+        #retrieve a mask for filtering
+        """easier to just rebuild here"""
+        mask_rlay = self.mask_build(base_rlay, logger=log, zero_shift=True)
+        
+        pts_clean_vlay_fp, fcnt = self.filter_edge_pts(pts_vlay2, mask_rlay, logger=log, dist=dist,
+                                               ofp=os.path.join(out_dir, '02_filter_edge_pts.gpkg'),
+                                        )
+        
+        #=======================================================================
+        # sample raster
+        #=======================================================================
+        sample_vlay1 = self.rastersampling(pts_clean_vlay_fp, base_rlay, logger=log)
+        mstore.addMapLayer(sample_vlay1)
+        """
+        base_rlay.source()
+        view(sample_vlay2)
+        sample_vlay2.source()
+        """
+        
+        sample_vlay2 = self.renameField(sample_vlay1, 'sample_1', fieldName,
+                                        output=os.path.join(out_dir, '03_rastersamples.gpkg')
+                                        )
+        
+        #check
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        
+        
+        meta_d['cnt_edgeFilter'] = fcnt
+        
+        mstore.removeAllMapLayers()
+        
+        log.debug('finished on %s'%sample_vlay2)
+        
+        return sample_vlay2, meta_d
+        
+    def filter_edge_pts(self, #filter points where close to a rlay's no-data boundary
+                        pts_vlay,
+                        mask_rlay,
+                        dist=None, #distance from boundary to exclude
+                        ofp=None, #optional outpath
+                        logger=None,
+                        ):
+        """todo: incorpoarte this into get_beach_pts_poly"""
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log=logger.getChild('filter_edge_pts')
+        
+        mstore=QgsMapLayerStore()
+        pts_vlay = self.get_layer(pts_vlay, mstore=mstore)
+        if ofp is None:
+            ofp = os.path.join(self.temp_dir, '%s_edgePtsFiltered.gpkg'%pts_vlay.name())
+        
+        #=======================================================================
+        # build selection donut
+        #=======================================================================
+        #polygonize buffer
+        mask_vlay_fp = self.polygonizeGDAL(mask_rlay, logger=log)
+        
+        
+        #outer buffer of no-data poly
+        nd_big_vlay = self.buffer(mask_vlay_fp, dist=dist, dissolve=True, logger=log)
+        
+        #inner buffer of no-data poly
+        nd_sml_vlay = self.buffer(mask_vlay_fp, dist=-dist, dissolve=True, logger=log)
+        
+        #outer-inner donut no-data poly
+        nd_donut_vlay = self.symmetricaldifference(nd_big_vlay, nd_sml_vlay, logger=log)
+        
+        lays = [nd_big_vlay, nd_sml_vlay, nd_donut_vlay]
+        
+        #=======================================================================
+        # #apply fiolter
+        #=======================================================================
+        #select points intersecting donut
+ 
+        lays.append(pts_vlay)
+        
+        self.selectbylocation(pts_vlay, nd_donut_vlay, allow_none=False, logger=log)
+        
+        """
+        view(pts_vlay)
+        """
+        
+        #invert selection
+        pts_vlay.invertSelection()
+        
+        #exctract remaining points
+        pts_clean_vlay_fp = self.saveselectedfeatures(pts_vlay, logger=log,
+                          output=ofp)
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        mstore.addMapLayers(lays)
+        
+
+        fcnt = pts_vlay.selectedFeatureCount()
+        log.info('selected %i (of %i) pts by raster no-data extent'%(
+            fcnt, pts_vlay.dataProvider().featureCount()))
+        
+        mstore.removeAllMapLayers()
+        
+        return pts_clean_vlay_fp, fcnt
  
         
     def get_capped_pts(self, #force lower/upper bounds on some points

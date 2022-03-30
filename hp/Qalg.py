@@ -507,7 +507,7 @@ class QAlgos(object):
                  'RASTERCOPY' : rlay }
         
         log.debug('executing \'%s\' on \'%s\' with: \n     %s'
-            %(algo_nm, vlay.name(), ins_d))
+            %(algo_nm, vlay, ins_d))
             
         #===========================================================================
         # #execute
@@ -732,6 +732,7 @@ class QAlgos(object):
             logger=None,
             ):
         
+        assert isinstance(spacing, int)
         #=======================================================================
         # setups and defaults
         #=======================================================================
@@ -761,6 +762,7 @@ class QAlgos(object):
         #=======================================================================
         # setups and defaults
         #=======================================================================
+        assert isinstance(dist, int)
         if logger is None: logger=self.logger    
         algo_nm = 'native:buffer'
         log = logger.getChild('buffer')

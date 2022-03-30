@@ -161,6 +161,10 @@ class Session(TComs, baseSession):
                 'compiled':lambda **kwargs:self.vlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_beach2(**kwargs),
                 },
+            'hgInterp':{
+                'compiled':lambda **kwargs:self.rlay_load(**kwargs),
+                'build':lambda **kwargs:self.build_hgInterp(**kwargs),
+                },
             'hgRaw':{
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs),
                 'build':lambda **kwargs:self.build_hgRaw(**kwargs),
@@ -1570,6 +1574,8 @@ class Session(TComs, baseSession):
 
         beach2_rlay = self.retrieve('beach2', logger=log)
         
+        hgInterp_rlay = self.retrieve('hgInterp', logger=log)
+        
         hgRaw_rlay = self.retrieve('hgRaw', logger=log)
         
         
@@ -2032,12 +2038,12 @@ class Session(TComs, baseSession):
         
         return res_vlay, df, meta_d
     
-    def build_hgRaw(self, #interpolate and grow the beach 2 values
+    def build_hgInterp(self, #interpolate and grow the beach 2 values
              
              #datalayesr
              beach2_vlay=None,
              dem_rlay=None, #for reference
-             inun2_rlay=None,
+
              fieldName=None, #field name with sample values
              
              #parameters (interploate)
@@ -2079,7 +2085,7 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
  
-        assert dkey=='hgRaw'
+        assert dkey=='hgInterp'
  
         layname, ofp = self.get_outpars(dkey, write)
         
@@ -2093,10 +2099,8 @@ class Session(TComs, baseSession):
         if beach2_vlay is None:
             beach2_vlay=self.retrieve('beach2')
             
-        if inun2_rlay is None:
-            """basically a mask of the beach2_vlay points"""
-            inun2_rlay=self.retrieve('inun2')
-            
+
+        resolution=int(self.rlay_get_resolution(dem_rlay))
         #=======================================================================
         # parameters 2
         #=======================================================================
@@ -2108,7 +2112,7 @@ class Session(TComs, baseSession):
  
         
         if radius is None:
-            radius=self.dem_psize*4
+            radius=resolution*6
             
         meta_d = {'distP':distP, 'pts_cnt':pts_cnt, 'radius':radius}
         #=======================================================================
@@ -2135,14 +2139,15 @@ class Session(TComs, baseSession):
         shp_fp = self.vlay_write(beach2_vlay, os.path.join(self.temp_dir, '%s.shp'%beach2_vlay.name()), driverName='ESRI Shapefile')
         
         #run tool
-        interp_raw_fp = Whitebox(logger=logger, version='v2.0.0', #1.4 wont cap processors
+        """still very slow... may be the ref_lay"""
+        interp1_fp = Whitebox(logger=logger, version='v2.0.0', #1.4 wont cap processors
                                  max_procs=max_procs, 
                                ).IdwInterpolation(shp_fp, fieldName,
                                 weight=distP, 
                                 radius=radius,
                                 min_points=pts_cnt,
-                                #cell_size=resolution,
-                                ref_lay_fp=dem_rlay.source(),
+                                cell_size=resolution,
+                                #ref_lay_fp=dem_rlay.source(),
                                 out_fp=os.path.join(self.temp_dir, 'wbt_IdwInterpolation_%s.tif'%dkey))
                                
  
@@ -2154,21 +2159,77 @@ class Session(TComs, baseSession):
         #               output=os.path.join(self.temp_dir, 'vsurfidw.tif'),
         #               )
         #======================================================================="""
-        assert os.path.exists(interp_raw_fp)
+        assert os.path.exists(interp1_fp)
+        
+        #reproject
+        interp2_fp = self.warpreproject(interp1_fp, resolution=int(resolution), 
+                                     logger=log, extents=dem_rlay.extent(), 
+                                     crsOut=self.qproj.crs(), crsIn=self.qproj.crs(),
+                                     output=ofp)
+        
+        
+        
+        
+        #=======================================================================
+        # wrap
+        #=======================================================================
+        rlay = self.rlay_load(interp2_fp, logger=log)
+        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))
+        
+        
+        
+        
+        if write:
+            self.ofp_d[dkey] = ofp
+ 
+        if self.exit_summary:
+            self.smry_d[dkey] = pd.Series(meta_d).to_frame()
+ 
+ 
+        return rlay
         
  
+    def build_hgRaw(self,
+                #input layers
+                hgInterp_rlay=None,
+                inun2_rlay=None,
+                
+               #gen
+              dkey=None, logger=None,write=None,
+                  ):
+    
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        if write is None: write=self.write
+        log=logger.getChild('b.%s'%dkey)
+ 
+        assert dkey=='hgRaw'
+ 
+        layname, ofp = self.get_outpars(dkey, write)
         
+        
+        if inun2_rlay is None:
+            """basically a mask of the beach2_vlay points"""
+            inun2_rlay=self.retrieve('inun2')
+            
+        if hgInterp_rlay is None:
+            """basically a mask of the beach2_vlay points"""
+            hgInterp_rlay=self.retrieve('hgInterp')
+      
+        meta_d = dict()
         #=======================================================================
         # #re-interpolate interior regions-----
         #=======================================================================
-        self.wsl_extrap_wbt(interp_raw_fp,inun2_rlay.source(),  logger=log, ofp=ofp)
+        self.wsl_extrap_wbt(hgInterp_rlay.source(),inun2_rlay.source(),  logger=log, ofp=ofp)
  
         #=======================================================================
         # wrap
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
         
-        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))
+        
         
         
         if write:

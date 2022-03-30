@@ -188,7 +188,7 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('method',[
     'pixels', 
     'polygons'
@@ -212,7 +212,28 @@ def test_10beach2(session, true_dir, write, base_dir,
     test_rlay = session.retrieve(dkey, write=write, method=method)
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
+
+@pytest.mark.dev
+@pytest.mark.parametrize('radius',[30] )   #speed things up
+@pytest.mark.parametrize('pts_cnt',[3] )   #speed things up
+@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0330_beach2.gpkg'] ) #from test_hand
+@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
+
+@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
+def test_11hgInterp(session, true_dir, write, base_dir, beach2, dem, pts_cnt, radius):
+    """3 parameters were not really testing here"""
     
+    #set the compiled references
+    session.compiled_fp_d={
+        'beach2':os.path.join(base_dir, beach2),
+        'dem':os.path.join(base_dir, dem),
+
+        }
+    
+    dkey = 'hgInterp'
+    test_rlay = session.retrieve(dkey, write=write, pts_cnt=pts_cnt, radius=radius)
+
+    layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
 
 @pytest.mark.parametrize('radius',[30] )   #speed things up
 @pytest.mark.parametrize('pts_cnt',[3] )   #speed things up

@@ -1628,6 +1628,7 @@ class QAlgos(object):
                               rlay_raw,
                               
                               crsOut = None, #crs to re-project to
+                              crsIn=None, #needed for some rasters
                               resolution=None,
                               compress = None,
                               nodata_val=-9999,
@@ -1710,7 +1711,7 @@ class QAlgos(object):
              'OPTIONS' : opts,
              'OUTPUT' : output,
              'RESAMPLING' : {v:k for k,v in resamp_d.items()}[resampling],
-             'SOURCE_CRS' : None,
+             'SOURCE_CRS' : crsIn,
              'TARGET_CRS' : crsOut,
              'TARGET_EXTENT' : extents,
              'TARGET_EXTENT_CRS' : None,

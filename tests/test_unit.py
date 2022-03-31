@@ -188,7 +188,7 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-
+@pytest.mark.dev
 @pytest.mark.parametrize('method',[
     'pixels', 
     'polygons'
@@ -209,7 +209,7 @@ def test_10beach2(session, true_dir, write, base_dir,
         }
     
     dkey = 'beach2'
-    test_rlay = session.retrieve(dkey, write=write, method=method)
+    test_rlay = session.retrieve(dkey, write=write, method=method, write_plotData=False)
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
 
@@ -238,7 +238,7 @@ def test_11hgInterp(session, true_dir, write, base_dir, beach2, dem,
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('hgInterp',[r'test_11hgInterp_fred01_test_010\working\test_tag_0331_hgInterp.tif'] )  
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
@@ -404,6 +404,7 @@ def water_rlay_tests(dkey, session, true_dir, dem, write, base_dir):  #common te
 
 def layer_post( #post test commons for layer types
         dkey, true_dir, session, test_rlay, ext='.tif', **kwargs):
+    session.logger.info('\n\nlayer_post \n\n')
     #===========================================================================
     # load true
     #===========================================================================

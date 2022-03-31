@@ -1723,6 +1723,7 @@ class Session(TComs, baseSession):
         
         if write:
             self.ofp_d[dkey] = self.vlay_write(samp_cap_vlay,ofp,  logger=log)
+            log.info('wrote %s to \n    %s'%(dkey, ofp))
             
         if write_plotData:
             """for plotting later"""

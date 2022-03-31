@@ -251,7 +251,7 @@ def compare_layers(lay_test, lay_true, #two containers of layers
     # vectorlayer checks
     #=======================================================================
     if isinstance(lay_test, QgsVectorLayer):
-        assert dptest.featureCount()==dptrue.featureCount()
+        assert dptest.featureCount()==dptrue.featureCount(), 'feature count mismatch'
         assert lay_test.wkbType() == dptrue.wkbType()
         
         #data checks

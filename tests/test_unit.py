@@ -213,12 +213,11 @@ def test_10beach2(session, true_dir, write, base_dir,
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
 
-@pytest.mark.dev
+
 #@pytest.mark.parametrize('radius',[30] )   #speed things up
 #@pytest.mark.parametrize('pts_cnt',[3] )   #speed things up
 @pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0330_beach2.gpkg'] ) #from test_hand
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
-
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_11hgInterp(session, true_dir, write, base_dir, beach2, dem,
                      #pts_cnt, radius
@@ -239,24 +238,22 @@ def test_11hgInterp(session, true_dir, write, base_dir, beach2, dem,
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
 
-@pytest.mark.parametrize('radius',[30] )   #speed things up
-@pytest.mark.parametrize('pts_cnt',[3] )   #speed things up
-@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0330_beach2.gpkg'] ) #from test_hand
-@pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
+@pytest.mark.dev
+@pytest.mark.parametrize('hgInterp',[r'test_11hgInterp_fred01_test_010\working\test_tag_0331_hgInterp.tif'] )  
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_11hgRaw(session, true_dir, write, base_dir, beach2, dem, inun2, pts_cnt, radius):
+def test_11hgRaw(session, true_dir, write, base_dir, 
+                 hgInterp, inun2):
     """3 parameters were not really testing here"""
     
     #set the compiled references
     session.compiled_fp_d={
-        'beach2':os.path.join(base_dir, beach2),
-        'dem':os.path.join(base_dir, dem),
+        'hgInterp':os.path.join(base_dir, hgInterp),
         'inun2':os.path.join(base_dir, inun2),
         }
     
     dkey = 'hgRaw'
-    test_rlay = session.retrieve(dkey, write=write, pts_cnt=pts_cnt, radius=radius)
+    test_rlay = session.retrieve(dkey, write=write)
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     

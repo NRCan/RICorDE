@@ -3,48 +3,32 @@ Created on Mar. 27, 2021
 
 @author: cefect
 
-workflows for deriving gridded depth estimates from inundation polygons and DEMs
+deriving gridded depth estimates from inundation polygons and DEMs
 
  
  
+        
+#===============================================================================
+# resolution 
+#===============================================================================
+see 'RICorDE - notes.xlsx'
 
-#===============================================================================
-# passing layers vs. filepaths
-#===============================================================================
-some algos natively input/output QgsLayers and others filepaths
-    filepaths are easier to de-bug (can open in QGIS)
-        lower memory requirements
-    QgsLayers are easier to clean and code (can extract info)
-    
-PROCEDURE GUIDE
-    passing inputs between functions (excluding coms and _helpers): 
-        filepaths
-    layers within a function
-        QgsLayers or filepaths
-        
-        
+
 #===============================================================================
 # TODO
 #===============================================================================
-switch to default input as raster
-
-change variable names to be more geneirc (less Canadian)
+ 
 
 paralleleize expensive loops
 
 add some better logic checks (%inundation)
 
-create a master parameter list 
+create a master parameter list  (documentation)
     explan function/roll of each parameter
     which functions use the parameter
     default value
 
-better organize outputs
-    temps should be a single folder
-    intermediaries a second
-    only the main depths output lands at the top level
-
-add tests
+ 
 
 
 '''
@@ -196,6 +180,9 @@ class Session(TComs, baseSession):
         self.dem_fp, self.pwb_fp, self.inun_fp = dem_fp, pwb_fp, inun_fp
         self.exit_summary=exit_summary 
             
+        """
+        data_retrieve_hndls.keys()
+        """
         
         super().__init__(tag=tag, 
                          data_retrieve_hndls=data_retrieve_hndls,
@@ -1602,7 +1589,7 @@ class Session(TComs, baseSession):
 
     
         
-    def build_beach2(self, #beach values (on inun2 w/ some refinement)
+    def build_beach2(self, #beach values (on inun2 w/ some refinement) pts vlay
              
              #datalayesr
              hand_rlay=None,
@@ -2172,9 +2159,7 @@ class Session(TComs, baseSession):
                                      crsOut=self.qproj.crs(), crsIn=self.qproj.crs(),
                                      output=ofp)
         
-        
-        
-        
+ 
         #=======================================================================
         # wrap
         #=======================================================================
@@ -2182,10 +2167,7 @@ class Session(TComs, baseSession):
         
         """not forcing a match any more
         assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))"""
-        
-        
-        
-        
+ 
         if write:
             self.ofp_d[dkey] = ofp
  
@@ -2226,10 +2208,37 @@ class Session(TComs, baseSession):
             hgInterp_rlay=self.retrieve('hgInterp')
       
         meta_d = dict()
+        mstore = QgsMapLayerStore()
+        #=======================================================================
+        # resolution match
+        #=======================================================================
+        """
+        hgInterp is often (and can now be) a lower resolution than the inundation
+            but we want to preserve inundation resolution for the grow
+            TODO: investigate relaxing this 
+            
+            NOTE: hgSmooth allows a second coarsening
+        """
+        inun2_res = self.rlay_get_resolution(inun2_rlay)
+        hgInterp_res = self.rlay_get_resolution(hgInterp_rlay)
+        
+        assert inun2_res<=hgInterp_res, 'hgInterp must have a lower (coarser) resolution than the inundation'
+        
+        if not inun2_res==hgInterp_res:
+            log.info('resolution mismatch... reprojecting \'%s\' (%i to %i)'%(
+                hgInterp_rlay.name(), hgInterp_res, inun2_res))
+            
+            hgInterp2_rlay_fp = self.warpreproject(hgInterp_rlay, extents=inun2_rlay.extent(), 
+                                                   resolution=int(inun2_res), logger=log)
+ 
+        else:
+            hgInterp2_rlay_fp = hgInterp_rlay.source()
+        
+        
         #=======================================================================
         # #re-interpolate interior regions-----
         #=======================================================================
-        self.wsl_extrap_wbt(hgInterp_rlay.source(),inun2_rlay.source(),  logger=log, ofp=ofp)
+        self.wsl_extrap_wbt(hgInterp2_rlay_fp,inun2_rlay.source(),  logger=log, ofp=ofp)
  
         #=======================================================================
         # wrap
@@ -2244,7 +2253,8 @@ class Session(TComs, baseSession):
  
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
- 
+            
+        mstore.removeAllMapLayers()
  
         return rlay
         
@@ -2300,7 +2310,9 @@ class Session(TComs, baseSession):
  
         if resolution is None: 
             """not much benefit to downsampling actually
-                    just makes the smoothing iterations faster"""
+                    just makes the smoothing iterations faster
+                    NOTE: we also allow the hgInterp to be downsampled (but this is reverted in hgRaw
+                    """
             resolution = int(self.rlay_get_resolution(hgRaw_vlay)*3)
             
         if range_thresh is  None:
@@ -2483,6 +2495,7 @@ class Session(TComs, baseSession):
         #===================================================================
         assert os.path.exists(rlay_fp_i), 'failed to get a result: %s'%rlay_fp_i
         #repeoject to extents and original resolution
+        """TODO: consider relaxing this... doing lots of downsampling already"""
         ofp = self.warpreproject(rlay_fp_i, 
                                  output=ofp,
                                  extents=rlay_raw.extent(), 
@@ -2737,7 +2750,9 @@ class Session(TComs, baseSession):
  
         """
         TODO: performance improvements
-            reduce resolution?
+            paralleleize
+ 
+ 
             different raster format? netCDF
         """
         #=======================================================================
@@ -2791,6 +2806,7 @@ class Session(TComs, baseSession):
  
         #reproject with new resolution
         if not hres == resolution:
+            raise Error('not sure about htis')
             log.info('downsampling \'%s\' from %.2f to %.2f'%(
                 hand_rlay.name(), hres,  resolution))
              

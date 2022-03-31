@@ -188,7 +188,7 @@ def test_09inun2(session, true_dir, write, base_dir, inunHmax, inun1):
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('method',[
     'pixels', 
     'polygons'
@@ -214,9 +214,8 @@ def test_10beach2(session, true_dir, write, base_dir,
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, ext='.gpkg')
 
 
-#@pytest.mark.parametrize('radius',[30] )   #speed things up
-#@pytest.mark.parametrize('pts_cnt',[3] )   #speed things up
-@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0330_beach2.gpkg'] ) #from test_hand
+
+@pytest.mark.parametrize('beach2',[r'test_10beach2_fred01_test_09in0\working\test_tag_0331_beach2.gpkg'] ) #from test_hand
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_11hgInterp(session, true_dir, write, base_dir, beach2, dem,
@@ -257,11 +256,11 @@ def test_11hgRaw(session, true_dir, write, base_dir,
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
-
-@pytest.mark.parametrize('resolution',[8] )
+@pytest.mark.dev
+@pytest.mark.parametrize('resolution',[4] )
 @pytest.mark.parametrize('precision',[0.4] )  
-@pytest.mark.parametrize('range_thresh',[2.7] ) 
-@pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0328_hgRaw.tif'] ) #from test_hand
+@pytest.mark.parametrize('range_thresh',[0.5] ) 
+@pytest.mark.parametrize('hgRaw',[r'test_11hgRaw_fred01_test_09inu0\working\test_tag_0331_hgRaw.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range_thresh, precision):
      
@@ -272,7 +271,7 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
         }
      
     dkey = 'hgSmooth'
-    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=5, range_thresh=range_thresh, precision=precision)
+    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=3, range_thresh=range_thresh, precision=precision)
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     

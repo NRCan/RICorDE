@@ -2271,11 +2271,13 @@ class Session(TComs, baseSession):
              
              range_thresh=None, #maximum range (between HAND cell values) to allow
                 #None: calc from max_slope and resolution
+                #NOTE: this is also used to spatially select where the smoothing applies.. so it will change the result
+                #lower values mean smoomther... should no exceed 2.0
              max_grade = 0.1, #maximum hand value grade to allow 
              
              neighborhood_size = 7,
              
-             max_iter=20, #maximum number of smoothing iterations to allow
+             max_iter=5, #maximum number of smoothing iterations to allow
              precision=0.2,  #prevision of resulting HAND values (value to round to nearest multiple of)
              
              
@@ -2320,7 +2322,7 @@ class Session(TComs, baseSession):
             """capped at 2.0 for low resolution runs""" 
             range_thresh = round(min(max_grade*resolution, 2.0),2)
             
-            
+        assert range_thresh<=2.0
  
             
         log.info('applying low-pass filter and downsampling (%.2f) from %s'%(
@@ -2363,7 +2365,7 @@ class Session(TComs, baseSession):
                     circular_neighborhood=True,
                     resolution=None, #for rNeighbors
                     
-                    max_iter=10, 
+                    max_iter=None, 
                     range_thresh=None,
                     
  
@@ -2377,7 +2379,10 @@ class Session(TComs, baseSession):
         log = logger.getChild('rsmth')
         meta_d={'smooth_resolution':resolution, 'smooth_range_thresh':range_thresh, 'max_iter':max_iter}
         log.info('on \'%s\'  %s\n    %s'%(rlay_raw.name(), self.rlay_get_props(rlay_raw), meta_d))
+        assert isinstance(resolution, int)
         
+        assert isinstance(range_thresh, float)
+        assert isinstance(max_iter, int)
  
         #===================================================================
         # smooth initial
@@ -2388,26 +2393,36 @@ class Session(TComs, baseSession):
                         cell_size=resolution,
                         #output=ofp, 
                         logger=log)
-        """this has a new extents"""
+        
         
         assert os.path.exists(smooth_rlay_fp1)
+        
+        #reproject
+        """this has a new extents and a sloppy resolution
+            cleaning resolution and setting back to og extent
+            self.rlay_get_resolution(smooth_rlay_fp2)
+            """
+        smooth_rlay_fp2 =  self.warpreproject(smooth_rlay_fp1, 
+                           resolution=resolution, 
+                           extents=rlay_raw.extent(), logger=log, output=ofp)
         #===================================================================
         # get mask
         #===================================================================
         """
         getting a new mask from teh smoothed as this has grown outward
         """
-        mask_fp = self.mask_build(smooth_rlay_fp1, logger=log,
+        mask_fp = self.mask_build(smooth_rlay_fp2, logger=log,
                         ofp=os.path.join(self.temp_dir, 'rsmooth_mask.tif'))
         
-
+        """NO! allowing downsampling
+        assert_func(lambda:  self.rlay_check_match(mask_fp,rlay_raw, logger=log))"""
         #===================================================================
         # smooth loop-----
         #===================================================================
         #===================================================================
         # setup
         #===================================================================
-        rlay_fp_i=smooth_rlay_fp1
+        rlay_fp_i=smooth_rlay_fp2
         rval = 99.0 #dummy starter value
         rvals_d = dict()
         
@@ -2424,17 +2439,21 @@ class Session(TComs, baseSession):
             #===============================================================
             # #check range and smoth
             #===============================================================
+            assert_func(lambda:  self.rlay_check_match(rlay_fp_i,mask_fp, logger=log))
+            
             try:
                 check, rlay_fp_i, rvali, fail_pct = self._smooth_iter(rlay_fp_i, 
                                                            range_thresh=range_thresh,
                                                            mask=mask_fp,
                                                            logger=log.getChild(str(i)),
-                                                           out_dir=temp_dir,
-                                                           sfx='%03d'%i,
-                                                           debug=debug)
+                                                           out_dir=temp_dir,sfx='%03d'%i,debug=debug,
+                                                           )
             except Exception as e:
+                """why do we allow this to fail???"""
+                if i==0: 
+                    raise Error('_smooth_iter failed on first iteration w/\n    %s'%e)
                 log.warning('_smooth_iter %i failed w/ \n    %s'%(i, e))
-                fail_cnt=10
+                fail_cnt=10 #????
                 rvali=0
 
             #===============================================================
@@ -2485,7 +2504,7 @@ class Session(TComs, baseSession):
             rlay_fp_i = df.loc[imin, 'fp']
             
             
-            log.warning('FAILED smoothness in %i (%.2f>%.2f). taking i=%i\n    %s'%(
+            log.warning('range exceeds thresh after %i (%.2f>%.2f). taking i=%i\n    %s'%(
                 i,rvali, range_thresh, imin, df['rval'].to_dict()))
         
         """
@@ -2527,17 +2546,15 @@ class Session(TComs, baseSession):
  
     def _smooth_iter(self,  #check if range threshold is satisifed... or smooth 
                     rlay_fp, 
-                    range_thresh=1.0,
-                    neighborhood_size=3,
+                    range_thresh=None,
+                    neighborhood_size=3, #hardcoded
                     #circular_neighborhood=True,
                     mask=None,
                     sfx='',
-                    out_dir=None,
-                    logger=None,
-                    debug=False,
+                    out_dir=None,logger=None,debug=False,
                     ):
         """
-        spent a few hours on this
+        spent (more than) a few hours on this
             theres probably a nicer pre-buit algo I should be using
             
         most parameter configurations return the smoothest result on iter=2
@@ -2546,6 +2563,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # defaults
         #=======================================================================
+        assert isinstance(range_thresh, float)
+        assert isinstance(neighborhood_size, int)
         
         if logger is None: logger=self.logger
         log=logger.getChild('iter')
@@ -2563,6 +2582,7 @@ class Session(TComs, baseSession):
         if not os.path.exists(os.path.join(out_dir, 'mask')):
             os.makedirs(os.path.join(out_dir, 'mask'))
             
+        mstore=QgsMapLayerStore()
         #=======================================================================
         # apply mask
         #=======================================================================
@@ -2594,7 +2614,7 @@ class Session(TComs, baseSession):
         # check critiera
         #=======================================================================
         if rval<=range_thresh:
-            log.debug('maximum range (%.2f) < %.2f'%(rval, range_thresh))
+            log.info('maximum range (%.2f) < %.2f achieved'%(rval, range_thresh))
             
             
             return True, rlay_maskd_fp, rval, 0
@@ -2666,12 +2686,35 @@ class Session(TComs, baseSession):
         assert os.path.exists(smooth_fp)
         """good to have a different name for iterations"""
         
+        #=======================================================================
+        # reproject
+        #=======================================================================
+        """this probably makes things slower... but cleaner to force all this to match"""
+        base_rlay = self.get_layer(rlay_fp, mstore=mstore, logger=log)
+        
+        
         ofp = os.path.join(os.path.dirname(smooth_fp), '%s_avg.tif'%sfx)
-        os.rename(smooth_fp,ofp)
+        #os.rename(smooth_fp,ofp)
+        
+        """
+        self.rlay_check_match(smooth_fp,base_rlay, logger=log)
+        self.rlay_get_props(smooth_fp)
+        """
+        
+        self.warpreproject(smooth_fp, 
+                           resolution=int(self.rlay_get_resolution(base_rlay)), 
+                           extents=base_rlay.extent(), logger=log, output=ofp)
+        
+        
+        assert_func(lambda:  self.rlay_check_match(ofp,base_rlay, logger=log))
+        #=======================================================================
+        # wrap
+        #=======================================================================
         #copy over
         if debug:
             shutil.copyfile(ofp,os.path.join(out_dir,'avg','%s_avg.tif'%sfx))
         
+        mstore.removeAllMapLayers()
         return False, ofp, rval, fail_cnt
     
 

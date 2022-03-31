@@ -1783,8 +1783,9 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # load
         #=======================================================================
-        rlay1 = self.get_layer(rlay1_raw, logger=log)
-        rlay2 = self.get_layer(rlay2_raw, logger=log)
+        mstore = QgsMapLayerStore()
+        rlay1 = self.get_layer(rlay1_raw, logger=log, mstore=mstore)
+        rlay2 = self.get_layer(rlay2_raw, logger=log, mstore=mstore)
         
         #=======================================================================
         # run tests
@@ -1812,7 +1813,7 @@ class Qproj(QAlgos, Basic):
         # wrap
         #=======================================================================
         res_df = pd.DataFrame.from_dict(res_d).T.infer_objects()
- 
+        mstore.removeAllMapLayers()
         
         if not res_df['result'].all():
             with pd.option_context('display.max_rows', None,'display.max_columns', None,'display.width',1000):

@@ -3499,7 +3499,7 @@ class Session(TComs, baseSession):
             
  
         if self.exit_summary:
-            self.smry_d[dkey] = pd.Series(meta_d, dtype=float).to_frame()
+            self.smry_d[dkey] = pd.Series(meta_d, dtype=str).to_frame()
  
  
         mstore.removeAllMapLayers()

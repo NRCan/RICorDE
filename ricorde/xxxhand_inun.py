@@ -30,7 +30,7 @@ from hp.Q import Qproj, QgsVectorLayer, view, vlay_get_fdf, QgsMapLayerStore, \
 from qgis.analysis import QgsRasterCalculatorEntry
 from hp.gdal import rlay_to_array
 
-from scripts.tcoms import TComs
+from ricorde.tcoms import TComs
 
 
 
@@ -63,12 +63,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # attach
         #=======================================================================
-        
-        
-        
-
  
-    
     #===========================================================================
     # RUNERS-----------
     #===========================================================================
@@ -198,7 +193,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # downsample the hand layer
         #=======================================================================
-        hres = self.get_resolution(hand_fp)
+        hres = self.rlay_get_resolution(hand_fp)
 
         if resolution is None:
             resolution=hres
@@ -322,8 +317,8 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         #=======================================================================
         # downsampling DEM
         #=======================================================================
-        hres = self.get_resolution(fp)
-        dres = self.get_resolution(dem_fp)
+        hres = self.rlay_get_resolution(fp)
+        dres = self.rlay_get_resolution(dem_fp)
  
 
         #reproject with new resolution
@@ -841,7 +836,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
         
         return vlay_fp, fcnt
     
-    def get_edge_samples(self,
+    def get_edge_samples(self, #points vecotor layer with base raster samples
                          rToSamp_fp='', #raster layer to sample
                          inun_fp='', #inundation (filtered bby h ydrauilc maximum)
                          ndb_fp='', #nodata boundary polygon of hand layer
@@ -867,7 +862,9 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             
         Regardless, some unexpected extremes will show up in the edge values
             becuase of the vertical/value variance in the dem
-            i.e. some min/max filtering will always be required
+            i.e. some min/max filtering may always be required
+            
+        see get_edge_rsamp for raster based
         """
         
         #=======================================================================
@@ -1222,14 +1219,14 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             # fix resolution
             #===================================================================
             """v.surf.idw isnt generating the correct resolution
-            ores = self.get_resolution(interp_raw_fp)"""
+            ores = self.rlay_get_resolution(interp_raw_fp)"""
             log.info('warpreproject resolution=%.4f on  %s'%(resolution, interp_raw_fp))
             self.warpreproject(interp_raw_fp, 
                                resolution=resolution, nodata_val=-9999,
                                output=ofp, logger=log)
             
             
-            ores = self.get_resolution(ofp)
+            ores = self.rlay_get_resolution(ofp)
             assert ores  == resolution
             
             meta_d = {'distP':distP, 'interp_resolution':resolution}
@@ -1319,6 +1316,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
  
 
         """
+        raise IOError('moved')
         #=======================================================================
         # defaults
         #=======================================================================
@@ -1528,7 +1526,7 @@ class HIses(TComs): #get inundation raters from HAND and raw polygonss
             
         most parameter configurations return the smoothest result on iter=2
         """
-        
+        raise IOError('moved')
         #=======================================================================
         # defaults
         #=======================================================================

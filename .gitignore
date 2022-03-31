@@ -134,3 +134,6 @@ dmypy.json
 *.gpkg-wal
 *.gpkg-shm
 *.aux.xml
+
+#windows shortcuts
+*.lnk

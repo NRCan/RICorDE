@@ -27,27 +27,36 @@ mod_logger = logging.getLogger(__name__)
 
 class Whitebox(object):
     
-    exe_fp = r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe'
+    exe_d = {
+        'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
+        'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
+        }
     
     def __init__(self,
                  out_dir=None,
                  logger=mod_logger,
                  overwrite=True,
+                 version='v1.4.0',
+                 max_procs=4, 
                  ):
         
         if out_dir is None: out_dir = get_temp_dir()
         self.out_dir=out_dir
         self.logger=logger.getChild('wbt')
         self.overwrite =overwrite
+        self.exe_fp=self.exe_d[version]
+        self.max_procs=max_procs
 
-
+        assert os.path.exists(self.exe_fp), 'bad exe: \n    %s'%self.exe_fp
+        
     def breachDepressionsLeastCost(self,
                                    dem_fp, #file path to fill. MUST BE UNCOMPRESSED!
-                                   dist=100, #pixe distance to fill
+                                   dist=100, #(Maximum search distance for breach paths in cells) pixel distance to fill
                                    ofp = None, #outpath
                                    logger=None,
         
                                    ):
+        """can be very slow"""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -68,30 +77,29 @@ class Whitebox(object):
                 '--run={}'.format(tool_nm),
                 '--dem=\'{}\''.format(dem_fp),
                 '--dist=%i'%dist,
-                '--min_dist=\'True\'',
-                '--fill=\'True\'',
+                '--min_dist=\'True\'', #Optional flag indicating whether to minimize breach distances
+                '--fill=\'True\'', # fill any remaining unbreached depressions
                 '--compress_raster=\'False\'',
                 '--output=\'{}\''.format(ofp),
 
-                #'-v'
+                '-v'
                 ]
         
         log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(dem_fp)))
-        log.debug(args)
+        #log.debug(args)
         #subprocess.Popen(args)
         #=======================================================================
         # execute
         #=======================================================================
-        result = subprocess.run(args, 
-                                capture_output=True,text=True,
-                                #stderr=sys.STDOUT, stdout=PIPE,
-                                ) #spawn process in explorer
+        self.__run__(args) #execute
+        #=======================================================================
+        # result = subprocess.run(args, #spawn process in explorer
+        #                         capture_output=True,text=True,
+        #                         #stderr=sys.STDOUT, stdout=PIPE,
+        #                         ) 
+        #=======================================================================
         
-        #=======================================================================
-        # wrap
-        #=======================================================================
-        log.debug(result.stdout)
-        log.info('finished w/ %s'%ofp)
+ 
         
         
         return ofp
@@ -221,22 +229,31 @@ class Whitebox(object):
         #=======================================================================
         # execute
         #=======================================================================
-        log.info('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(rlay_fp)))
+        log.debug('executing \'%s\' on \'%s\''%(tool_nm, os.path.basename(rlay_fp)))
         self.__run__(args) #execute
         
         return out_fp
     
     def IdwInterpolation(self,
                         vlay_pts_fp, fieldn, 
+                        
+                        #parameters
                         weight=2, #IDW weight value
-                        cell_size=10, 
+                        radius=4.0, #Search Radius in map units
+                        min_points=3, #Minimum number of points
+                        
+                        #output data props
+                        cell_size=None, #resolution of output
+                        ref_lay_fp=None, #optional reference layer (if no cell_size is specifed)
+                        
+                        #gen 
                         logger=None, out_fp=None,
                         ):
 
         #=======================================================================
         # defaults
         #=======================================================================
-        tool_nm = 'IdwInterpolation '
+        tool_nm = 'IdwInterpolation'
         if logger is None: logger=self.logger
         log=logger.getChild(tool_nm)
         
@@ -244,16 +261,32 @@ class Whitebox(object):
             out_fp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(vlay_pts_fp))[0]+'_idw.tif')
         
         assert out_fp.endswith('.tif')
+        
+        assert os.path.exists(vlay_pts_fp)
+        
+        assert vlay_pts_fp.endswith('.shp'), 'only shapefiles allowed'
  
+
         #=======================================================================
         # setup
         #=======================================================================
         args = [self.exe_fp,'-v','--run={}'.format(tool_nm),'--output={}'.format(out_fp),
-                '--input={}'.format(vlay_pts_fp),
+                '-i={}'.format(vlay_pts_fp),
                 '--field=%s'%fieldn,
                 '--weight=%.2f'%weight,
-                '--cell_size=%.2f'%cell_size,
+                '--radius=%.2f'%radius,
+                '--min_points=%i'%min_points,
+                '--max_procs=%i'%self.max_procs,
                 ]
+        
+        if ref_lay_fp is None:
+            assert isinstance(cell_size, int)
+            args.append('--cell_size=%i'%cell_size)
+        else:
+            assert cell_size is None
+            assert os.path.exists(ref_lay_fp)
+            assert ref_lay_fp.endswith('.tif')
+            args.append('--base=%s'%ref_lay_fp)
         
         #=======================================================================
         # execute
@@ -353,6 +386,8 @@ class Whitebox(object):
 
         
     def __run__(self, args, logger=None):
+        """I think this only returns info upon completion?
+        check the verbose flag also"""
         #=======================================================================
         # setup
         #=======================================================================
@@ -368,7 +403,7 @@ class Whitebox(object):
         #=======================================================================
         # #handle result
         #=======================================================================
-        #failed
+
         log.debug('finished w/ returncode=%i \n    %s'%(result.returncode, result.stdout))
         
         if not result.returncode==0: 

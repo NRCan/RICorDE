@@ -507,7 +507,7 @@ class QAlgos(object):
                  'RASTERCOPY' : rlay }
         
         log.debug('executing \'%s\' on \'%s\' with: \n     %s'
-            %(algo_nm, vlay.name(), ins_d))
+            %(algo_nm, vlay, ins_d))
             
         #===========================================================================
         # #execute
@@ -732,6 +732,7 @@ class QAlgos(object):
             logger=None,
             ):
         
+        assert isinstance(spacing, int)
         #=======================================================================
         # setups and defaults
         #=======================================================================
@@ -761,6 +762,7 @@ class QAlgos(object):
         #=======================================================================
         # setups and defaults
         #=======================================================================
+        assert isinstance(dist, int)
         if logger is None: logger=self.logger    
         algo_nm = 'native:buffer'
         log = logger.getChild('buffer')
@@ -1039,7 +1041,7 @@ class QAlgos(object):
             mstore.addMapLayer(extent_layer)
         
         if resolution is None:
-            resolution = self.get_resolution(extent_layer)
+            resolution = self.rlay_get_resolution(extent_layer)
             
         """because this algo is resolution based, can result in a row/column mismatch"""
         assert round(resolution, 2)==resolution, 'got overly precise resolution: %s'%str(resolution)
@@ -1063,7 +1065,35 @@ class QAlgos(object):
         
         mstore.removeAllMapLayers()
         return res_d['OUTPUT']
-    
+
+    def pixelstopoints(self,
+            rlay,
+            fieldName='VALUE',
+ 
+            logger=None,
+            output='TEMPORARY_OUTPUT',
+            ):
+        
+        #=======================================================================
+        # setups and defaults
+        #=======================================================================
+        if logger is None: logger=self.logger    
+        algo_nm = 'native:pixelstopoints'
+        log = logger.getChild('pixelstopoints')
+        
+ 
+ 
+        feedback=self.feedback
+            
+
+        ins_d = { 'FIELD_NAME' : fieldName, 'INPUT_RASTER' : rlay,
+                  'OUTPUT' : output, 'RASTER_BAND' : 1 }
+        
+        log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
+ 
+        res_d = processing.run(algo_nm, ins_d,  feedback=feedback, context=self.context)
+ 
+        return res_d['OUTPUT']
     #===========================================================================
     # QGIS--------
     #===========================================================================
@@ -1469,7 +1499,7 @@ class QAlgos(object):
     def cliprasterwithpolygon(self,
               rlay_raw,
               poly_vlay,
-              layname = None,
+ 
               output = 'TEMPORARY_OUTPUT',
               #result = 'layer', #type fo result to provide
                 #layer: default, returns a raster layuer
@@ -1497,11 +1527,7 @@ class QAlgos(object):
             feedback=self.feedback
         log = logger.getChild('cliprasterwithpolygon')
         
-        #=======================================================================
-        # if layname is None:
-        #     layname = '%s_clipd'%rlay_raw.name()
-        #=======================================================================
-            
+ 
             
         algo_nm = 'gdal:cliprasterbymasklayer'
             
@@ -1509,13 +1535,11 @@ class QAlgos(object):
         #=======================================================================
         # precheck
         #=======================================================================
-        #=======================================================================
-        # assert isinstance(rlay_raw, QgsRasterLayer)
-        # assert isinstance(poly_vlay, QgsVectorLayer)
-        # assert 'Poly' in QgsWkbTypes().displayString(poly_vlay.wkbType())
-        # 
-        # assert rlay_raw.crs() == poly_vlay.crs()
-        #=======================================================================
+        assert isinstance(rlay_raw, QgsRasterLayer)
+        assert isinstance(poly_vlay, QgsVectorLayer)
+        assert 'Poly' in QgsWkbTypes().displayString(poly_vlay.wkbType())
+         
+        assert rlay_raw.crs() == poly_vlay.crs()
         
         #=======================================================================
         # cleanup outputs
@@ -1604,13 +1628,22 @@ class QAlgos(object):
                               rlay_raw,
                               
                               crsOut = None, #crs to re-project to
+                              crsIn=None, #needed for some rasters
                               resolution=None,
-                              compression = 'none',
-                              nodata_val=None,
+                              compress = None,
+                              nodata_val=-9999,
+                              resampling='Nearest neighbour', #resampling method
+                              extents=None,
  
-                              output = 'TEMPORARY_OUTPUT',
+ 
+                              output = 'TEMPORARY_OUTPUT', #always writes to file
                               logger = None,
                               ):
+        """
+                        bbox_str = '%.3f, %.3f, %.3f, %.3f [%s]'%(
+                    rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum(),
+                    self.aoi_vlay.crs().authid())
+        """
 
         
         #=======================================================================
@@ -1618,12 +1651,22 @@ class QAlgos(object):
         #=======================================================================
         if logger is None: logger = self.logger
         log = logger.getChild('warpreproject')
+        if compress is None: compress=self.compress
+        if output is None: output='TEMPORARY_OUTPUT'
         
-        #=======================================================================
-        # if layname is None:
-        #     layname = '%s_rproj'%rlay_raw.name()
-        #=======================================================================
-            
+        resamp_d = {0:'Nearest neighbour',
+                    1:'Bilinear',
+                    2:'Cubic',
+                    3:'Cubic spline',
+                    4:'Lanczos windowed sinc',
+                    5:'Average',
+                    6:'Mode',
+                    7:'Maximum',
+                    8:'Minimum',
+                    9:'Median',
+                    10:'First quartile',
+                    11:'Third quartile'}
+ 
             
         algo_nm = 'gdal:warpreproject'
             
@@ -1650,30 +1693,35 @@ class QAlgos(object):
             os.remove(output)
 
             
-            
+        if not resolution is None:
+            assert isinstance(resolution, int), 'got bad type in resolution: %s'%type(resolution)
         #=======================================================================
         # run algo        
         #=======================================================================
+        opts = self.compress_d[compress]
+        if opts is None: opts = ''
 
         
         ins_d =  {
              'DATA_TYPE' : 0,#use input
              'EXTRA' : '',
              'INPUT' : rlay_raw,
-             'MULTITHREADING' : True,
+             'MULTITHREADING' : False,
              'NODATA' : nodata_val,
-             'OPTIONS' : self.compress_d[compression],
+             'OPTIONS' : opts,
              'OUTPUT' : output,
-             'RESAMPLING' : 0,#nearest neighbour
-             'SOURCE_CRS' : None,
+             'RESAMPLING' : {v:k for k,v in resamp_d.items()}[resampling],
+             'SOURCE_CRS' : crsIn,
              'TARGET_CRS' : crsOut,
-             'TARGET_EXTENT' : None,
+             'TARGET_EXTENT' : extents,
              'TARGET_EXTENT_CRS' : None,
              'TARGET_RESOLUTION' : resolution,
           }
         
+ 
         log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
         
+ 
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
         
  
@@ -1682,7 +1730,7 @@ class QAlgos(object):
             """failing intermittently"""
             raise Error('failed to get a result')
         
- 
+        log.debug('finished w/ %s'%res_d)
           
         return res_d['OUTPUT']
     
@@ -1904,6 +1952,18 @@ class QAlgos(object):
         
         return res_d['OUTPUT']
     
+    def convertformat(self,
+                      input,
+                      output = 'TEMPORARY_OUTPUT', #defaults to a gpkg
+                      ):
+        algo_nm = 'gdal:convertformat'
+        ins_d = { 'INPUT' : input, 'OPTIONS' : '', 'OUTPUT' : output}
+        
+        
+        res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
+        
+        return res_d['OUTPUT']
+    
     #===========================================================================
     # GRASS--------
     #===========================================================================
@@ -2045,7 +2105,44 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
         
         return res_d
-    
+
+    def rBuffer(self, #buffer a raster
+                       rlay,
+                       dist=10,
+                       output = 'TEMPORARY_OUTPUT',
+                       logger=None,
+                       ):
+        """
+        for buffered mask layers... the buffered cells have a value of 2
+        WARNING: this changes the extents
+        """
+ 
+        #=======================================================================
+        # defaults
+        #=======================================================================
+        if logger is None: logger=self.logger
+        log = logger.getChild('rBuffer')
+
+        algo_nm = 'grass7:r.buffer'
+ 
+        #=======================================================================
+        # pars
+        #=======================================================================
+ 
+        
+        ins_d = { '-z' : False, #ignore zeros instead of nulls
+                  'GRASS_RASTER_FORMAT_META' : '', 'GRASS_RASTER_FORMAT_OPT' : '', 'GRASS_REGION_CELLSIZE_PARAMETER' : 0, 'GRASS_REGION_PARAMETER' : None, 
+                  'distances' : str(int(dist)), 
+                  'input' : rlay, 
+                 'output' : output, 
+                 'units' : 0, #meteres
+                  }
+        
+        log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
+        
+        res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
+        
+        return res_d['output']
     #===========================================================================
     # WHITEBOX------
     #===========================================================================

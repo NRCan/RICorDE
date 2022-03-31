@@ -10,14 +10,14 @@ setup to execute 1 workflow at a time (output 1 depth raster)
     
 
 TODO:
-    merge main runner from InsCrve
+ 
     switch to data file request/call dictionary
         add metadata per-datafile for this
         add function kwargs
         
     clean up the creation/use of temporary folders
         
-    collapse all necessary hp and tcom scripts into a single hp.py
+    collapse all necessary hp and tcom ricorde into a single hp.py
     re-org folders
         RICorDE
             main #top-level callers
@@ -41,7 +41,7 @@ start =  datetime.datetime.now()
 print('start at %s'%start)
  
  
-from scripts.ses import Session, QgsCoordinateReferenceSystem, force_open_dir
+from ricorde.scripts import Session, QgsCoordinateReferenceSystem, force_open_dir
 
 
 #from memory_profiler import profile
@@ -104,8 +104,39 @@ def run(#main runner
         
     return out_dir
         
+
+def dev_test(
+        tName = 'fred01',
+        proj_d = {
+            'aoi_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\aoi01T_fred_20220325.geojson', 
+            'dem_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_dem.tif', 
+            'inun_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_inun_rlay.tif',
+            'pwb_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_pwb_rlay.tif',
+            'crsid': 'EPSG:3979', 
+            'name': 'fred01'}
+
+        ):
     
+    """throwing some recursion error
+    from tests.conftest import get_proj_d
+    proj_d = get_proj_d(tName)
+    """
+    
+    with Session(name=tName, tag='dev',
+                 compress='none',  
+                 crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
+                   overwrite=True,
+            **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
+                   
+                   ) as wrkr:
         
+        #ref_lay = wrkr.retrieve('dem_rlay')
+        #wrkr.retrieve('hand_rlay')
+        wrkr.run_imax()
+        
+        out_dir = wrkr.out_dir
+        
+    return out_dir
 
 
 
@@ -117,7 +148,7 @@ if __name__ =="__main__":
     
  
     #od = CMM2()
-    od = Fred12()
+    od = dev_test()
     
     #od = Fred12()
     
@@ -125,6 +156,6 @@ if __name__ =="__main__":
     #===========================================================================
     # wrap
     #===========================================================================
-    force_open_dir(od)
+    #force_open_dir(od)
     tdelta = datetime.datetime.now() - start
     print('finished in %s'%tdelta)

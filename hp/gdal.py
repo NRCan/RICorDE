@@ -21,7 +21,7 @@ from osgeo import ogr, gdal_array, gdal
 import numpy as np
 
 
-from qgis.core import QgsVectorLayer, QgsMapLayerStore
+from qgis.core import QgsVectorLayer, QgsMapLayerStore, QgsRasterLayer
 
 from hp.exceptions import Error
 
@@ -167,12 +167,19 @@ def get_nodata_val(rlay_fp):
     assert os.path.exists(rlay_fp)
     ds = gdal.Open(rlay_fp)
     band = ds.GetRasterBand(1)
-    return band.GetNoDataValue()
+    nodataval =  band.GetNoDataValue()
+    
+    del ds
+    del band
+    return nodataval
     
     
 
 
 def rlay_to_array(rlay_fp, dtype=np.dtype('float32')):
+    """context managger?"""
+    if isinstance(rlay_fp, QgsRasterLayer):
+        rlay_fp = rlay_fp.source()
     #get raw data
     ds = gdal.Open(rlay_fp)
     band = ds.GetRasterBand(1)
@@ -185,9 +192,34 @@ def rlay_to_array(rlay_fp, dtype=np.dtype('float32')):
     
     ar_raw[ar_raw==ndval]=np.nan
     
+    del ds
+    del band
+    
     return ar_raw
 
+def getRasterMetadata(fp):
+    assert os.path.exists(fp)
     
+    dataset = gdal.OpenEx(fp)
+    
+    md = copy.copy(dataset.GetMetadata('IMAGE_STRUCTURE'))
+    
+    del dataset
+    
+    return md
+
+def getRasterStatistics(fp):
+    """warning: this sometimes disagrees with native:rasterlayerstatistics (and QGIS)"""
+    ds = gdal.Open(fp)
+ 
+    band = ds.GetRasterBand(1)
+    d = dict()
+    d['min'], d['max'], d['mean'], d['stddev'] = band.GetStatistics(True, True)
+ 
+    
+    del ds
+    
+    return d
     
     
             

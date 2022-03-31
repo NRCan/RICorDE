@@ -3390,7 +3390,10 @@ class Session(TComs, baseSession):
               dkey=None, logger=None,write=None,  write_dir=None,
               compress=None, #could result in large memory usage
                   ):
-        """resolution is taken from hInunSet layers"""
+        """resolution is taken from hInunSet layers
+        
+        TODO: fix the nodata type
+        """
  
  
         #=======================================================================
@@ -3404,7 +3407,7 @@ class Session(TComs, baseSession):
         assert dkey=='depths'
         if write_dir is None: write_dir=self.out_dir
         layname, ofp = self.get_outpars(dkey, write, ext='.tif', write_dir=write_dir)
-        meta_d = dict()
+        
         
  
                 
@@ -3418,7 +3421,7 @@ class Session(TComs, baseSession):
             compress=self.compress
         
  
-        
+        meta_d = {'precision': precision, 'compress':compress}
         #=======================================================================
         # retrieve
         #=======================================================================
@@ -3461,17 +3464,23 @@ class Session(TComs, baseSession):
         
  
         #=======================================================================
-        # mask to only those within hydrauilc maximum (and handle compression)
+        # mask to only those within hydrauilc maximum 
         #=======================================================================
  
-        dep3_fp = self.mask_apply(dep2_fp, inun2_rlay, logger=log, ofp=ofp,
-                                  allow_approximate=True, 
+        dep3_fp = self.mask_apply(dep2_fp, inun2_rlay, logger=log, 
+                                  #ofp=ofp,
+                                  allow_approximate=True, #really?
                                   )
+        
+        #=======================================================================
+        # clean up layer
+        #=======================================================================
+        dep4_fp = self.warpreproject(dep3_fp, compress=compress, output=ofp, logger=log)
                 
         #=======================================================================
         # summary
         #=======================================================================
-        rlay = self.rlay_load(dep3_fp, logger=log)
+        rlay = self.rlay_load(dep4_fp, logger=log)
         
         stats_d = self.rasterlayerstatistics(rlay)
         stats_d2 = {'range':stats_d['RANGE'], 'min':stats_d['MIN'], 'max':stats_d['MAX']}
@@ -3479,7 +3488,7 @@ class Session(TComs, baseSession):
         
         cell_cnt = self.rlay_get_cellCnt(dep3_fp)
         
-        meta_d = {**{'resolution':self.rlay_get_resolution(rlay), 'wet_cells':cell_cnt}, **stats_d2}
+        meta_d.update({**{'resolution':self.rlay_get_resolution(rlay), 'wet_cells':cell_cnt}, **stats_d2})
         
         #=======================================================================
         # wrap

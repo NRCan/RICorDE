@@ -2046,11 +2046,13 @@ class Session(TComs, baseSession):
 
              fieldName=None, #field name with sample values
              
-             #parameters (interploate)
+             #parameters
+             resolution = None, #base resolution for output of interp raster
              distP=2.0, #distance coeffiocient#I think this is unitless
 
              pts_cnt = 5, #number of points to include in seawrches
              radius=None, #Search Radius in map units
+                #WARNING: larger radius is faster
              max_procs=4,
              
                #gen
@@ -2061,21 +2063,24 @@ class Session(TComs, baseSession):
         
         2022-03-28:
             changed to use wbt
-            changed to always match dem resolution
+ 
             
         because we're using rasters instead of polys there are way more points to interpolate
             and this is much slower
-            would be nice if we could fiter the points somewhat...
+            added a new polygonize method to beach2
+ 
             
-            Points to Path (by fid) 
-                could help... but this follows rastser cell order
-            some other path search algo? 
-                probably very slow also...
-            divide layer?
-                wbt already parallelizes... so not sure this would be worth it
-                
-            switch back to vectorized inundations?
-                probably the best way to get fewer points
+ 
+        divide layer?
+            wbt already parallelizes... so not sure this would be worth it
+            
+        resolution
+            since we've already sampled, and were dealing with HAND values
+            there isn't much of an accuracy loss in lowering the resolution
+            the wbt interp function seems to hang for large jobs
+            
+        TODO: test all the idw algorhithims again. give the user options
+ 
         """
  
         #=======================================================================
@@ -2099,8 +2104,8 @@ class Session(TComs, baseSession):
         if beach2_vlay is None:
             beach2_vlay=self.retrieve('beach2')
             
-
-        resolution=int(self.rlay_get_resolution(dem_rlay))
+        if resolution is None:
+            resolution=int(self.rlay_get_resolution(dem_rlay))*3
         #=======================================================================
         # parameters 2
         #=======================================================================
@@ -2148,7 +2153,7 @@ class Session(TComs, baseSession):
                                 min_points=pts_cnt,
                                 cell_size=resolution,
                                 #ref_lay_fp=dem_rlay.source(),
-                                out_fp=os.path.join(self.temp_dir, 'wbt_IdwInterpolation_%s.tif'%dkey))
+                                out_fp=os.path.join(self.temp_dir, 'wbt_IdwInterpolation_raw_%s.tif'%dkey))
                                
  
         """GRASS.. a bit slow
@@ -2174,7 +2179,9 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         rlay = self.rlay_load(interp2_fp, logger=log)
-        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))
+        
+        """not forcing a match any more
+        assert_func(lambda:  self.rlay_check_match(rlay,dem_rlay, logger=log))"""
         
         
         

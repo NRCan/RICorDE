@@ -2094,6 +2094,7 @@ class Session(TComs, baseSession):
             
         if resolution is None:
             resolution=int(self.rlay_get_resolution(dem_rlay))*3
+        assert isinstance(resolution, int)
         #=======================================================================
         # parameters 2
         #=======================================================================
@@ -2107,7 +2108,7 @@ class Session(TComs, baseSession):
         if radius is None:
             radius=resolution*6
             
-        meta_d = {'distP':distP, 'pts_cnt':pts_cnt, 'radius':radius}
+        meta_d = {'distP':distP, 'pts_cnt':pts_cnt, 'radius':radius, 'resolution':resolution}
         #=======================================================================
         # #build interpolated surface from edge points-----
         #=======================================================================

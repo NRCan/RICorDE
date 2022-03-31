@@ -271,13 +271,14 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
         }
      
     dkey = 'hgSmooth'
-    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=3, range_thresh=range_thresh, precision=precision)
+    test_rlay = session.retrieve(dkey, write=write, resolution=resolution, max_iter=3, 
+                                 range_thresh=range_thresh, precision=precision)
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
     
 
-@pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0329_hgSmooth.tif'] ) #from test_hand
+@pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0331_hgSmooth.tif'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_12hInunSet(session, true_dir, write, base_dir, 

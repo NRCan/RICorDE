@@ -256,7 +256,7 @@ def test_11hgRaw(session, true_dir, write, base_dir,
 
     layer_post(dkey, true_dir, session, test_rlay, test_data=False, test_spatial=True)
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('resolution',[4] )
 @pytest.mark.parametrize('precision',[0.4] )  
 @pytest.mark.parametrize('range_thresh',[0.5] ) 
@@ -308,8 +308,8 @@ def test_12hInunSet(session, true_dir, write, base_dir,
 
 
 
-
-@pytest.mark.parametrize('hInunSet',[r'test_12hInunSet_fred01_test_040\working\test_tag_0329_hInunSet.pickle'] ) 
+@pytest.mark.dev
+@pytest.mark.parametrize('hInunSet',[r'test_12hInunSet_fred01_test_040\working\test_tag_0620_hInunSet.pickle'] ) #needs to be updated
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
 def test_13hWslSet(session, true_dir, write, base_dir, 

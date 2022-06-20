@@ -541,8 +541,10 @@ class TComs(Qproj):
 #===============================================================================
 # FUNCTIONS---------
 #===============================================================================
-from memory_profiler import profile
-@profile(precision=2)
+#===============================================================================
+# from memory_profiler import profile
+# @profile(precision=2)
+#===============================================================================
 def test(
         dem_fp=r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\cost\CMM2_ins\HAND_0722.tif',
         inunr_rp=r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\cost\CMM2_ins\inun2r.tif',

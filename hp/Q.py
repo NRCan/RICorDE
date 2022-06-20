@@ -1839,7 +1839,7 @@ class Qproj(QAlgos, Basic):
         # load from filepath
         #=======================================================================
         if isinstance(obj, str):
-            assert os.path.exists(obj)
+            assert os.path.exists(obj), obj
             ext = os.path.splitext(obj)[1]
             
             #rasters

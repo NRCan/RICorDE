@@ -49,7 +49,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=False
+    write=True
     #===========================================================================
     # write key
     #===========================================================================
@@ -67,7 +67,7 @@ def proj_d(request): #retrieve test dataset
     return get_proj_d(request.param)
 
 def get_proj_d(name):
-    base_dir = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data'
+    base_dir = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\src\tests\data' #todo: move to def
     rproj_d = rproj_lib[name].copy()
     rproj_d['name'] = name
     proj_d = dict()

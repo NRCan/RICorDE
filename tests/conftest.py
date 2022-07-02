@@ -8,6 +8,7 @@ copied from 2112_Agg
 import os, shutil
 import pytest
 import numpy as np
+from definitions import proj_dir
 from numpy.testing import assert_equal
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal
@@ -21,7 +22,9 @@ from ricorde.scripts import Session
 from hp.Q import vlay_get_fdf
 from hp.gdal import getRasterStatistics, rlay_to_array, getRasterMetadata
     
-rproj_lib = {
+#test project data
+#relative to data_dir (C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\)
+rproj_lib = { 
         'fred01':{ #raster inputs (a bit faster)
             'aoi_fp':'aoi01T_fred_20220325.geojson',
             'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
@@ -62,27 +65,28 @@ def write():
 # function.fixtures-------
 #===============================================================================
 @pytest.fixture(scope='function')
-def proj_d(request): #retrieve test dataset
-    
-    return get_proj_d(request.param)
-
-def get_proj_d(name):
-    base_dir = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\src\tests\data' #todo: move to def
+def proj_d(data_dir, request): #retrieve test project data and convert paths
+ 
+    #retrieve requested test project
+    name = request.param
     rproj_d = rproj_lib[name].copy()
     rproj_d['name'] = name
     proj_d = dict()
     
+    #convert paths to absolute
     for k,v in rproj_d.items():
         if k.endswith('_fp'):
-            fp = os.path.join(base_dir,name, v)
+            fp = os.path.join(data_dir,name, v)
             assert os.path.exists(fp), 'got bad fp on \'%s.%s\'\n    %s'%(name, k, fp)
             proj_d[k] = fp
         else:
             proj_d[k]=v
-    
-    
-    
+ 
     return proj_d
+
+@pytest.fixture(scope='session')
+def data_dir(): 
+    return os.path.join(proj_dir, 'tests', 'data')
     
 @pytest.fixture(scope='function')
 def test_name(request):

@@ -28,8 +28,8 @@ class Basic(object): #simple base class
     def __init__(self, 
                  
                  #directories
-                 out_dir        = None,
                  root_dir       = None,
+                 out_dir        = None,
                  temp_dir       = None,
                  
                  #labelling
@@ -45,23 +45,60 @@ class Basic(object): #simple base class
                  #general parameters
                  prec           = 2,
                  overwrite      = False, #file overwriting control
+                 relative       = False, #specify whether 
                  
                  #inheritancee
                  inher_d        = {}, #container of inheritance pars
                  session        = None,
                  ):
+        """
+        Initialize a generic class object.
+    
+        Provides common methods and parameters for object based programming.
+    
+        Parameters
+        ----------
+        root_dir: str, optional
+            Base directory of the project. Used for generating default directories.            
+        out_dir : str, optional
+            Directory used for outputs            
+        temp_dir: str, optional
+            Directory for temporary outputs
+        mod_name: str, default 'RICorDE'
+            Base name for all labels and directories,
+        name: str, default 'SessionName'
+            Name of a sub-class. (is this used?)
+        tag: str, default ''
+            Label for a specific run or version.
+        logger: logging.RootLogger, optional
+            Logging worker.
+        logcfg_file: str, optional
+            Filepath of a python logging configuration file
+        prec: int, default 2
+            Default float precision for this object.
+        overwrite: bool, default False
+            Default behavior when attempting to overwrite a file for this object
+        relative: bool, default False
+            Default behavior of filepaths (relative vs. absolute) for this object
+        inher_d: dict, default {}
+            Container of inheritance parameters {attribute name: object}
+        session: scripts.Session, optional
+            Reference to parent session
+        
+        """
         
         #=======================================================================
         # attachments
         #=======================================================================
         
         self.today_str = datetime.datetime.today().strftime('%Y%m%d')
-        self.root_dir = root_dir
         self.mod_name = mod_name
+        self.name = name
         self.tag = tag
         self.prec=prec
         self.overwrite=overwrite
-        self.name = name
+        self.relative=relative
+
         self.trash_fps = list() #container for files to delete on exit
         
         #setup inheritance handles
@@ -72,7 +109,7 @@ class Basic(object): #simple base class
         self.session=session
         
         #=======================================================================
-        # working directory
+        # root directory
         #=======================================================================
         if root_dir is None:
             from definitions import root_dir
@@ -81,6 +118,7 @@ class Basic(object): #simple base class
         if not os.getcwd() == root_dir:
             os.chdir(root_dir) #set this as the working directory (mostly used by the logger)
             print('set  directory to %s'%root_dir)
+            
         self.root_dir=root_dir
         #=======================================================================
         # output directory
@@ -125,7 +163,6 @@ class Basic(object): #simple base class
             lwrkr.duplicate(self.out_dir, 
                         basenm='%s_%s'%(tag, datetime.datetime.today().strftime('%m%d.%H.%M')))
 
-            
         self.logger=logger
             
         

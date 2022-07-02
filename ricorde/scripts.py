@@ -2872,14 +2872,16 @@ class Session(TComs, baseSession):
         #reproject with new resolution
         if not hres == resolution:
             raise Error('not sure about htis')
-            log.info('downsampling \'%s\' from %.2f to %.2f'%(
-                hand_rlay.name(), hres,  resolution))
-             
-            hand1_rlay = self.warpreproject(hand_rlay, resolution=resolution,
-                                           logger=log)
-            
-            mstore.addMapLayer(hand1_rlay)
-            assert hand1_rlay.extent()==hand_rlay.extent()
+            #===================================================================
+            # log.info('downsampling \'%s\' from %.2f to %.2f'%(
+            #     hand_rlay.name(), hres,  resolution))
+            #  
+            # hand1_rlay = self.warpreproject(hand_rlay, resolution=resolution,
+            #                                logger=log)
+            # 
+            # mstore.addMapLayer(hand1_rlay)
+            # assert hand1_rlay.extent()==hand_rlay.extent()
+            #===================================================================
         else:
             hand1_rlay = hand_rlay
             

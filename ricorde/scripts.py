@@ -48,7 +48,6 @@ from hp.exceptions import Error, assert_func
 from hp.dirz import force_open_dir
 
  
-#from hp.plot import Plotr #only needed for plotting sessions
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, \
     QgsRasterLayer, QgsWkbTypes, vlay_get_fdf, QgsVectorLayer, vlay_get_fdata, \
     vlay_get_geo, QgsMapLayer, view
@@ -186,7 +185,7 @@ class Session(TComs, baseSession):
         
         super().__init__(tag=tag, 
                          data_retrieve_hndls=data_retrieve_hndls,
-                         #prec=prec,
+ 
                          **kwargs)
         
  
@@ -2778,24 +2777,45 @@ class Session(TComs, baseSession):
     
 
     
-    def build_hiSet(self, #get HAND derived inundations
-                #input layers
-                hgSmooth_rlay=None,
-                hand_rlay=None,
+    def build_hiSet(self,  
+                hgSmooth_rlay=None,hand_rlay=None,
                 
                 #parameters
-                resolution=None, #resolution for inundation rasters
-                    #same resolution is used for hWslSet and wslMosaic
-                    #allowsing downsampling here
-                
+                resolution=None,
+                                
                #gen
-              dkey=None, logger=None,write=None, debug=False, 
-              compress=None, #could result in large memory usage
+              dkey=None, logger=None,write=None, debug=False,compress=None,  
                   ):
  
         """
+        Build set of HAND derived inundation from hgSmooth
+        
+        Builds one inundation raster for each value found in 
+        hgSmooth using the pre-calculated HAND layer
+        
+        
+        Parameters
+        ----------
+        hgSmooth_rlay: QgsRasterLayer
+            Best estimate of HAND value for flooding in each pixel
+        
+        hand_rlay: QgsRasterLayer
+            HAND layer from which to build inundations
+            
+        resolution: int, optional
+            Resolution to use when computing each inundation raster
+            
+        Returns
+        ----------
+        hInunSet: dict
+            Filepaths of each inundation raster created {hval:fp}
+ 
+        
+        """
+        
+        """
         TODO: performance improvements
-            paralleleize
+            parallelize
  
  
             different raster format? netCDF

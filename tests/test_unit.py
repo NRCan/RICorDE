@@ -277,34 +277,32 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-
+@pytest.mark.dev
 @pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0331_hgSmooth.tif'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_12hInunSet(session, true_dir, write, base_dir, 
-                    hgSmooth, HAND):
-     
+def test_12hInunSet(session, true_dir, write, base_dir,hgSmooth, HAND):  #  
+    dkey = 'hInunSet'
+    
     #set the compiled references
     session.compiled_fp_d={
         'hgSmooth':os.path.join(base_dir, hgSmooth),
-        'HAND':os.path.join(base_dir, HAND),
-  
-        }
-     
-    dkey = 'hInunSet'
+        'HAND':os.path.join(base_dir, HAND),  
+        }    
     
+    #configure compression
     if write:
         compress='med' #med: 361 KB, 2.33s
     else:
         compress='none' #none: 8.23 MB,  1.36s
     
-    test_d = session.retrieve(dkey, write=write, 
-                             compress=compress,
-                               
-                               
-                             )
+    #execute
+    """ricorde.scripts.Session.build_hiSet()"""
+    test_d = session.retrieve(dkey, write=write,compress=compress,relative=True)
     
+    #validate/compare
     layer_d_post(dkey, true_dir, session, test_d, test_data=False)
+ 
 
 
 
@@ -355,7 +353,7 @@ def test_14wslMosaic(session, true_dir, write, base_dir,
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('wslMosaic',[r'test_14wslMosaic_fred01_test_10\working\test_tag_0329_wslMosaic.tif'] ) 
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   
@@ -378,17 +376,17 @@ def test_15depths(session, true_dir, write, base_dir,
 # commons--------
 #===============================================================================
 def layer_d_post(dkey, true_dir, session, test_d, **kwargs): #checking layer_d
+    """Test validation and comparison for layer sets"""
     #===========================================================================
     # check against trues
     #===========================================================================
     true_fp = search_fp(os.path.join(true_dir, 'working'), '.pickle', dkey) #find the data file.
-    true_d = retrieve_data(dkey, true_fp, session)
+    true_d = retrieve_data(dkey, true_fp, session) #absolute
     
     for hval, test_rlay_fp in test_d.items():
         assert hval in true_d, 'hval not in true set: %s'%hval
-        true_rlay_fp=true_d[hval]
-        
-        compare_layers(test_rlay_fp, true_rlay_fp, wrkr=session, **kwargs)
+ 
+        compare_layers(test_rlay_fp, true_d[hval], wrkr=session, **kwargs)
         
         
 def water_rlay_tests(dkey, session, true_dir, dem, write, base_dir):  #common test for inun and pwb

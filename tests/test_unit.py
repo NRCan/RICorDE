@@ -277,7 +277,7 @@ def test_11hgSmooth(session, true_dir, write, base_dir, hgRaw, resolution, range
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
     
     
-@pytest.mark.dev
+
 @pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0331_hgSmooth.tif'] ) #from test_hand
 @pytest.mark.parametrize('HAND',[r'test_04hand_fred01_test_04demH0\working\test_tag_0328_HAND.tif'] ) #from test_hand
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
@@ -306,31 +306,25 @@ def test_12hInunSet(session, true_dir, write, base_dir,hgSmooth, HAND):  #
 
 
 
-
-@pytest.mark.parametrize('hInunSet',[r'test_12hInunSet_fred01_test_040\working\test_tag_0620_hInunSet.pickle'] ) #needs to be updated
+@pytest.mark.dev
+#needs to be updated
+@pytest.mark.parametrize('hInunSet',[r'test_12hInunSet_fred01_test_040\working\test_tag_0702_hInunSet.pickle'] ) 
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_13hWslSet(session, true_dir, write, base_dir, 
-                    hInunSet, dem):
+def test_13hWslSet(session, true_dir, write, base_dir,hInunSet, dem):
     """TODO: play with precursors so there are less hvals to calculate for this test"""
-     
-    #set the compiled references
-    session.compiled_fp_d={
-        'hInunSet':os.path.join(base_dir, hInunSet),
-        'dem':os.path.join(base_dir, dem),
-  
-        }
-     
     dkey = 'hWslSet'
     
+    #set the compiled references
+    session.compiled_fp_d={'hInunSet':os.path.join(base_dir, hInunSet),'dem':os.path.join(base_dir, dem),}
+        
     if write:
         compress='med' #1.37 MB,  4.85s
     else:
         compress='none'
     
-    test_d = session.retrieve(dkey, write=write, 
-                             compress=compress,
-                             )
+    """Session.build_hwslSet()"""
+    test_d = session.retrieve(dkey, write=write,compress=compress,relative=True)
     
     layer_d_post(dkey, true_dir, session, test_d, test_data=False)
     

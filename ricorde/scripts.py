@@ -2981,18 +2981,50 @@ class Session(TComs, baseSession):
     
  
     
-    def build_hwslSet(self, #get set of HAND derived wsls (from hand inundations)
+    def build_hwslSet(self, #
                 #input layers
                 hi_fp_d=None,
                 dem_rlay=None,
                 
                 #parameters
-                max_fail_cnt=5, #maximum number of wsl failures to allow
+                max_fail_cnt=5, #
                #gen
               dkey=None, logger=None,write=None,  
-              compress=None, #could result in large memory usage
+              compress=None,relative=None
                   ):
-        """resolution is taken from hInunSet layers"""
+        """
+        Get set of HAND derived wsls (from hand inundations).
+        
+        Builds one inundation raster for each value found in 
+        hgSmooth using the pre-calculated HAND layer
+        
+        
+        Parameters
+        ----------
+        hi_fp_d: dict, optional
+            Output from hInunSet.
+            Filepaths of inundation rasters {hval:fp}.
+            Defaults to retrieve.       
+        dem_rlay: QgsRasterLayer, optional
+            DEM raster.
+            Defaults to retrieve.
+        max_fail_cnt: int, default 5
+            Maximum number of wsl failures to allow 
+        relative: bool, optional
+            Filepath behavior (defaults to self).
+ 
+            
+        Returns
+        ----------
+        hWslSet: dict
+            HandValue per filepath of WSL raster {hval:fp}
+            
+        Notes
+        ----------
+        resolution is taken from hInunSet layers
+        
+        """
+
  
  
         #=======================================================================
@@ -3027,7 +3059,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         """NOTE: resolutions are allowed to not match (see build_hiSet())"""
         if hi_fp_d is None:
-            hi_fp_d = self.retrieve('hInunSet')
+            hi_fp_d = self.retrieve('hInunSet', relative=relative)
         if dem_rlay is None:
             dem_rlay=self.retrieve('dem')
 
@@ -3045,8 +3077,6 @@ class Session(TComs, baseSession):
         ref_lay = self.rlay_load(hi_fp_i, mstore=mstore, logger=log)
         matching, msg = self.rlay_check_match(ref_lay, dem_rlay)
  
- 
-
         #reproject with new resolution
         if not matching:
             """not tested
@@ -3073,9 +3103,7 @@ class Session(TComs, baseSession):
         for i, (hval, fp) in enumerate(hi_fp_d.items()):
             log.info('(%i/%i) hval=%.2f on %s'%(
                 i,len(hi_fp_d)-1,hval, os.path.basename(fp)))
-            
-            
-            
+ 
             try:
             
                 #extrapolate in
@@ -3085,11 +3113,8 @@ class Session(TComs, baseSession):
                             compress=compress,)
                 
                 #smooth
-                """would result in some negative depths?
-                    moved to the wsl mosaic"""
+                """would result in some negative depths? moved to the wsl mosaic"""
  
-                
-                
                 #get the stats
                 stats_d = self.rasterlayerstatistics(wsl_fp, logger=log)
                 res_d[i] = {**stats_d, **{'hval':hval,'inun_fp':fp,'fp':wsl_fp, 'error':np.nan}}
@@ -3107,38 +3132,35 @@ class Session(TComs, baseSession):
                 if fail_cnt>max_fail_cnt:
                     raise Error('failed to get wsl too many times')
             
-
+        if len(res_d)==0:
+            raise Error('failed to generate any WSLs')
         #===================================================================
         # build animations
         #===================================================================
         """not showing up in the gifs for some reason"""
-
- 
-        if len(res_d)==0:
-            raise Error('failed to generate any WSLs')
- 
  
         #=======================================================================
-        # output
+        # wrap
         #=======================================================================
         meta_d.update({'fail_cnt':fail_cnt})
         
         df = pd.DataFrame.from_dict(res_d, orient='index')
-
-        #write the reuslts pickel
-        """only taking those w/ successfulr asters"""
-        res2_d = df[df['error'].isna()].set_index('hval', drop=True)['fp'].to_dict()
-
-        if write:
-            self.ofp_d[dkey] = self.write_pick(res2_d, ofp, logger=log)
- 
-            
- 
+        
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
             self.smry_d['%s_stats'%dkey] = df
  
         mstore.removeAllMapLayers()
+
+        #=======================================================================
+        # write pickle of filepaths
+        #=======================================================================
+        """only taking those w/ successfulr asters"""
+        res2_d = df[df['error'].isna()].set_index('hval', drop=True)['fp'].to_dict()
+
+        if write:
+            self.ofp_d[dkey] = self.write_pick(res2_d, ofp, logger=log, relative=relative)
+ 
         return res2_d
     
     def build_wsl(self, #get set of HAND derived wsls (from hand inundations)

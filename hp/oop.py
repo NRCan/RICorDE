@@ -380,7 +380,7 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         #=======================================================================
  
         if dkey in self.compiled_fp_d and 'compiled' in hndl_d:
-            data = hndl_d['compiled'](fp=self.compiled_fp_d[dkey], dkey=dkey)
+            data = hndl_d['compiled'](fp=self.compiled_fp_d[dkey], dkey=dkey, **kwargs)
             method='loaded pre-compiled from %s'%self.compiled_fp_d[dkey]
         #=======================================================================
         # 3.build from scratch

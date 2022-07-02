@@ -104,7 +104,7 @@ class Basic(object): #simple base class
         #setup inheritance handles
         self.inher_d = {**inher_d, #add all thosefrom parents 
                         **{'Basic':[ #add the basic
-                            'root_dir', 'mod_name', 'tag', 'overwrite']}, 
+                            'root_dir', 'mod_name', 'tag', 'overwrite', 'relative']}, 
                         }
         self.session=session
         

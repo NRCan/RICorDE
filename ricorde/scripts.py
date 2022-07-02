@@ -2782,11 +2782,14 @@ class Session(TComs, baseSession):
                 
                 #parameters
                 resolution=None,
+                
+                #output control
+                animate=False,
                                 
                #gen
-              dkey=None, logger=None,write=None, debug=False,compress=None,  
-                  ):
- 
+              dkey=None, logger=None,write=None, debug=False,compress=None,
+              relative=None,  
+                  ): 
         """
         Build set of HAND derived inundation from hgSmooth
         
@@ -2797,13 +2800,16 @@ class Session(TComs, baseSession):
         Parameters
         ----------
         hgSmooth_rlay: QgsRasterLayer
-            Best estimate of HAND value for flooding in each pixel
-        
+            Best estimate of HAND value for flooding in each pixel.        
         hand_rlay: QgsRasterLayer
-            HAND layer from which to build inundations
-            
+            HAND layer from which to build inundations.            
         resolution: int, optional
-            Resolution to use when computing each inundation raster
+            Resolution to use when computing each inundation raster.
+            Defaults to resolution of hand_rlay.
+        relative: bool, optional
+            Filepath behavior (defaults to self).
+        animate: bool, default False
+            Flag to create animations of outputs. 
             
         Returns
         ----------
@@ -2825,25 +2831,28 @@ class Session(TComs, baseSession):
         #=======================================================================
         if logger is None: logger=self.logger
         if write is None: write=self.write
+        if relative is None: relative=self.relative
 
         log=logger.getChild('b.%s'%dkey)
  
         assert dkey=='hInunSet'
         
-        layname, ofp = self.get_outpars(dkey, write, ext='.pickle')
+        
         meta_d = dict()
         
         
         #=======================================================================
         # setup
         #=======================================================================
-    
+        layname, ofp = self.get_outpars(dkey, write, ext='.pickle')
         #directory
         if write:
             out_dir = os.path.join(self.wrk_dir, dkey)
         else:
             out_dir=os.path.join(self.temp_dir, dkey)
+            
         temp_dir = os.path.join(self.temp_dir, dkey)
+        
         if not os.path.exists(out_dir):os.makedirs(out_dir)
         if not os.path.exists(temp_dir):os.makedirs(temp_dir)
         
@@ -2909,8 +2918,7 @@ class Session(TComs, baseSession):
         for i, hval in enumerate(uq_vals):
             log.debug('(%i/%i) getting hinun for %.2f'%(i+1, len(uq_vals), hval))
             
-            #get this hand inundation
- 
+            #get this hand inundation 
             rlay_fp = self.get_hand_inun(hand1_rlay, hval, logger=log,
                                ofp = os.path.join(out_dir, '%03d_hinun_%03d.tif'%(i, hval*100)),
                                compress=compress
@@ -2928,15 +2936,17 @@ class Session(TComs, baseSession):
         #=======================================================================
         # check
         #=======================================================================
-        inun_rlay_i = self.rlay_load(rlay_fp, logger=log, mstore=mstore)
-        
-        assert inun_rlay_i.extent()==hand_rlay.extent(), 'resulting inundation extents do not match'
+    
+        if __debug__: #quick check on the last layer
+            inun_rlay_i = self.rlay_load(rlay_fp, logger=log, mstore=mstore)
+            
+            assert inun_rlay_i.extent()==hand_rlay.extent(), 'resulting inundation extents do not match'
  
             
         #===================================================================
         # build animations
         #===================================================================
-        if debug:
+        if animate:
             from hp.animation import capture_images
             capture_images(
                 os.path.join(self.out_dir, self.layName_pfx+'_hand_inuns.gif'),
@@ -2949,21 +2959,28 @@ class Session(TComs, baseSession):
         meta_d.update({'uq_vals_cnt':len(uq_vals), 'hinun_set_resol':resolution,
                      'hvgrid_uq_vals':copy.copy(uq_vals)})
         
+        mstore.removeAllMapLayers()
+        #reshape metadata
         df = pd.DataFrame.from_dict(res_d, orient='index')
-
-        res2_d = df.set_index('hval')['fp'].to_dict()
-
-        if write:
-            self.ofp_d[dkey] = self.write_pick(res2_d, ofp, logger=log)
- 
-            
- 
+        
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
-            self.smry_d['%s_stats'%dkey] = df
+            self.smry_d['%s_stats'%dkey] = df       
+        
+        #=======================================================================
+        # write pickle of filepaths
+        #=======================================================================
+        res_d2 = df.set_index('hval')['fp'].to_dict()
+        if relative:
+            res_d3 = {k:os.path.basename(v) for k,v in res_d2.items()}
+        else:
+            res_d3 = res_d
+
+        if write:
+            self.ofp_d[dkey] = self.write_pick(res_d3, ofp, logger=log)
  
-        mstore.removeAllMapLayers()
-        return res2_d
+ 
+        return res_d3
     
  
     

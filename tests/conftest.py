@@ -52,7 +52,7 @@ def write():
     #===========================================================================
     # write key
     #===========================================================================
-    write=False
+    write=True
     #===========================================================================
     # write key
     #===========================================================================
@@ -96,7 +96,6 @@ def test_name(request):
 
 
 @pytest.fixture(scope='function')
-#@pytest.mark.parametrize('proj_d',['fred01'], indirect=False) 
 def session(tmp_path,
             root_dir, 
             proj_d, #scope=function
@@ -114,23 +113,17 @@ def session(tmp_path,
         #retrieves a directory specific to the test... useful for writing compiled true data
         """this is dying after the yield statement for some reason...."""
         out_dir = os.path.join(base_dir, os.path.basename(tmp_path))
-        #out_dir = os.path.join(r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\compiled', test_name)
-        #out_dir = r'C:\LS\10_OUT\ricorde\tests\try1' 
+ 
         
     
     
     with Session( 
-                 name='test', #probably a better way to propagate through this key
-                 #fp_d={k:v for k,v in proj_d.items() if k in ['dem_fp', 'fic_fp', 'nhn_fp']}, 
-                 
-                 #aoi_fp=proj_d['aoi_fp'],
-                 
-                 
+                 name='test', #probably a better way to propagate through this key 
                  
                  out_dir=out_dir, 
                  temp_dir=os.path.join(tmp_path, 'temp'),
                  root_dir=root_dir, #testing default is the same as the session default for now
-                 
+                 relative=True,
                  compress='none',  
                  crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
                  

@@ -436,24 +436,73 @@ class Session(Basic): #analysis with flexible loading of intermediate results
     
 
     
-    def load_pick(self,
-                  fp=None, 
-                  dkey=None,
-                  ):
+    def load_pick(self,fp=None,dkey=None,
+                  relative=False, #best to keep this excplicit
+                  #only relevant when data is a dictionary
+                  
+                  data_dir=None,):        
+        """
+        Load data from a pickle
+                
+        Parameters
+        ----------
+        fp : str, default None
+            Filepath of pickle.
+        dkey: str, default None
+            Data key for this function (for error reporting)
+        relative:bool, default False
+            Convert a filepath dict from relative to absolute.
+        data_dir:str, optional
+            Directory to use for converting relative filepaths.
+            Defaults to directory of the pickle.
         
+            
+        Returns
+        ----------
+        data, varies
+            Data loaded from the pickle
+        """
         assert os.path.exists(fp), 'bad fp for \'%s\' \n    %s'%(dkey, fp)
         
         with open(fp, 'rb') as f:
-            data = pickle.load(f)
+            data_raw = pickle.load(f)
+            
+        #=======================================================================
+        # filepath conversion
+        #=======================================================================
+        if relative:
+            assert isinstance(data_raw, dict)
+            if data_dir is None: data_dir=os.path.join(os.path.dirname(fp), dkey)
+            assert os.path.exists(data_dir)
+            data = {k:os.path.join(data_dir, v) for k,v in data_raw.items()}
+        else:
+            data=data_raw
             
         return data
     
     def write_pick(self, 
-                   data, 
-                   out_fp,
-                   overwrite=None,
-                   protocol = 3, # added in Python 3.0. It has explicit support for bytes
-                   logger=None):
+                   data_raw, out_fp,protocol = 3, 
+                   relative=False,overwrite=None,logger=None):
+        """
+        Write data to a pickle
+                
+        Parameters
+        ----------
+        data_raw : varies 
+            Data to be written.
+        out_fp: str 
+            Filepath to write to.
+        protocol: int, default 3
+            Pickle writing protocol. 
+            added in Python 3.0. It has explicit support for bytes.
+        relative:bool, default False
+            Convert a filepath dict from relative to absolute.
+
+        Returns
+        ----------
+        out_fp, str
+            Filepath where pickle was written to
+        """
         
         #=======================================================================
         # defaults
@@ -470,14 +519,26 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             assert overwrite, out_fp
             
         assert out_fp.endswith('.pickle')
+        
+        #=======================================================================
+        # convert to relative
+        #=======================================================================
+        if relative:
+            assert isinstance(data_raw, dict)
+            data = {k:os.path.basename(v) for k,v in data_raw.items()}
+        else:
+            data = data_raw
             
+            
+        #=======================================================================
+        # write
+        #=======================================================================
         log.debug('writing to %s'%out_fp)
         
         with open(out_fp,  'wb') as f:
             pickle.dump(data, f, protocol)
         
-        log.info('wrote %i to %s'%(len(data), out_fp))
-            
+        log.info('wrote %i to %s'%(len(data), out_fp))            
         
         return out_fp
         

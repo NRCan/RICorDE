@@ -2971,16 +2971,13 @@ class Session(TComs, baseSession):
         # write pickle of filepaths
         #=======================================================================
         res_d2 = df.set_index('hval')['fp'].to_dict()
-        if relative:
-            res_d3 = {k:os.path.basename(v) for k,v in res_d2.items()}
-        else:
-            res_d3 = res_d
+
 
         if write:
-            self.ofp_d[dkey] = self.write_pick(res_d3, ofp, logger=log)
+            self.ofp_d[dkey] = self.write_pick(res_d2, ofp, logger=log, relative=relative)
  
  
-        return res_d3
+        return res_d2
     
  
     

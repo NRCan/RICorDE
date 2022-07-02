@@ -204,10 +204,11 @@ class Session(TComs, baseSession):
     #===========================================================================
     # PHASE0: Data Prep---------
     #===========================================================================
-
-        
-    def run_dataPrep(self, #clean and load inputs into memory
-                     ):
+ 
+    def run_dataPrep(self,):
+        """
+        Clean and load inputs into memory.
+        """
         #=======================================================================
         # defaults
         #=======================================================================
@@ -370,41 +371,35 @@ class Session(TComs, baseSession):
         
         return rlay 
  
-        
-        
-                  
-    
 
-
-    
-    
-
-    def build_rlay(self, #build raster from some water polygon
+    def build_rlay(self, 
                         fp,
-                        dkey=None,
-                        write=None,
+                        
                         ref_lay=None,
                         aoi_vlay=None,
                         
                         resampling='Maximum', #resampling method
-                                        #===========================================================
-                                        # 0:'Nearest neighbour',
-                                        # 1:'Bilinear',
-                                        # 2:'Cubic',
-                                        # 3:'Cubic spline',
-                                        # 4:'Lanczos windowed sinc',
-                                        # 5:'Average',
-                                        # 6:'Mode',
-                                        # 7:'Maximum',
-                                        # 8:'Minimum',
-                                        # 9:'Median',
-                                        # 10:'First quartile',
-                                        # 11:'Third quartile'}
-                                        #===========================================================    
+                                        
                         
                         clean_inun_kwargs={},
+                        dkey=None,write=None,
                         ):
         """
+        Build inundation raster from inundation data
+        
+        Parameters
+        ----------
+        fp : str
+            Filepath to raw inundation layer.
+        
+            
+        Returns
+        ----------
+        rlay : QgsRasterLayer
+            Binary inundation raster layer.
+            
+        Notes
+        ----------
         see also self.build_dem()
         """
  
@@ -422,7 +417,7 @@ class Session(TComs, baseSession):
         if ref_lay is None:
             ref_lay = self.retrieve('dem', logger=log)
             
-        dem_psize = self.dem_psize
+ 
         
         mstore = QgsMapLayerStore()
         
@@ -500,8 +495,7 @@ class Session(TComs, baseSession):
                                      resampling=resampling, logger=log, 
                                      #ofp=ofp,
                                      )
-        
-        
+ 
         meta_d.update(d)
         
         #convert badztck
@@ -964,9 +958,8 @@ class Session(TComs, baseSession):
     #===========================================================================
     # PHASE1: Inundation Correction---------
     #===========================================================================
-    def run_imax(self,
-
-                 ):
+    def run_imax(self,):
+        """Phase 1: Inundation Correction."""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -975,6 +968,12 @@ class Session(TComs, baseSession):
         start =  datetime.datetime.now()
         
         self.clear_all() #release everything from memory and reset the data containers
+        
+        """
+        self.write
+        self.ofp_d
+        self.compiled_fp_d
+        """
         
         dem_rlay = self.retrieve('dem', logger=log) #just for checking
  
@@ -1019,24 +1018,35 @@ class Session(TComs, baseSession):
     
         
 
-    def build_inun1(self, #merge NHN and FiC and crop to DEM extents
-            
-            
+    def build_inun1(self,             
             #layer inputs
-            pwb_rlay = None,
-            inun_rlay=None,
-            HAND_mask=None,
+            pwb_rlay = None,inun_rlay=None,HAND_mask=None,
  
-              
-              
               #parameters
-              buff_dist=None, #buffer to apply to perm water
- 
+              buff_dist=None, 
               
               #misc
-              logger=None,
-              write=None, dkey = None,
-              ):
+              logger=None,write=None, dkey = None,):        
+        """
+        Merge layers to create the hydro corrected inundation           
+        
+        
+        Parameters
+        ----------
+        pwb_rlay : QgsRasterLayer
+            Permanent water bodies raster layer
+        inun_rlay : QgsRasterLayer
+            Primary input inundation raster layer (uncorrected)
+        HAND_mask: QgsRasterLayer
+            HAND layer extents
+        buff_dist: float, optional
+            buffer to apply to pwb_rlay. Defaults to pixel size of DEM.
+            
+        Returns
+        ----------
+        QgsRasterLayer
+            Hydro-corrected inundation raster (inun1)
+        """
  
         """
         currently setup for inun1 as a vectorlayer
@@ -1124,15 +1134,13 @@ class Session(TComs, baseSession):
         #===================================================================
         # crop to HAND extents
         #===================================================================
-        self.mask_apply(inun1_1_fp, HAND_mask, logger=log, ofp=ofp)
- 
+        self.mask_apply(inun1_1_fp, HAND_mask, logger=log, ofp=ofp) 
         rlay = self.rlay_load(ofp, logger=log)
         
         #=======================================================================
         # check
         #=======================================================================
-        assert_func(lambda:  self.rlay_check_match(rlay,HAND_mask, logger=log))
-        
+        assert_func(lambda:  self.rlay_check_match(rlay,HAND_mask, logger=log))        
         assert_func(lambda:  self.mask_check(rlay))
         
         #===================================================================
@@ -1144,8 +1152,6 @@ class Session(TComs, baseSession):
         if self.exit_summary:
  
             self.smry_d[dkey] = pd.Series({'buff_dist':buff_dist}).to_frame()
-        
-        
  
         log.info('for \'%s\' built: \n    %s'%(dkey, ofp))
 
@@ -1535,14 +1541,14 @@ class Session(TComs, baseSession):
 
         return rlay
     
-
-    def run_HANDgrid(self, #get mosaic of depths (from HAND values)
-
+    #===========================================================================
+    # PHASE2: Compute Rolling HAND grid---------------
+    #===========================================================================
+    def run_HANDgrid(self, #
                   logger=None,
                   ):
-
-
-        
+        """PHASE2: Compute Rolling HAND grid"""
+ 
         #=======================================================================
         # defaults
         #=======================================================================
@@ -1581,12 +1587,7 @@ class Session(TComs, baseSession):
         tdelta = datetime.datetime.now() - start
         
         log.info('finished in %s'%tdelta)
-        self._log_datafiles()
-        return 
- 
-        
-
-    
+        self._log_datafiles()    
         
     def build_beach2(self, #beach values (on inun2 w/ some refinement) pts vlay
              
@@ -2720,13 +2721,9 @@ class Session(TComs, baseSession):
 
     #===========================================================================
     # PHASE3: Rolling WSL grid-----------
-    #===========================================================================
-    
-
-    
-    def run_wslRoll(self,
- 
-                    ):
+    #=========================================================================== 
+    def run_wslRoll(self,):
+        """PHASE3: Rolling WSL grid"""
         
         #=======================================================================
         # defaults    
@@ -2750,11 +2747,7 @@ class Session(TComs, baseSession):
         """convert each inundation layer into a WSL"""
         hwsl_pick = self.retrieve('hWslSet', logger=log)
         
-        
-        
-        
  
-        
         #mask and mosaic to get event wsl
         """using the approriate mask derived from teh hvgrid
             mosaic togehter the corresponding HAND wsl rasters
@@ -2773,10 +2766,8 @@ class Session(TComs, baseSession):
         
         log.info('finished in %s'%tdelta)
         self._log_datafiles()
-        return 
-    
-
-    
+ 
+ 
     def build_hiSet(self,  
                 hgSmooth_rlay=None,hand_rlay=None,
                 
@@ -3409,11 +3400,10 @@ class Session(TComs, baseSession):
         return rlay
     
     #===========================================================================
-    # PHASE4: Depth-----------
+    # PHASE4: Final Depth-----------
     #===========================================================================
-    def run_depths(self,
- 
-                    ):
+    def run_depths(self,):
+        """PHASE4: Final Depth"""
         
         #=======================================================================
         # defaults    
@@ -3425,9 +3415,7 @@ class Session(TComs, baseSession):
         # #get depths
         #=======================================================================
         dep_rlay = self.retrieve('depths')
-        
  
-
         #=======================================================================
         # wrap
         #=======================================================================
@@ -3439,7 +3427,7 @@ class Session(TComs, baseSession):
         
         log.info('finished in %s'%tdelta)
         #self._log_datafiles()   no... this will happen on exit
-        return 
+ 
     
     def build_depths(self,
                  wslM_rlay=None,dem_rlay=None,inun2_rlay=None,precision=1, 
@@ -3649,6 +3637,7 @@ class Session(TComs, baseSession):
             os.remove(ofp)
             
         return layname, ofp
+    
     def get_delta(self, #subtract two rasters
                   top_fp,
                   bot_fp,

@@ -215,14 +215,18 @@ def search_fp(dirpath, ext, pattern): #get a matching file with extension and be
     return result
 
 
-def retrieve_data(dkey, fp, ses):
+def retrieve_data(dkey, fp, ses, relative=None):
     """load some compiled result off the session (using the dkey)"""
     assert dkey in ses.data_retrieve_hndls
     hndl_d = ses.data_retrieve_hndls[dkey]
     assert 'compiled' in hndl_d, '%s has no compliled handles'%dkey
     
+    #build kwargs
+    kwargs = dict(fp=fp, dkey=dkey)
+    if not relative is None: kwargs['relative'] = relative
+    
     """Session.load_pick()"""
-    return hndl_d['compiled'](fp=fp, dkey=dkey, relative=True)
+    return hndl_d['compiled'](**kwargs)
 
 def compare_layers(lay_test, lay_true, #two containers of layers
                    test_data=True, #check vlay attributes

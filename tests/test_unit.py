@@ -306,7 +306,7 @@ def test_12hInunSet(session, true_dir, write, base_dir,hgSmooth, HAND):  #
 
 
 
-@pytest.mark.dev
+
 #needs to be updated
 @pytest.mark.parametrize('hInunSet',[r'test_12hInunSet_fred01_test_040\working\test_tag_0702_hInunSet.pickle'] ) 
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
@@ -329,12 +329,12 @@ def test_13hWslSet(session, true_dir, write, base_dir,hInunSet, dem):
     layer_d_post(dkey, true_dir, session, test_d, test_data=False)
     
 
-
+@pytest.mark.dev
 @pytest.mark.parametrize('hgSmooth',[r'test_11hgSmooth_fred01_test_110\working\test_tag_0331_hgSmooth.tif'] ) #from test_hand
-@pytest.mark.parametrize('hWslSet',[r'test_13hWslSet_fred01_test_01d0\working\test_tag_0620_hWslSet.pickle'] ) #from test_hand
+@pytest.mark.parametrize('hWslSet',[r'test_13hWslSet_fred01_test_01d0\working\test_tag_0702_hWslSet.pickle'] ) #UPDATE
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_14wslMosaic(session, true_dir, write, base_dir, 
-                     hWslSet, hgSmooth):
+def test_14wslMosaic(session, true_dir, write, base_dir, hWslSet, hgSmooth):
+    dkey = 'wslMosaic'
      
     #set the compiled references
     session.compiled_fp_d={
@@ -342,8 +342,9 @@ def test_14wslMosaic(session, true_dir, write, base_dir,
         'hgSmooth':os.path.join(base_dir, hgSmooth),
         }
      
-    dkey = 'wslMosaic'
-    test_rlay = session.retrieve(dkey, write=write)
+
+    """"Session.build_wsl()"""
+    test_rlay = session.retrieve(dkey, write=write, relative=True)
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
@@ -375,7 +376,7 @@ def layer_d_post(dkey, true_dir, session, test_d, **kwargs): #checking layer_d
     # check against trues
     #===========================================================================
     true_fp = search_fp(os.path.join(true_dir, 'working'), '.pickle', dkey) #find the data file.
-    true_d = retrieve_data(dkey, true_fp, session) #absolute
+    true_d = retrieve_data(dkey, true_fp, session, relative=True) #absolute
     
     for hval, test_rlay_fp in test_d.items():
         assert hval in true_d, 'hval not in true set: %s'%hval

@@ -2993,17 +2993,12 @@ class Session(TComs, baseSession):
               compress=None,relative=None
                   ):
         """
-        Get set of HAND derived wsls (from hand inundations).
-        
-        Builds one inundation raster for each value found in 
-        hgSmooth using the pre-calculated HAND layer
-        
+        Builds one WSL raster for each inundation layer using a grow routine.        
         
         Parameters
         ----------
         hi_fp_d: dict, optional
-            Output from hInunSet.
-            Filepaths of inundation rasters {hval:fp}.
+            hInunSet. Filepaths of inundation rasters {hval:fp}.
             Defaults to retrieve.       
         dem_rlay: QgsRasterLayer, optional
             DEM raster.
@@ -3163,22 +3158,46 @@ class Session(TComs, baseSession):
  
         return res2_d
     
-    def build_wsl(self, #get set of HAND derived wsls (from hand inundations)
-
-                    
+    def build_wsl(self,
                 #input layers
-                hwsl_fp_d=None,
-                hgSmooth_rlay=None,
- 
+                hwsl_fp_d=None,hgSmooth_rlay=None, 
                 
                 #parameters
                 hvgrid_uq_vals=None,
  
                #gen
-              dkey=None, logger=None,write=None,  write_dir=None,
-              compress=None, #could result in large memory usage
-                  ):
-        """resolution is taken from hInunSet layers"""
+              dkey=None, logger=None,write=None,  write_dir=None,compress=None,
+              relative=True):
+        """
+        Construct a WSL mosiac by filling with lookup HAND values.
+        
+        Using the HAND values grid representing the flood (hgSmooth), select
+        the approriate WSL value for each pixel by referencing the corresponding
+        WSL raster from hWslSet.
+        
+        
+        Parameters
+        ----------
+        hwsl_fp_d: dict, optional
+            hWslSet. Filepaths of WSL rasters {hval:fp}.
+            Defaults to retrieve.       
+        hgSmooth_rlay: QgsRasterLayer, optional
+            hgSmooth. Best estimate of HAND value for flooding in each pixel.
+            Defaults to retrieve.
+        hvgrid_uq_vals: dict, optional
+            Container of unique values found on hgSmooth. Defaults to re-calculating. 
+ 
+            
+        Returns
+        ----------
+        wslMosaic: QgsRasterLayer
+            WSL raster mosaiked from underlying HAND values
+            
+        Notes
+        ----------
+ 
+        
+        """
  
  
         #=======================================================================
@@ -3194,9 +3213,8 @@ class Session(TComs, baseSession):
         layname, ofp = self.get_outpars(dkey, write, ext='.tif', write_dir=write_dir)
         meta_d = dict()
         
-        
+        #retrieve from meta if we already have this
         if hvgrid_uq_vals is None:
-            #????
             if 'hvgrid_uq_vals' in self.meta_d: 
                 hvgrid_uq_vals=self.meta_d['hvgrid_uq_vals']
                 
@@ -3211,7 +3229,7 @@ class Session(TComs, baseSession):
             hgSmooth_rlay=self.retrieve('hgSmooth')
             
         if hwsl_fp_d is None:
-            hwsl_fp_d = self.retrieve('hWslSet')
+            hwsl_fp_d = self.retrieve('hWslSet', relative=relative)
         
             
         #sort it
@@ -3228,8 +3246,7 @@ class Session(TComs, baseSession):
         # round the hv grid
         #=======================================================================
         """
-        NO! multiple roundings might cause issues.. just use the raw and check it
-        
+        NO! multiple roundings might cause issues.. just use the raw and check it        
         grid precision needs to match the hvals for the mask production
         """
                 
@@ -3245,11 +3262,6 @@ class Session(TComs, baseSession):
         miss_l = set(hwsl_fp_d.keys()).symmetric_difference(hvgrid_uq_vals)
         assert len(miss_l)==0, '%i value mismatch between hwsl_pick  and hvgrid (%s) \n    %s'%(
             len(miss_l),  hgSmooth_rlay.name(), miss_l)
-        
-        """
-        ar = rlay_to_array(hvgrid_fp)
-        view(pd.Series(ar.reshape(1, ar.size).tolist()[0]).dropna().value_counts())
-        """
  
         #=======================================================================
         # loop and mask
@@ -3304,6 +3316,7 @@ class Session(TComs, baseSession):
             
             log.info('    (%i/%i) hval=%.2f on %s got %i wet cells'%(
                 i, len(hwsl_fp_d)-1, hval, os.path.basename(wsl_fp), cell_cnt))
+            
             #===================================================================
             # check cell co unt
             #===================================================================
@@ -3317,7 +3330,6 @@ class Session(TComs, baseSession):
             # apply the donut mask
             #===================================================================
             else:
- 
                 wsli_fp = self.mask_apply(wsl_fp, mask_fp, logger=log,
                                   ofp=os.path.join(temp_dir, 'wsl_maskd_%03d_%03d.tif'%(i, hval*100)),
                                   allow_empty=True, #whether to allow an empty wsl. can happen for small masks
@@ -3329,8 +3341,6 @@ class Session(TComs, baseSession):
                 assert os.path.exists(wsli_fp)                
                 d = {**d, **{ 'wsl_maskd_fp':wsli_fp},**stats_d}
  
-
-
             #wrap
             res_d[i] = d
         
@@ -3356,9 +3366,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         # merge masked
         #=======================================================================
-        
-        log.info('merging %i (of %i) rasters w/ valid wsls'%(len(fp_d), len(df)))
- 
+        log.info('merging %i (of %i) rasters w/ valid wsls'%(len(fp_d), len(df))) 
         
         wsl1_fp = self.mergeraster(list(fp_d.values()), compression='none',
                          logger=log,
@@ -3381,8 +3389,7 @@ class Session(TComs, baseSession):
         wsl3_fp = self.warpreproject(wsl2_fp, resolution=int(resolution), compress=compress, extents=hgSmooth_rlay.extent(), logger=log,
                            output=ofp)
         
-        rlay = self.rlay_load(wsl3_fp, logger=log)
-        
+        rlay = self.rlay_load(wsl3_fp, logger=log)        
         #=======================================================================
         # check
         #=======================================================================
@@ -3393,9 +3400,7 @@ class Session(TComs, baseSession):
         #=======================================================================
         log.info('finished on %s'%rlay.name())
         if write:self.ofp_d[dkey] = rlay.source()
- 
-            
- 
+
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d, dtype=float).to_frame()
             self.smry_d['%s_masking'%dkey] = df

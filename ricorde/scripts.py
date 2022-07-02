@@ -3442,18 +3442,37 @@ class Session(TComs, baseSession):
         return 
     
     def build_depths(self,
-                 #input layers
-                 wslM_rlay=None,
-                 dem_rlay=None,
-                 inun2_rlay=None,
-                 
-                 precision=1, #rounding to apply for delta calc
+                 wslM_rlay=None,dem_rlay=None,inun2_rlay=None,precision=1, 
  
                #gen
               dkey=None, logger=None,write=None,  write_dir=None,
-              compress=None, #could result in large memory usage
-                  ):
-        """resolution is taken from hInunSet layers
+              compress=None, ):
+        """
+        Construct the depths from DEM and WSL mosaic
+        
+        
+        Parameters
+        ----------
+        wslM_rlay: QgsRasterLayer, optional
+            wslMosaic. WSL raster. defaults to retrieve.        
+        dem_rlay: QgsRasterLayer, optional
+            dem. Elevations. Defaults to retrieve.           
+        inun2_rlay: QgsRasterLayer, optional
+            inun2. Maximum inundation. Used to mask results. Defaults to retrieve.  
+        precision: int, default 1
+            Rounding to apply for delta calculation. 
+            
+        Returns
+        ----------
+        hInunSet: dict
+            Filepaths of each inundation raster created {hval:fp}
+ 
+        Notes
+        ----------
+        output properties (e.g., resolution) will match the wslM_rlay.
+        defaults to writing in the 'out_dir' (not the working)
+        """
+        """
         
         TODO: fix the nodata type
         """
@@ -3471,18 +3490,14 @@ class Session(TComs, baseSession):
         if write_dir is None: write_dir=self.out_dir
         layname, ofp = self.get_outpars(dkey, write, ext='.tif', write_dir=write_dir)
         
-        
- 
-                
+      
         temp_dir = os.path.join(self.temp_dir, dkey)
         if not os.path.exists(temp_dir):os.makedirs(temp_dir)
                 
         mstore=QgsMapLayerStore()
         
-                    
         if compress is None:
             compress=self.compress
-        
  
         meta_d = {'precision': precision, 'compress':compress}
         #=======================================================================
@@ -3511,8 +3526,7 @@ class Session(TComs, baseSession):
         # check
         #=======================================================================
         """resolution doesnt have to match here"""
-        assert wslM_rlay.extent()==dem_rlay.extent()
-        
+        assert wslM_rlay.extent()==dem_rlay.extent()        
 
         assert_func(lambda:self.rlay_check_match(inun2_rlay, dem_rlay, logger=log))
         #=======================================================================
@@ -3528,10 +3542,8 @@ class Session(TComs, baseSession):
  
         #=======================================================================
         # mask to only those within hydrauilc maximum 
-        #=======================================================================
- 
-        dep3_fp = self.mask_apply(dep2_fp, inun2_rlay, logger=log, 
-                                  #ofp=ofp,
+        #======================================================================= 
+        dep3_fp = self.mask_apply(dep2_fp, inun2_rlay, logger=log,  
                                   allow_approximate=True, #really?
                                   )
         
@@ -3557,9 +3569,7 @@ class Session(TComs, baseSession):
         # wrap
         #=======================================================================
         log.info('finished on %s \n    %s'%(rlay.name(), meta_d))
-        if write:self.ofp_d[dkey] = rlay.source()
- 
-            
+        if write:self.ofp_d[dkey] = rlay.source()            
  
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d, dtype=str).to_frame()

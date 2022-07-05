@@ -1,3 +1,4 @@
+#all these are default with QGIS 3.22.8 (unless otherwise noted)
 atomicwrites==1.4.0
 attrs==21.4.0
 certifi==2020.6.20
@@ -40,8 +41,8 @@ pypiwin32==223
 pyproj==3.3.1
 PyQt5==5.15.4
 PyQt5-sip==12.8.1
-pytest==7.1.2 #custom
-pytest-qgis==1.3.2 #custom
+pytest==7.1.2 #needed for tests
+pytest-qgis==1.3.2 #needed for tests
 python-dateutil==2.8.1
 pytz==2020.1
 pywin32==228

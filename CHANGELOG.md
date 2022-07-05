@@ -6,9 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 Unreleased
 
-## version_tag - YYYY-DD-mm
+## v1.0.0 - 2022
 
 ### Added
+- pytest-qgis
+- docstrings
+- misc project files (changelog, conributing, requirements)
+- upgrade to QGIS 3.22.8
 
 ### Changed
 

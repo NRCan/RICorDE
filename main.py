@@ -34,18 +34,14 @@ TODO:
 #===============================================================================
 # imports-----------
 #===============================================================================
-import os, datetime, copy
  
+from ricorde.scripts import Session, QgsCoordinateReferenceSystem, force_open_dir
+import os, datetime, copy
 
 start =  datetime.datetime.now()
 print('start at %s'%start)
- 
- 
-from ricorde.scripts import Session, QgsCoordinateReferenceSystem, force_open_dir
 
-
-#from memory_profiler import profile
-#@profile(precision=1)
+ 
 def run(#main runner
         
         #=======================================================================
@@ -61,8 +57,6 @@ def run(#main runner
         #=======================================================================
         #prov='quebec',
         
-        
-        
         #FiC  period of interest
         min_dt=datetime.datetime.strptime('2017-05-07', '%Y-%m-%d'),
         max_dt=datetime.datetime.strptime('2017-05-10', '%Y-%m-%d'),
@@ -75,13 +69,11 @@ def run(#main runner
         dem_resolution=2,
         hval_prec=0.2,
         out_dir=None,
-        
 
         ):
     """
     aoi02_CMM_20210711: 3Gb and 40mins
     """
-    
 
     # setup
     with Session(aoi_fp=aoi_fp, name=name, fp_d=fp_d, crs=QgsCoordinateReferenceSystem(crsid),
@@ -139,19 +131,12 @@ def dev_test(
     return out_dir
 
 
-
-
-
-
-
 if __name__ =="__main__": 
-    
  
     #od = CMM2()
     od = dev_test()
     
     #od = Fred12()
-    
     
     #===========================================================================
     # wrap

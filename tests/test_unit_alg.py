@@ -1,9 +1,5 @@
 '''
-Created on Mar. 25, 2022
-
-@author: cefect
-
-tests for phase 1: inun max
+Unit tests for major RICorDE algorithm callers
 '''
 
 import pytest, copy, os

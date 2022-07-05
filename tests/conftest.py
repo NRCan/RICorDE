@@ -102,8 +102,12 @@ def session(tmp_path,
             base_dir, 
             write,logger, feedback,# (scope=session)
             test_name,
+            
+            #pytest-qgis fixtures
+            qgis_app, qgis_processing,
  
                     ):
+    """Mock session for tests"""
  
     np.random.seed(100)
     
@@ -127,13 +131,15 @@ def session(tmp_path,
                  compress='none',  
                  crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
                  
-                 logger=logger, feedback=feedback,
-                 
-                   overwrite=True,
+                 logger=logger, feedback=feedback,overwrite=True,
                    write=write, #avoid writing prep layers
                    exit_summary=False,
                    compiled_fp_d=dict(), #I guess my tests are writing to the class... no tthe instance
-                   **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
+                   
+                   qgis_app=qgis_app,qgis_processing=True, #pytest-qgis
+                   
+                    #extract fipepaths from the proj_d
+                   **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']},
                    ) as ses:
         
         assert len(ses.data_d)==0

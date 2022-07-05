@@ -120,10 +120,13 @@ class Qproj(QAlgos, Basic):
                  #inheritance
                  session=None, #parent session for child mode
                  inher_d = {},
+                 
+                  #pytest-qgis fixtures
+                 qgis_app=None, qgis_processing=None,
+                 
+                 
                  **kwargs):
-
-        
-        #mod_logger.debug('Qproj super')
+ 
         
         super().__init__(
             inher_d = {**inher_d,
@@ -157,7 +160,7 @@ class Qproj(QAlgos, Basic):
             
         #standalone
         if session is None:
-            self._init_qgis(crs=crs)
+            self._init_qgis(crs=crs, qgis_app=qgis_app)
             
             self._init_algos()
             
@@ -195,46 +198,56 @@ class Qproj(QAlgos, Basic):
     
     
     def _init_qgis(self, #instantiate qgis
-                   crs=None,
-                  gui = False): 
+                   crs=QgsCoordinateReferenceSystem('EPSG:4326'),
+                  gui = False,
+                  qgis_app=None,  #pytest fixture
+                  QGIS_PREFIX_PATH=None,
+                  ): 
         """
+        Initialize QGIS for standalone runs (pyqgis)
+        
+        This function sets up a session class to run the QGIS api outside of the GUI
+        and does some basic project setup (crs).Also handles running with pytest-qgis.
+        
+        Notes
+        ----------
         WARNING: need to hold this app somewhere. call in the module you're working in (ricorde)
         
         """
         log = self.logger.getChild('_init_qgis')
         
         
+        if QGIS_PREFIX_PATH is None:#call from environment
+            QGIS_PREFIX_PATH=os.environ['QGIS_PREFIX_PATH']
+            
+        assert os.path.exists(QGIS_PREFIX_PATH) 
+        
+        
         #=======================================================================
         # init the application
         #=======================================================================
-        
-        try:
+        if qgis_app is None: #non-test runs
+            try:                
+                QgsApplication.setPrefixPath(QGIS_PREFIX_PATH, True)
+                
+                qgis_app = QgsApplication([], gui)
+    
+                qgis_app.initQgis()
+     
             
-            QgsApplication.setPrefixPath(r'C:/OSGeo4W64/apps/qgis-ltr', True)
-            
-            app = QgsApplication([], gui)
-
-            app.initQgis()
-
-
-            
-        
-        except:
-            raise Error('QGIS failed to initiate')
+            except:
+                raise Error('QGIS failed to initiate')
         
         #=======================================================================
         # store the references
         #=======================================================================
-        self.qap = app
+        self.qap = qgis_app
         self.qproj = QgsProject.instance()
         self.mstore = QgsMapLayerStore() #build a new map store
         
         #=======================================================================
         # crs
-        #=======================================================================
-        if crs is None: 
-            crs = QgsCoordinateReferenceSystem(self.crsID_default)
-            
+        #=======================================================================         
             
         assert isinstance(crs, QgsCoordinateReferenceSystem), 'bad crs type'
         assert crs.isValid()

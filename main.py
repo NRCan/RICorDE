@@ -1,15 +1,8 @@
 '''
-Created on Mar. 27, 2021
-
-@author: cefect
-
-workflows for deriving gridded depth estimates from inundation polygons and DEMs
-
-setup to execute 1 workflow at a time (output 1 depth raster)
-    see validate.py for calculating the performance of these outputs
-    
+Running RICorDE from command line    
 
 TODO:
+    need a parameter file
  
     switch to data file request/call dictionary
         add metadata per-datafile for this
@@ -30,117 +23,34 @@ TODO:
     parallelize
 
 
-'''
-#===============================================================================
-# imports-----------
-#===============================================================================
+''' 
+import sys, argparse
+from ricorde.runrs import runr
  
-from ricorde.scripts import Session, QgsCoordinateReferenceSystem, force_open_dir
-import os, datetime, copy
 
-start =  datetime.datetime.now()
-print('start at %s'%start)
-
- 
-def run(#main runner
-        
-        #=======================================================================
-        # medium right test aoi
-        #=======================================================================
-        name='CMMt1',
-         aoi_fp=r'C:\LS\02_WORK\02_Mscripts\InsuranceCurves\04_CALC\CMM\aoi\aoi_t1_CMM_20210716.gpkg',
-         fp_d = {                  
-            },
-        
-        #=======================================================================
-        # common pars
-        #=======================================================================
-        #prov='quebec',
-        
-        #FiC  period of interest
-        min_dt=datetime.datetime.strptime('2017-05-07', '%Y-%m-%d'),
-        max_dt=datetime.datetime.strptime('2017-05-10', '%Y-%m-%d'),
-       
-        #NHN kwargs
-        waterTypes = ['Watercourse', 'Reservoir'],
-        
-        #general kwargs
-        crsid = 'EPSG:2950',
-        dem_resolution=2,
-        hval_prec=0.2,
-        out_dir=None,
-
-        ):
-    """
-    aoi02_CMM_20210711: 3Gb and 40mins
-    """
-
-    # setup
-    with Session(aoi_fp=aoi_fp, name=name, fp_d=fp_d, crs=QgsCoordinateReferenceSystem(crsid),
-                 out_dir=out_dir,compress='med',
-                   overwrite=True) as wrkr:
-
-        # load
-        ofp_d = wrkr.run_get_data(min_dt=min_dt, max_dt=max_dt, waterTypes=waterTypes,
-                                   resolution=dem_resolution,
-                                   #prov=prov,
-                                   )
-        
-        #adjust for hydrauilc maximum
-        wrkr.run_imax()
-        
-        #get depths mosaic
-        wrkr.run_hdep_mosaic(hval_prec=hval_prec)
-        
-        out_dir = wrkr.out_dir
-        
-    return out_dir
-        
-
-def dev_test(
-        tName = 'fred01',
-        proj_d = {
-            'aoi_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\aoi01T_fred_20220325.geojson', 
-            'dem_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_dem.tif', 
-            'inun_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_inun_rlay.tif',
-            'pwb_fp': r'C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\fred01\test_tag_0326_pwb_rlay.tif',
-            'crsid': 'EPSG:3979', 
-            'name': 'fred01'}
-
-        ):
-    
-    """throwing some recursion error
-    from tests.conftest import get_proj_d
-    proj_d = get_proj_d(tName)
-    """
-    
-    with Session(name=tName, tag='dev',
-                 compress='none',  
-                 crs=QgsCoordinateReferenceSystem(proj_d['crsid']),
-                   overwrite=True,
-            **{k:v for k,v in proj_d.items() if k in ['dem_fp', 'inun_fp', 'pwb_fp', 'aoi_fp']}, #extract from the proj_d
-                   
-                   ) as wrkr:
-        
-        #ref_lay = wrkr.retrieve('dem_rlay')
-        #wrkr.retrieve('hand_rlay')
-        wrkr.run_imax()
-        
-        out_dir = wrkr.out_dir
-        
-    return out_dir
-
-
-if __name__ =="__main__": 
- 
-    #od = CMM2()
-    od = dev_test()
-    
-    #od = Fred12()
-    
+if __name__ == "__main__":
+    print(sys.argv)
     #===========================================================================
-    # wrap
+    # setup argument parser 
     #===========================================================================
-    #force_open_dir(od)
-    tdelta = datetime.datetime.now() - start
-    print('finished in %s'%tdelta)
+    parser = argparse.ArgumentParser(prog='RICorDE',description='execute RICorDE')
+    #add arguments
+ 
+    parser.add_argument("-tag",'-t', help='tag for the run') #this defaults to None if not passed
+    parser.add_argument("-write",'-w', help='flag to write outputs', action='store_true')#defaults to False
+    
+    parser.add_argument("-cap", help='cap to apply to beach values', type=float, default=6.0) #this defaults to None if not passed
+    parser.add_argument("-floor", help='cap to apply to beach values', type=float, default=1.5) #this defaults to None if not passed
+    parser.add_argument("-dev",'-d', help='flag for dev runs', action='store_true')
+    parser.add_argument("-b2_method",  help='method for beach2 construction', default='pixels')
+    parser.add_argument("-hgi_resolution",  help='resolution for hgInterp', default=90*4, type=int)
+    parser.add_argument("-hgi_minPoints",  help='minimum points count (pts_cnt) for hgInterp', default=5, type=int)
+    parser.add_argument("-hval_precision",  help='precision for HAND values in hgSmooth', default=0.2, type=float)
+    
+    args = parser.parse_args()
+    kwargs = vars(args)
+    print('parser got these kwargs: \n    %s'%kwargs) #print all the parsed arguments in dictionary form
+    
+     
+    dev = kwargs.pop('dev')
+    print('\n\nSTART (dev=%s) \n\n\n\n'%dev)

@@ -1,10 +1,4 @@
-'''
-Created on Jul. 18, 2021
-
-@author: cefect
-
-QGIS algorhthims
-'''
+'''Methods for QGIS processing'''
 
 #===============================================================================
 # # standard imports -----------------------------------------------------------
@@ -28,13 +22,13 @@ from hp.exceptions import Error
 # classes
 #===============================================================================
 
+
 class QAlgos(object):
     """
     common methods for applying algorthhims
     
     made a separate class just for organization
     """
-    
     
     #projection operations
     """theres probably a nice way to get this from the users profile"""
@@ -89,7 +83,6 @@ class QAlgos(object):
     raster_dtype_d={'Float32':5}
     
     selectionMeth_d =  {'new':0, 'add':1, 'subselection':2, }
-
     
     def __init__(self, 
                  inher_d = {},
@@ -99,7 +92,6 @@ class QAlgos(object):
             inher_d = {**inher_d,
                 **{'QAlgos':['context']}},
                         **kwargs) 
-        
         
     def _init_algos(self,
                     context=None,
@@ -111,7 +103,6 @@ class QAlgos(object):
         """
         crashing without raising an Exception
         """
-    
     
         log = self.logger.getChild('_init_algos')
         
@@ -132,8 +123,6 @@ class QAlgos(object):
         # init p[rocessing]
         #=======================================================================
         from processing.core.Processing import Processing
-
-        
     
         Processing.initialize()  
     
@@ -146,14 +135,11 @@ class QAlgos(object):
         #     log.debug("{}:{} --> {}".format(alg.provider().name(), alg.name(), alg.displayName()))
         #=======================================================================
         
-        
         assert not self.feedback is None, 'instance needs a feedback method for algos to work'
         
         log.info('processing initilzied w/ feedback: \'%s\''%(type(self.feedback).__name__))
-        
 
         return True
-    
     
     #===========================================================================
     # NATIVE---------
@@ -191,8 +177,6 @@ class QAlgos(object):
             input_obj = self._get_sel_obj(vlay)
         else:
             input_obj = vlay
-        
- 
  
         #=======================================================================
         # execute
@@ -203,7 +187,6 @@ class QAlgos(object):
                              'OUTPUT' : output,
                              'TARGET_CRS' : crsOut},  
                            feedback=self.feedback, context=self.context)
-
 
         log.debug('finished  w/ %s'%res_d)
         return res_d['OUTPUT']
@@ -221,7 +204,6 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
         
         return res_d['OUTPUT']
-    
     
     def selectbylocation(self, #select features (from main laye) by geoemtric relation with comp_vlay
                 vlay, #vlay to select features from
@@ -249,7 +231,6 @@ class QAlgos(object):
         #===========================================================================
         # #set parameter translation dictoinaries
         #===========================================================================
-        
             
         pred_d = {
                 'are within':6,
@@ -282,7 +263,6 @@ class QAlgos(object):
         #===========================================================================
         _ = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
         
-        
         #=======================================================================
         # check
         #=======================================================================
@@ -302,16 +282,12 @@ class QAlgos(object):
             %(vlay.selectedFeatureCount(),vlay.dataProvider().featureCount(), vlay.name()))
         
         return self._get_sel_res(vlay, result_type=result_type, logger=log, allow_none=allow_none)
-    
-    
-    
 
     def dissolve(self, #select features (from main laye) by geoemtric relation with comp_vlay
                 vlay, #vlay to select features from
                 fields = [], 
                 output='TEMPORARY_OUTPUT',
                 selected_only = False, #selected features only on the comp_vlay
-                
 
                 logger = None,
 
@@ -328,7 +304,6 @@ class QAlgos(object):
             alg_input = self._get_sel_obj(vlay)
         else:
             alg_input = vlay
-
     
         #=======================================================================
         # setup
@@ -345,11 +320,8 @@ class QAlgos(object):
         # #execute
         #===========================================================================
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
-    
-
     
     def fixgeo(self, 
                 vlay, #vlay to select features from
@@ -372,7 +344,6 @@ class QAlgos(object):
             alg_input = self._get_sel_obj(vlay)
         else:
             alg_input = vlay
-
     
         #=======================================================================
         # setup
@@ -389,7 +360,6 @@ class QAlgos(object):
         # #execute
         #===========================================================================
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback)
-        
 
         return res_d['OUTPUT']
     
@@ -414,7 +384,6 @@ class QAlgos(object):
             alg_input = self._get_sel_obj(vlay)
         else:
             alg_input = vlay
-
     
         #=======================================================================
         # setup
@@ -430,7 +399,6 @@ class QAlgos(object):
         # #execute
         #===========================================================================
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback)
-        
 
         return res_d['OUTPUT']
     
@@ -454,7 +422,6 @@ class QAlgos(object):
             alg_input = self._get_sel_obj(vlay)
         else:
             alg_input = vlay
-
     
         #=======================================================================
         # setup
@@ -470,7 +437,6 @@ class QAlgos(object):
         # #execute
         #===========================================================================
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -496,7 +462,6 @@ class QAlgos(object):
             alg_input = self._get_sel_obj(vlay)
         else:
             alg_input = vlay
-
     
         #=======================================================================
         # setup
@@ -513,10 +478,8 @@ class QAlgos(object):
         # #execute
         #===========================================================================
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
-    
     
     def saveselectedfeatures(self,#generate a memory layer from the current selection
                              vlay,
@@ -527,7 +490,6 @@ class QAlgos(object):
         """
         TODO: add these intermediate layers to the store
         """
-        
         
         #===========================================================================
         # setups and defaults
@@ -541,8 +503,6 @@ class QAlgos(object):
             feedback=self.feedback
         log = logger.getChild('saveselectedfeatures')
         algo_nm = 'native:saveselectedfeatures'
-        
- 
               
         #=======================================================================
         # precheck
@@ -570,8 +530,6 @@ class QAlgos(object):
         #execute
         res_d = processing.run(algo_nm, ins_d,  feedback=feedback)
 
- 
-
         return res_d['OUTPUT']
     
     def fillnodata(self,
@@ -589,7 +547,6 @@ class QAlgos(object):
         if logger is None: logger=self.logger    
         algo_nm = 'native:fillnodata'   
         log = logger.getChild('fillnodata')
- 
     
         #=======================================================================
         # setup
@@ -643,7 +600,6 @@ class QAlgos(object):
         # #execute
         #===========================================================================
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -663,7 +619,6 @@ class QAlgos(object):
         algo_nm = 'native:extractbyexpression'
         log = logger.getChild('extractbyexpression')
  
- 
         #=======================================================================
         # setup
         #=======================================================================
@@ -671,10 +626,8 @@ class QAlgos(object):
                     'FAIL_OUTPUT' : fail_output}
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d #fail_output can be useful
     
@@ -694,10 +647,8 @@ class QAlgos(object):
         ins_d =    {'INPUT' : vlay, 'OUTPUT' : output}
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -718,10 +669,8 @@ class QAlgos(object):
         ins_d =    {'INPUT' : vlay, 'OUTPUT' : output, 'OVERLAY':vlay_top}
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -744,10 +693,8 @@ class QAlgos(object):
                     'DISTANCE' : spacing, 'END_OFFSET' : 0, 'START_OFFSET' : 0}
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -773,14 +720,10 @@ class QAlgos(object):
                     }
         
         self.feedback.log('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
-    
- 
     
     def symmetricaldifference(self,
             vlay,
@@ -801,10 +744,8 @@ class QAlgos(object):
                     }
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -828,10 +769,8 @@ class QAlgos(object):
                     }
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
     
@@ -854,7 +793,6 @@ class QAlgos(object):
         if crs is None: crs=self.qproj.crs()
         
         assert extent_layer.crs() == crs, 'crs mismatch'
-        
  
         ins_d =    { 'CRS' :crs,
                      'EXTENT' : extent_layer.extent(),
@@ -864,13 +802,10 @@ class QAlgos(object):
                        'OUTPUT' : output}
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
-    
  
     def renameField(self,
             vlay,
@@ -887,19 +822,14 @@ class QAlgos(object):
         algo_nm = 'native:renametablefield'
         log = logger.getChild('renameField')
  
-        
- 
         ins_d = { 'FIELD' : old_fn, 'NEW_NAME' : new_fn,
                   'INPUT' : vlay, 'OUTPUT' : output}
         
         log.debug('executing \'%s\' with: \n     %s'%(algo_nm,  ins_d))
-            
  
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
-        
 
         return res_d['OUTPUT']
-    
     
     def deleteholes(self,
             vlay,
@@ -923,7 +853,6 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d,  feedback=self.feedback, context=self.context)
         
         return res_d['OUTPUT']
-    
     
     def simplifygeometries(self,
             vlay,
@@ -967,7 +896,6 @@ class QAlgos(object):
             feedback=None
         elif feedback is None: 
             feedback=self.feedback
-            
 
         ins_d = { 'BAND' : 1, 
                  'INPUT' : rlay,
@@ -985,7 +913,6 @@ class QAlgos(object):
             if not allow_empty:
                 raise Error(msg)
             logger.getChild('rasterlayerstatistics').error(msg)
-
       
         return res_d 
     
@@ -1005,7 +932,6 @@ class QAlgos(object):
         assert isinstance(prec, int)
  
         feedback=self.feedback
-            
 
         ins_d = { 'BAND' : 1, 'BASE_N' : 10, 'DECIMAL_PLACES' : prec,
                   'INPUT' :rlay, 'OUTPUT' : output,
@@ -1045,10 +971,8 @@ class QAlgos(object):
             
         """because this algo is resolution based, can result in a row/column mismatch"""
         assert round(resolution, 2)==resolution, 'got overly precise resolution: %s'%str(resolution)
-    
  
         feedback=self.feedback
-            
 
         ins_d = { 'EXTENT' : extent_layer.extent(),
                   'NUMBER' : burn_val,
@@ -1080,11 +1004,8 @@ class QAlgos(object):
         if logger is None: logger=self.logger    
         algo_nm = 'native:pixelstopoints'
         log = logger.getChild('pixelstopoints')
-        
- 
  
         feedback=self.feedback
-            
 
         ins_d = { 'FIELD_NAME' : fieldName, 'INPUT_RASTER' : rlay,
                   'OUTPUT' : output, 'RASTER_BAND' : 1 }
@@ -1153,8 +1074,6 @@ class QAlgos(object):
         # assemble parameters
         #=======================================================================
         assert predicate in self.predicate_d, 'unrecognized predicarte: %s' %predicate
-
-        
         
         pars_d = { 'DISCARD_NONMATCHING' : False, 
                   'INPUT' : vlay, 
@@ -1165,7 +1084,6 @@ class QAlgos(object):
                   'OUTPUT' : output, 
                   'PREDICATE' : [self.predicate_d[predicate]], #only accepting single predicate
                   'PREFIX' : prefix }
-        
 
         #=======================================================================
         # execute
@@ -1239,13 +1157,11 @@ class QAlgos(object):
         if isinstance(jlay_fieldn_l, set):
             jlay_fieldn_l = list(jlay_fieldn_l)
             
-            
         #convert predicate to code
         pred_code_l = [self.predicate_d[pred_name] for pred_name in predicate_l]
             
         #convert summaries to code
         sum_code_l = [self.summaries_d[smry_str] for smry_str in smry_l]
- 
         
         #=======================================================================
         # prechecks
@@ -1306,7 +1222,6 @@ class QAlgos(object):
         algo_nm = 'qgis:deletecolumn'
         if logger is None: logger=self.logger
         log = logger.getChild('deletecolumn')
-
         
         assert isinstance(fields_l, list)
         #=======================================================================
@@ -1316,8 +1231,6 @@ class QAlgos(object):
             main_input = self._get_sel_obj(vlay)
         else:
             main_input=vlay
-            
-        
         
         #assemble pars
         ins_d = { 'COLUMN' : fields_l, 
@@ -1344,8 +1257,6 @@ class QAlgos(object):
         algo_nm = 'qgis:distancematrix'
         if logger is None: logger=self.logger
         log = logger.getChild('distancematrix')
-
-        
  
         #=======================================================================
         # assemble pars
@@ -1354,8 +1265,6 @@ class QAlgos(object):
             main_input = self._get_sel_obj(vlay)
         else:
             main_input=vlay
-            
-        
         
         #assemble pars
         ins_d = { 'INPUT' : main_input,
@@ -1371,7 +1280,6 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
         
         return res_d['OUTPUT']
-    
     
     def idwinterpolation(self, # table containing a distance matrix, with distances between all the points in a points layer.
                      pts_vlay,
@@ -1407,9 +1315,6 @@ class QAlgos(object):
         if extent_layer is None:
             extent_layer=pts_vlay
         
-            
-        
-        
         #assemble pars
         ins_d = { 'DISTANCE_COEFFICIENT' : distP,
                   'EXTENT' : extent_layer.extent(),
@@ -1436,7 +1341,6 @@ class QAlgos(object):
         algo_nm = 'qgis:exportaddgeometrycolumns'
         if logger is None: logger=self.logger
         log = logger.getChild('addgeometry')
-
  
         #=======================================================================
         # assemble pars
@@ -1486,15 +1390,10 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
         
         return res_d['OUTPUT']
- 
-    
-    
-    
     
     #===========================================================================
     # GDAL---------
     #===========================================================================
-
     
     def cliprasterwithpolygon(self,
               rlay_raw,
@@ -1526,11 +1425,8 @@ class QAlgos(object):
         else:
             feedback=self.feedback
         log = logger.getChild('cliprasterwithpolygon')
-        
- 
             
         algo_nm = 'gdal:cliprasterbymasklayer'
-            
 
         #=======================================================================
         # precheck
@@ -1559,11 +1455,9 @@ class QAlgos(object):
         else:
             setResolution = False
             
-            
         #=======================================================================
         # run algo        
         #=======================================================================
-
         
         ins_d = {   'ALPHA_BAND' : False,
                     'CROP_TO_CUTLINE' : True,
@@ -1621,8 +1515,6 @@ class QAlgos(object):
  
         log.info('dist=%.2f on %s'%(dist, rlay))
         return processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
-
-        
         
     def warpreproject(self, #repojrect a raster
                               rlay_raw,
@@ -1635,7 +1527,6 @@ class QAlgos(object):
                               resampling='Nearest neighbour', #resampling method
                               extents=None,
  
- 
                               output = 'TEMPORARY_OUTPUT', #always writes to file
                               logger = None,
                               ):
@@ -1644,7 +1535,6 @@ class QAlgos(object):
                     rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum(),
                     self.aoi_vlay.crs().authid())
         """
-
         
         #=======================================================================
         # defaults
@@ -1666,7 +1556,6 @@ class QAlgos(object):
                     9:'Median',
                     10:'First quartile',
                     11:'Third quartile'}
- 
             
         algo_nm = 'gdal:warpreproject'
             
@@ -1691,7 +1580,6 @@ class QAlgos(object):
             
         if os.path.exists(output):
             os.remove(output)
-
             
         if not resolution is None:
             assert isinstance(resolution, int), 'got bad type in resolution: %s'%type(resolution)
@@ -1700,7 +1588,6 @@ class QAlgos(object):
         #=======================================================================
         opts = self.compress_d[compress]
         if opts is None: opts = ''
-
         
         ins_d =  {
              'DATA_TYPE' : 0,#use input
@@ -1717,14 +1604,10 @@ class QAlgos(object):
              'TARGET_EXTENT_CRS' : None,
              'TARGET_RESOLUTION' : resolution,
           }
-        
  
         log.debug('executing \'%s\' with ins_d: \n    %s \n\n'%(algo_nm, ins_d))
-        
  
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback)
-        
- 
         
         if not os.path.exists(res_d['OUTPUT']):
             """failing intermittently"""
@@ -1752,7 +1635,6 @@ class QAlgos(object):
         if layname is None:
             layname = 'merge'
             
-            
         algo_nm = 'gdal:merge'
             
         if crsOut is None: crsOut = self.qproj.crs() #just take the project's
@@ -1763,7 +1645,6 @@ class QAlgos(object):
         assert isinstance(crsOut, QgsCoordinateReferenceSystem), 'bad crs type'
         assert isinstance(rlays_l, list)
         assert (output == 'TEMPORARY_OUTPUT') or (output.endswith('.tif')) 
-        
  
         first, bc = True, None
         for r in rlays_l: 
@@ -1802,15 +1683,12 @@ class QAlgos(object):
             """failing intermittently"""
             raise Error('failed to get a result')
         
-        
         if output == 'TEMPORARY_OUTPUT':
             res_rlay = QgsRasterLayer(res_d['OUTPUT'], layname)
-            
 
             assert isinstance(res_rlay, QgsRasterLayer), 'got bad type: %s'%type(res_rlay)
             assert res_rlay.isValid()
             assert bc==res_rlay.bandCount(), 'band count mismatch'
-               
        
             res_rlay.setName(layname) #reset the name
                
@@ -1819,10 +1697,6 @@ class QAlgos(object):
             res_rlay = res_d['OUTPUT']
           
         return res_rlay
-        
-        
-    
-
     
     def rasterize_value(self, #build a rastser with a fixed value from a polygon
                 bval, #fixed value to burn,
@@ -1843,8 +1717,6 @@ class QAlgos(object):
         if layname is None: layname = '%s_%.2f'%(poly_vlay.name(), bval)
         algo_nm = 'gdal:rasterize'
         
-        
-        
         """
         extents =  QgsRectangle(-127.6, 44.1, -106.5, 54.1)
         """
@@ -1855,7 +1727,6 @@ class QAlgos(object):
         
         extent = '%s,%s,%s,%s'%(rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum())+ \
                 ' [%s]'%poly_vlay.crs().authid()
-
         
         #=======================================================================
         # build pars
@@ -1872,7 +1743,6 @@ class QAlgos(object):
                       'INVERT' : False,
                    'NODATA' : -9999, 'DATA_TYPE' : 5,'OPTIONS' : '',
                    'INPUT' : poly_vlay, 'OUTPUT' : output,
-                    
                      
                       }
         
@@ -1880,10 +1750,8 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, pars_d, feedback=self.feedback)
         
         #laod teh rlay
-        
     
         return self._get_rlay_res(res_d, result, layname=layname)
-    
     
     def rastercalculatorGDAL(self, #build a rastser with a fixed value from a polygon
                 rlayA, #fixed value to burn,
@@ -1931,7 +1799,6 @@ class QAlgos(object):
                        output = 'TEMPORARY_OUTPUT',
                        logger=None,
                        ):
-        
  
         #=======================================================================
         # defaults
@@ -1958,7 +1825,6 @@ class QAlgos(object):
                       ):
         algo_nm = 'gdal:convertformat'
         ins_d = { 'INPUT' : input, 'OPTIONS' : '', 'OUTPUT' : output}
-        
         
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
         
@@ -1996,7 +1862,6 @@ class QAlgos(object):
         #=======================================================================
         if extents is None:
             extents = pts_vlay.extent()
- 
         
         ins_d = { '-n' : False, 
                  'GRASS_MIN_AREA_PARAMETER' : 0.0001,
@@ -2048,7 +1913,6 @@ class QAlgos(object):
         #=======================================================================
         # pars
         #=======================================================================
- 
         
         ins_d = { '-a' : True, #dont align with input 
                  '-c' : circular_neighborhood,
@@ -2077,7 +1941,6 @@ class QAlgos(object):
                        output = 'TEMPORARY_OUTPUT',
                        logger=None,
                        ):
-        
  
         #=======================================================================
         # defaults
@@ -2090,7 +1953,6 @@ class QAlgos(object):
         #=======================================================================
         # pars
         #=======================================================================
- 
         
         ins_d = { '-' : False, '-m' : False, 'GRASS_RASTER_FORMAT_META' : '', 'GRASS_RASTER_FORMAT_OPT' : '', 
                  'GRASS_REGION_CELLSIZE_PARAMETER' : 0, #inherit?
@@ -2128,7 +1990,6 @@ class QAlgos(object):
         #=======================================================================
         # pars
         #=======================================================================
- 
         
         ins_d = { '-z' : False, #ignore zeros instead of nulls
                   'GRASS_RASTER_FORMAT_META' : '', 'GRASS_RASTER_FORMAT_OPT' : '', 'GRASS_REGION_CELLSIZE_PARAMETER' : 0, 'GRASS_REGION_PARAMETER' : None, 
@@ -2143,6 +2004,7 @@ class QAlgos(object):
         res_d = processing.run(algo_nm, ins_d, feedback=self.feedback, context=self.context)
         
         return res_d['output']
+
     #===========================================================================
     # WHITEBOX------
     #===========================================================================
@@ -2158,8 +2020,6 @@ class QAlgos(object):
                   'fill' : True, 'flat_increment' : None, 'max_cost' : None, 
                   'min_dist' : True,
                    'output' : output }
-        
-        
         
         algo_nm='wbt:BreachDepressionsLeastCost'
         
@@ -2186,16 +2046,12 @@ class QAlgos(object):
         #     if QgsProject.instance().addMapLayer(vlay, False) is None:
         #         raise Error('failed to add map layer \'%s\''%vlay.name())
         #=======================================================================
-            
         
         #handle project layer store
         if self.qproj.mapLayer(vlay.id()) is None:
             #layer not on project yet. add it
             if self.qproj.addMapLayer(vlay, False) is None:
                 raise Error('failed to add map layer \'%s\''%vlay.name())
-            
- 
-            
        
         log.debug('based on %i selected features from \'%s\''%(len(vlay.selectedFeatureIds()), vlay.name()))
         
@@ -2203,10 +2059,8 @@ class QAlgos(object):
                                                     selectedFeaturesOnly=True, 
                                                     featureLimit=-1, 
                                                     geometryCheck=QgsFeatureRequest.GeometryAbortOnInvalid)
-        
  
         #return QgsProcessingFeatureSourceDefinition(vlay.id(), True)
-    
     
     def _get_sel_res(self, #handler for returning selection like results
                         vlay, #result layer (with selection on it
@@ -2230,7 +2084,6 @@ class QAlgos(object):
                 raise Error('nothing selected')
             
             return None
-
         
         #log.debug('user specified \'%s\' for result_type'%result_type)
         #=======================================================================
@@ -2248,7 +2101,6 @@ class QAlgos(object):
         elif result_type == 'feats':
             
             result =  {feat.id(): feat for feat in vlay.getSelectedFeatures()}
-            
             
         elif result_type == 'layer':
             
@@ -2269,11 +2121,8 @@ class QAlgos(object):
             #=======================================================================
             assert isinstance(res_rlay, QgsRasterLayer), 'got bad type: %s'%type(res_rlay)
             assert res_rlay.isValid()
-               
        
             res_rlay.setName(layname) #reset the name
-               
-
           
             return res_rlay
         elif result == 'fp':

@@ -1,29 +1,15 @@
-'''
-Created on Mar 10, 2019
+'''Methods for object-oriented-programming'''
 
-@author: cef
-
-object oriented programming
-
-'''
-
-
-import os, sys, datetime, gc, copy, pickle
-
-from hp.dirz import delete_dir
-
-from hp.exceptions import Error
+from hp.dirz import delete_dir 
 from qgis.core import QgsMapLayer
-
- 
+import os, sys, datetime, gc, copy, pickle
 
 #===============================================================================
 # functions------------------------------------------------------------------- 
 #===============================================================================
 
+
 class Basic(object): #simple base class
-    
-    
     
     def __init__(self, 
                  
@@ -41,7 +27,6 @@ class Basic(object): #simple base class
                 logger         = None,
                 logcfg_file    = None,
                  
-                 
                  #general parameters
                  prec           = 2,
                  overwrite      = False, #file overwriting control
@@ -58,12 +43,12 @@ class Basic(object): #simple base class
     
         Parameters
         ----------
-        root_dir: str, optional
+        root_dir: str, default from definitions
             Base directory of the project. Used for generating default directories.            
         out_dir : str, optional
-            Directory used for outputs            
+            Directory used for outputs. Defaults to a sub-directory of root_dir            
         temp_dir: str, optional
-            Directory for temporary outputs
+            Directory for temporary outputs (i.e., cache). Defaults to a sub-directory of out_dir.
         mod_name: str, default 'RICorDE'
             Base name for all labels and directories,
         name: str, default 'SessionName'
@@ -75,11 +60,11 @@ class Basic(object): #simple base class
         logcfg_file: str, optional
             Filepath of a python logging configuration file
         prec: int, default 2
-            Default float precision for this object.
+            Default float precision.
         overwrite: bool, default False
-            Default behavior when attempting to overwrite a file for this object
+            Default behavior when attempting to overwrite a file
         relative: bool, default False
-            Default behavior of filepaths (relative vs. absolute) for this object
+            Default behavior of filepaths (relative vs. absolute)
         inher_d: dict, default {}
             Container of inheritance parameters {attribute name: object}
         session: scripts.Session, optional
@@ -164,8 +149,6 @@ class Basic(object): #simple base class
                         basenm='%s_%s'%(tag, datetime.datetime.today().strftime('%m%d.%H.%M')))
 
         self.logger=logger
-            
-        
         
         self.logger.debug('finished Basic.__init__')
         
@@ -268,9 +251,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
     """typically we only instance this once
         but tests will instance multiple times
         so beware of setting containers here"""
-
-    
-    
     
     def __init__(self, 
                  bk_lib=dict(),         #kwargs for builder calls {dkey:kwargs}
@@ -287,18 +267,15 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         
         assert isinstance(data_retrieve_hndls, dict), 'must past data retrival handles'
         
-        
         super().__init__(**kwargs)
         
         self.data_d = dict() #datafiles loaded this session
     
         self.ofp_d = dict() #output filepaths generated this session
         
-        
         #=======================================================================
         # retrival handles---------
         #=======================================================================
-                    
             
         self.data_retrieve_hndls=data_retrieve_hndls
         
@@ -311,16 +288,13 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             l = set(compiled_fp_d.keys()).difference(keys)
             assert len(l)==0, 'keymismatch on compiled_fp_d \n    %s'%l
             
-            
         #attach    
         self.bk_lib=bk_lib
         self.compiled_fp_d = compiled_fp_d
         self.write=write
         
-        
         #start meta
         self.dk_meta_d = {k:dict() for k in keys}
- 
  
         #=======================================================================
         # defaults
@@ -333,7 +307,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             
         self.wrk_dir = wrk_dir
         
-        
     def retrieve(self, #flexible 3 source data retrival
                  dkey,
                  *args,
@@ -343,7 +316,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         
         if logger is None: logger=self.logger
         log = logger.getChild('retrieve')
-        
 
         start = datetime.datetime.now()
         #=======================================================================
@@ -364,7 +336,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             except Exception as e:
                 log.warning('failed to get a copy of \"%s\' w/ \n    %s'%(dkey, e))
                 return self.data_d[dkey]
-            
         
         #=======================================================================
         # retrieve handles
@@ -412,7 +383,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             
             meta_d.update({'layname':data.name(), 'source':data.source()})
             
-            
         else:
             assert hasattr(data, '__len__'), '\'%s\' failed to retrieve some data'%dkey
         self.data_d[dkey] = data
@@ -423,8 +393,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         tdelta = round((datetime.datetime.now() - start).total_seconds(), 1)
         meta_d.update({
             'tdelta (secs)':tdelta, 'dtype':type(data), 'method':method})
-        
-        
             
         self.dk_meta_d[dkey].update(meta_d)
         #=======================================================================
@@ -433,8 +401,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         log.info('finished on \'%s\' w/   dtype=%s'%(dkey,  type(data)))
         
         return data
-    
-
     
     def load_pick(self,fp=None,dkey=None,
                   relative=False, #best to keep this excplicit
@@ -529,7 +495,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         else:
             data = data_raw
             
-            
         #=======================================================================
         # write
         #=======================================================================
@@ -579,25 +544,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
                 print('        \'%s\':r\'%s\','%(k,v))
             print('\n')
             self.ofp_d = dict()
-              
-              
-        
         
         super().__exit__(*args, **kwargs)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     

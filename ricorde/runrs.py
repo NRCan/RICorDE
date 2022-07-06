@@ -123,9 +123,5 @@ def load_params(param_fp,
             
     print('retrieved %i parameters from file\n%s'%(cnt, get_dict_str(res_lib)))
     
-    
-    
-    
-    
     return res_lib
  

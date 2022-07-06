@@ -1,60 +1,35 @@
-'''
-Created on Oct. 8, 2020
-
-@author: cefect
-'''
-
-
+'''helpers for QGIS'''
 
 #===============================================================================
-# # standard imports -----------------------------------------------------------
+# imports -----------------------------------------------------------
 #===============================================================================
-import time, sys, os, logging, datetime, inspect, gc, shutil, pprint
 
 import numpy as np
 import pandas as pd
+import time, sys, os, logging, datetime, inspect, gc, shutil, pprint
 
 #===============================================================================
 # import QGIS librarires
 #===============================================================================
 from qgis.core import *
  
-from qgis.gui import QgisInterface
- 
-from hp.gdal import get_nodata_val
-
 from PyQt5.QtCore import QVariant, QMetaType 
-import processing  
-
-
+from hp.gdal import get_nodata_val
 from qgis.analysis import QgsNativeAlgorithms, QgsRasterCalculatorEntry, QgsRasterCalculator
-
-
-
-#whitebox
-#from processing_wbt.wbtprovider import WbtProvider 
-
-
-"""throws depceciationWarning"""
-
+from qgis.gui import QgisInterface
+import processing  
+ 
 
 #===============================================================================
 # custom imports
 #===============================================================================
 
-from hp.exceptions import Error, assert_func
-
-from hp.oop import Basic
-from hp.dirz import get_valid_filename
 from hp.Qalg import QAlgos
-from hp.logr import get_new_file_logger
-
+from hp.dirz import get_valid_filename
+from hp.exceptions import Error, assert_func
 from hp.gdal import rlay_to_array
-#===============================================================================
-# logging
-#===============================================================================
-#mod_logger = logging.getLogger(__name__)
-
+from hp.logr import get_new_file_logger
+from hp.oop import Basic
 
 #==============================================================================
 # globals
@@ -87,23 +62,16 @@ stat_pars_d = {'First': 0, 'Last': 1, 'Count': 2, 'Sum': 3, 'Mean': 4, 'Median':
                 'St dev (pop)': 6, 'Minimum': 7, 'Maximum': 8, 'Range': 9, 'Minority': 10,
                  'Majority': 11, 'Variety': 12, 'Q1': 13, 'Q3': 14, 'IQR': 15}
 
-
-
 #===============================================================================
 # workers
 #===============================================================================
 
+
 class Qproj(QAlgos, Basic):
-    """
-    common methods for Qgis projects
-    """
-    
-    #crsID_default = 'EPSG:4326'
-    
+    """common Sessopm methods for Qgis projects"""
+ 
     driverName = 'SpatiaLite' #default data creation driver type
     out_dName = driverName #default output driver/file type
-    
-    
     
     def __init__(self, 
                  feedback=None, 
@@ -124,9 +92,7 @@ class Qproj(QAlgos, Basic):
                   #pytest-qgis fixtures
                  qgis_app=None, qgis_processing=None,
                  
-                 
                  **kwargs):
- 
         
         super().__init__(
             inher_d = {**inher_d,
@@ -180,7 +146,6 @@ class Qproj(QAlgos, Basic):
             """having a separate mstore is one of the main reasons to use children"""
             self.mstore = QgsMapLayerStore() #build a new map store 
         
-        
         if not self.proj_checks():
             raise Error('failed checks')
         """
@@ -201,9 +166,7 @@ class Qproj(QAlgos, Basic):
         
         self.logger.info('Qproj __INIT__ finished w/ crs \'%s\''%self.qproj.crs().authid())
         
-        
         return
-    
     
     def _init_qgis(self, #instantiate qgis
                    crs=QgsCoordinateReferenceSystem('EPSG:4326'),
@@ -224,12 +187,10 @@ class Qproj(QAlgos, Basic):
         """
         log = self.logger.getChild('_init_qgis')
         
-        
         if QGIS_PREFIX_PATH is None:#call from environment
             QGIS_PREFIX_PATH=os.environ['QGIS_PREFIX_PATH']
             
         assert os.path.exists(QGIS_PREFIX_PATH) 
-        
         
         #=======================================================================
         # init the application
@@ -241,7 +202,6 @@ class Qproj(QAlgos, Basic):
                 qgis_app = QgsApplication([], gui)
     
                 qgis_app.initQgis()
-     
             
             except:
                 raise Error('QGIS failed to initiate')
@@ -263,17 +223,12 @@ class Qproj(QAlgos, Basic):
         self.qproj.setCrs(crs)
         
         log.info('set project crs to %s'%self.qproj.crs().authid())
-        
-
-    
-    
 
     def _set_vdrivers(self):
         
         #build vector drivers list by extension
         """couldnt find a good built-in to link extensions with drivers"""
         vlay_drivers = {'SpatiaLite':'sqlite', 'OGR':'shp'}
-        
         
         #vlay_drivers = {'sqlite':'SpatiaLite', 'shp':'OGR','csv':'delimitedtext'}
         
@@ -294,8 +249,6 @@ class Qproj(QAlgos, Basic):
         self.logger.debug('built driver:extensions dict: \n    %s'%vlay_drivers)
         
         return
-        
-
            
     def proj_checks(self):
         log = self.logger.getChild('proj_checks')
@@ -307,7 +260,6 @@ class Qproj(QAlgos, Basic):
             raise Error('unrecognized driver name')
  
         assert not self.feedback is None
-        
  
         log.debug('project passed all checks')
         
@@ -367,7 +319,6 @@ class Qproj(QAlgos, Basic):
                 os.remove(out_fp) #workaround... should be away to overwrite with the QgsVectorFileWriter
             else:
                 raise Error(msg)
-            
         
         if vlay.dataProvider().featureCount() == 0:
             raise Error('\'%s\' has no features!'%(
@@ -395,7 +346,6 @@ class Qproj(QAlgos, Basic):
             return out_fp
          
         raise Error('FAILURE on writing layer \' %s \'  with code:\n    %s \n    %s'%(vlay.name(),error, out_fp))
-        
     
     def vlay_load(self,
                   fp,
@@ -415,7 +365,6 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if logger is None: logger=self.logger
         log = logger.getChild('vlay_load')
-        
         
         #file
         assert not fp is None
@@ -457,13 +406,10 @@ class Qproj(QAlgos, Basic):
         #spatial index
         if addSpatialIndex and (not vlay_raw.hasSpatialIndex()==QgsFeatureSource.SpatialIndexPresent):
             self.createspatialindex(vlay_raw, logger=log)
-            
-
 
         #=======================================================================
         # #zvalues
         #=======================================================================
- 
         
         if dropZ and vlay_raw.wkbType()>=1000:
             log.debug('dropping Z values')
@@ -485,7 +431,6 @@ class Qproj(QAlgos, Basic):
             if reproj:
                 vlay2 = self.reproject(vlay1, logger=log)
                 mstore.addMapLayer(vlay1)
-
                 
             elif set_proj_crs:
                 self.qproj.setCrs(vlay1.crs())
@@ -496,7 +441,6 @@ class Qproj(QAlgos, Basic):
                 
         else:
             vlay2 = vlay1
- 
                 
         vlay2.setName(vlay_raw.name())
  
@@ -506,7 +450,6 @@ class Qproj(QAlgos, Basic):
         #add to project
         'needed for some algorhithims?. moved to algos'
         #vlay = self.qproj.addMapLayer(vlay, False)
-        
 
         dp = vlay2.dataProvider()
                 
@@ -566,7 +509,6 @@ class Qproj(QAlgos, Basic):
         if opts is None:
             if not self.compress_d[compress] is None:
                 opts = [self.compress_d[compress]]
- 
         
         log = logger.getChild('rlay_write')
         #=======================================================================
@@ -579,9 +521,6 @@ class Qproj(QAlgos, Basic):
             newFn = get_valid_filename('%s.tif'%newLayerName) #clean it
         
             ofp = os.path.join(out_dir, newFn)
-
-        
-        
         
         log.debug('on \'%s\' w/ \n    crs:%s \n    extents:%s\n    xUnits:%.4f'%(
             rlayer.name(), rlayer.crs(), rlayer.extent(), rlayer.rasterUnitsPerPixelX()))
@@ -590,7 +529,6 @@ class Qproj(QAlgos, Basic):
         # precheck
         #=======================================================================
         assert isinstance(rlayer, QgsRasterLayer)
-        
         
         if os.path.exists(ofp):
             msg = 'requested file already exists! and overwrite=%s \n    %s'%(
@@ -639,8 +577,6 @@ class Qproj(QAlgos, Basic):
             nRows = int(extent.height()/rlayer.rasterUnitsPerPixelY())
             nCols = int(extent.width()/rlayer.rasterUnitsPerPixelX())
             
-
-            
         elif isinstance(resolution, int):
             nRows = int(extent.height()/resolution)
             nCols = int(extent.width()/resolution)
@@ -655,11 +591,9 @@ class Qproj(QAlgos, Basic):
         renderer = rlayer.renderer()"""
         provider = rlayer.dataProvider()
         
-        
         #build projector
         projector = QgsRasterProjector()
         #projector.setCrs(provider.crs(), provider.crs())
-        
 
         #build and configure pipe
         pipe = QgsRasterPipe()
@@ -668,7 +602,6 @@ class Qproj(QAlgos, Basic):
              
         if not pipe.insert(2, projector): #insert interface at specified index and connect
             raise Error("Cannot set pipe projector")
- 
         
         #=======================================================================
         # #build file writer
@@ -704,7 +637,6 @@ class Qproj(QAlgos, Basic):
             #move file over
             os.remove(ofp)
             shutil.copy2(ofp1,ofp)
-            
         
         #=======================================================================
         # wrap
@@ -714,15 +646,12 @@ class Qproj(QAlgos, Basic):
         assert QgsRasterLayer.isValidRasterFileName(ofp),  \
             'requested file is not a valid raster file type: %s'%ofp
         
-        
         return ofp
     
     def rlay_load(self, fp,  #load a raster layer and apply an aoi clip
   
                   logger=None,
                   dkey=None, #dummy recievor for retrieve calls
-                  
- 
 
                   mstore=None,
                   ):
@@ -732,7 +661,6 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if logger is None: logger = self.logger
         log = logger.getChild('rlay_load')
-
         
         assert os.path.exists(fp), 'requested file does not exist: \n    %s'%fp
         assert QgsRasterLayer.isValidRasterFileName(fp),  \
@@ -760,7 +688,6 @@ class Qproj(QAlgos, Basic):
         if not rlay_raw.crs() == self.qproj.crs():
             log.warning('\'%s\'  crs does not match project (%s v %s)'%(
                 rlay_raw.name(), rlay_raw.crs().authid(), self.qproj.crs().authid()))
-            
 
         #=======================================================================
         # wrap
@@ -768,9 +695,9 @@ class Qproj(QAlgos, Basic):
 
         if not mstore is None:
             mstore.addMapLayer(rlay_raw)
-            
         
         return rlay_raw
+
     #===========================================================================
     # AOI methods--------
     #===========================================================================
@@ -783,7 +710,6 @@ class Qproj(QAlgos, Basic):
         self.aoi_vlay = vlay
         
         log.info('loaded aoi \'%s\''%vlay.name())
-
         
         return vlay
     
@@ -812,8 +738,6 @@ class Qproj(QAlgos, Basic):
             
         log.info('slicing \'%s\' (%s) by \'%s\''%(
             lay_raw.name(), QgsMapLayerType(lay_raw.type()).name, aoi_vlay.name()))
-        
-        
  
         #=======================================================================
         # prechecks
@@ -823,8 +747,6 @@ class Qproj(QAlgos, Basic):
         if aoi_vlay.extent()==lay_raw.extent():
             """just a rectangular comparison"""
             log.warning('extents match (%s)'%lay_raw.name())
-            
- 
         
         #=======================================================================
         # vectorlyares
@@ -836,8 +758,6 @@ class Qproj(QAlgos, Basic):
                 log.debug('slicing finv \'%s\' and %i feats w/ aoi \'%s\''%(
                     lay_raw.name(),lay_raw.dataProvider().featureCount(), aoi_vlay.name()))
                 
-        
-                
                 sliced_lay =  self.selectbylocation(lay_raw, aoi_vlay, result_type='layer', logger=log, output=output)
                 
                 lay_raw.removeSelection()
@@ -847,8 +767,6 @@ class Qproj(QAlgos, Basic):
                 sliced_lay = self.clip(lay_raw, aoi_vlay, logger=log, output=output)
             else:
                 raise Error('not recognized')
-            
-            
             
         #=======================================================================
         # raster layers
@@ -871,7 +789,6 @@ class Qproj(QAlgos, Basic):
         sliced_lay.setName(layname)
             
         log.debug('finished on %s'%sliced_lay.name())
-        
             
         return sliced_lay
     
@@ -916,7 +833,6 @@ class Qproj(QAlgos, Basic):
             
         log = logger.getChild('vlay_new_df')
         
-        
         #=======================================================================
         # index fix
         #=======================================================================
@@ -935,7 +851,6 @@ class Qproj(QAlgos, Basic):
         # precheck
         #=======================================================================
         
-        
         #make sure none of hte field names execeed the driver limitations
         max_len = fieldn_max_d[self.driverName]
         
@@ -946,9 +861,7 @@ class Qproj(QAlgos, Basic):
             log.warning('passed %i columns which exeed the max length=%i for driver \'%s\'.. truncating: \n    %s'%(
                 boolcol.sum(), max_len, self.driverName, df_raw.columns[boolcol].tolist()))
             
-            
             df.columns = df.columns.str.slice(start=0, stop=max_len-1)
-
         
         #make sure the columns are unique
         assert df.columns.is_unique
@@ -1027,7 +940,6 @@ class Qproj(QAlgos, Basic):
             QgsWkbTypes.geometryDisplayString(feat.geometry().type()),
             ))
         
-        
         #=======================================================================
         # get the geo type
         #=======================================================================\
@@ -1035,8 +947,6 @@ class Qproj(QAlgos, Basic):
             gtype = QgsWkbTypes().displayString(next(iter(geo_d.values())).wkbType())
         else:
             gtype='None'
-
-            
             
         #===========================================================================
         # buidl the new layer
@@ -1063,7 +973,6 @@ class Qproj(QAlgos, Basic):
         rnm_d, #field name conversions to apply {old FieldName:newFieldName}
         #output='TEMPORARY_OUTPUT', #NO! need to load a layer
         logger=None,
- 
 
         ):
         """
@@ -1118,7 +1027,6 @@ class Qproj(QAlgos, Basic):
         
         log.debug('applied renames to \'%s\' \n    %s'%(vlay.name(), rnm_d))
         
-        
         return vlay
     
     def vlay_poly_tarea(self,#get the total area of polygons within the layer
@@ -1131,7 +1039,6 @@ class Qproj(QAlgos, Basic):
         if logger is None: logger=self.logger
         log=logger.getChild('vlay_poly_tarea')
         mstore = QgsMapLayerStore()
-        
 
         #=======================================================================
         # add the geometry
@@ -1242,8 +1149,6 @@ class Qproj(QAlgos, Basic):
         if not result == 0:
             raise Error('formula=%s failed w/ \n    %s'%(formula, rcalc.lastError()))
         
-        
-        
         log.debug('saved result to: \n    %s'%ofp1)
         
         #=======================================================================
@@ -1260,7 +1165,6 @@ class Qproj(QAlgos, Basic):
         # check again
         #=======================================================================
         assert_func(lambda:  self.rlay_check_match(ofp, rlay, logger=log))
- 
  
         #=======================================================================
         # wrap
@@ -1294,8 +1198,6 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('mask_build')
-        
-
         
         log.debug('on %s w/ zero_shift=%s, thresh=%s'%(
             obj, zero_shift, thresh))
@@ -1374,9 +1276,7 @@ class Qproj(QAlgos, Basic):
         
         mstore.removeAllMapLayers()
         
-        
         return ofp
- 
      
     def mask_invert(self, #take a mask layer, and invert it
                     rlay,
@@ -1419,7 +1319,6 @@ class Qproj(QAlgos, Basic):
         
         return self.rcalc1(rlay1_fp, formula, [rcentry], logger=log,ofp=ofp,
                            layname=layname, **kwargs)
-        
 
     def mask_apply(self, #apply a mask to a la yer
                    rlay, #layer to mask
@@ -1472,15 +1371,12 @@ class Qproj(QAlgos, Basic):
         # build the raster calc entries
         #===================================================================
         log.debug('building entries')
-
  
         rlay_obj_d = {'raw':rlay, 'mask':mask_rlay1}
         rcentry_d = dict()
         
         for k,obj in rlay_obj_d.items():
             rcentry_d[k] = self._rCalcEntry(obj, logger=log)
- 
-        
         
         if layname is None: 
             layname = (rcentry_d['raw'].raster.name() + '%s_maskd'%(
@@ -1502,8 +1398,6 @@ class Qproj(QAlgos, Basic):
         
         log.debug('finished w/ %s'%ofp)
         
- 
-        
         return ofp
     
     def mask_combine(self,
@@ -1521,14 +1415,11 @@ class Qproj(QAlgos, Basic):
         
         if layname is None: 
             layname = 'mask_combine_%i'%len(rlay_l)
-            
 
         #===================================================================
         # build the raster calc entries
         #===================================================================
         log.debug('building %i entries'%len(rlay_l))
-
- 
  
         rcentry_d = dict()
         
@@ -1551,14 +1442,11 @@ class Qproj(QAlgos, Basic):
             else:
                 obj_filld = obj
             
-            
             #retrieve
             rlay_filld = self.get_layer(obj_filld, mstore=mstore,  logger=log)
-            
  
             #check
             assert_func(lambda:  self.mask_check(rlay_filld, nullType='zeros', stats_d=stats_d))
-            
             
             #build entry
             rcentry_d[i] = self._rCalcEntry(rlay_filld, logger=log)
@@ -1577,7 +1465,6 @@ class Qproj(QAlgos, Basic):
         #===================================================================
         # build formula (sum all)-----
         #===================================================================
-        
  
         first = True
         formula = ''
@@ -1589,7 +1476,6 @@ class Qproj(QAlgos, Basic):
                 first=False
                 
             formula = formula + new_str
-
          
         # execute
         sumAll_fp = self.rcalc1(ref_lay, formula,
@@ -1597,14 +1483,12 @@ class Qproj(QAlgos, Basic):
                           layname='%s_sumAll'%layname,
                           logger=log)
         
-        
         log.debug('finished sum all on w/ %s'%sumAll_fp)
         
         #=======================================================================
         # divide by self
         #=======================================================================
         ofp = self.mask_build(sumAll_fp,layname=layname, **kwargs)
-        
  
         mstore.removeAllMapLayers()
         return ofp
@@ -1622,7 +1506,6 @@ class Qproj(QAlgos, Basic):
             stats_d = self.rasterlayerstatistics(rlay)
             
         #get_nodata_val(rlay)
- 
             
         ser = pd.Series({k:v for k,v in stats_d.items() if k in ['MAX', 'MEAN', 'MIN', 'RANGE','SUM_OF_SQUARES', 'STD_DEV' ]}, dtype=float, name='actual')
         
@@ -1648,32 +1531,23 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # check
         #=======================================================================
- 
         
         if bx.any():
             return False, '\'%s\' failed %i/%i checks (nullType=%s)\n    %s'%(
                 rlay, bx.sum(), len(bx), nullType, df.loc[bx, :])
         return True, ''
-        
- 
-        
- 
     
     def mask_get_area(self, #get the area of the a mask rlay
                   rlay,
  
                   ):
         
- 
-        
         stats_d = self.rasterlayerstatistics(rlay)
-        
         
         assert_func(lambda:  self.mask_check(rlay, stats_d=stats_d))
         
         #pixel size
         pixel_area = rlay.rasterUnitsPerPixelY() * rlay.rasterUnitsPerPixelX()
-        
         
         return stats_d['SUM']*pixel_area
     
@@ -1689,7 +1563,6 @@ class Qproj(QAlgos, Basic):
             return 'native'
         else:
             raise ValueError('not a mask?\n    %s'%stats_d)
-        
     
     def rlay_get_resolution(self,  
                        rlay):
@@ -1701,8 +1574,6 @@ class Qproj(QAlgos, Basic):
             mstore.addMapLayer(rlay)
             
         assert isinstance(rlay, QgsRasterLayer)
-        
-        
         
         #get the resolution
         res = (rlay.rasterUnitsPerPixelY() + rlay.rasterUnitsPerPixelX())*0.5
@@ -1743,7 +1614,6 @@ class Qproj(QAlgos, Basic):
  
             rlay = self.rlay_load(rlay, logger=log)
             mstore.addMapLayer(rlay)
- 
 
         assert isinstance(rlay, QgsRasterLayer)
         
@@ -1816,19 +1686,16 @@ class Qproj(QAlgos, Basic):
         rlay1.extent()
         """
         
-        
         log.debug('testing %s vs %s'%(rlay1.name(), rlay2.name()))
         res_d = dict()
         for i, testName in enumerate([
             'width', 'height', 'rasterUnitsPerPixelY', 'rasterUnitsPerPixelX', 'crs', 'extent'
             ]):
-            
         
             v1 = getattr(rlay1, testName)()
             v2 = getattr(rlay2, testName)()
             
             res_d[testName] = {'result':v1==v2, rlay1.name():v1, rlay2.name():v2}
-            
             
         #=======================================================================
         # wrap
@@ -1848,11 +1715,6 @@ class Qproj(QAlgos, Basic):
         
         log.debug('passed %i tests'%len(res_df))
         return True, ''
-
-
-            
-        
-        
         
     def get_layer(self, obj,mstore=None, **kwargs): #retrieve raster from filepath or rasterobject.
         
@@ -1883,10 +1745,6 @@ class Qproj(QAlgos, Basic):
         else:
             raise Error('bad type: %s'%type(obj))
         
-        
-        
-        
-        
     #===========================================================================
     # HELPERS---------
     #===========================================================================
@@ -1900,15 +1758,11 @@ class Qproj(QAlgos, Basic):
         log = logger
         if mstore is None: mstore=self.mstore
         
-        
-        
         d = {lay.name():QgsMapLayerType(lay.type()).name for lay in mstore.mapLayers().values()}
         
         txt = pprint.pformat(d, width=30, indent=0, compact=True, sort_dicts =False)
         
         log.info('mstore has %i layers \n%s'%(len(d), txt))
-        
- 
      
     def _rCalcEntry(self, #helper for raster calculations 
                          rlay_obj, bandNumber=1,
@@ -1956,9 +1810,7 @@ class Qproj(QAlgos, Basic):
         vers = ['%s = %s' % (k,v) for k,v in vars(Qt).items() if k.lower().find('version') >= 0 and not inspect.isbuiltin(v)]
         log.info('\n    '.join(sorted(vers)))
         
-        
         super()._install_info(**kwargs) #initilzie teh baseclass
- 
  
     def __exit__(self, #destructor
                  *args,**kwargs):
@@ -1968,12 +1820,6 @@ class Qproj(QAlgos, Basic):
         #print('clearing mstore')
         
         super().__exit__(*args,**kwargs) #initilzie teh baseclass
-        
-    
-
-
-    
-    
 
     
 class RasterFeedback(QgsRasterBlockFeedback):
@@ -1985,13 +1831,13 @@ class RasterFeedback(QgsRasterBlockFeedback):
         
         super().__init__()
         
-        
     def onNewData(self):
         print('onNewData')
         
     def setProgress(self, newProg):
         self.prog+=newProg
         print(self.prog)
+
  
 class MyFeedBackQ(QgsProcessingFeedback):
     """
@@ -2044,7 +1890,6 @@ class MyFeedBackQ(QgsProcessingFeedback):
         
     def log(self, msg):
         self.logger.debug(msg)
-        
     
     def upd_prog(self, #advanced progress handling
              prog_raw, #pass None to reset
@@ -2090,11 +1935,11 @@ class MyFeedBackQ(QgsProcessingFeedback):
         # emit signalling
         #===================================================================
         self.setProgress(prog)
-        
 
 #===============================================================================
 # standalone funcs--------
 #===============================================================================
+
 
 def vlay_get_fdf( #pull all the feature data and place into a df
                     vlay,
@@ -2145,19 +1990,15 @@ def vlay_get_fdf( #pull all the feature data and place into a df
     
     if fieldn_l is None: #use all the fields
         fieldn_l = all_fnl
-        
    
     #field name check
     assert isinstance(fieldn_l, list)
     miss_l = set(fieldn_l).difference(all_fnl)
     assert len(miss_l)==0, '\'%s\' missing %i requested fields: %s'%(vlay.name(), len(miss_l), miss_l)
-  
-
     
     if allow_none:
         if expect_all_real:
             raise Error('cant allow none and expect all reals')
-        
     
     #===========================================================================
     # prechecks
@@ -2176,7 +2017,6 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         raise Error('dict results dont respect field slicing')
     
     #assert hasattr(feedback, 'setProgress')
-    
     
     #===========================================================================
     # build the request
@@ -2198,7 +2038,6 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         
     #never want geometry   
     request = request.setFlags(QgsFeatureRequest.NoGeometry) 
-               
 
     #log.debug('extracting data from \'%s\' on fields: %s'%(vlay.name(), fieldn_l))
     #===========================================================================
@@ -2214,7 +2053,6 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         fid_attvs[feat.id()] = feat.attributes()
         
         #feedback.setProgress((indxr/fcnt)*90)
-
 
     #===========================================================================
     # post checks
@@ -2242,7 +2080,6 @@ def vlay_get_fdf( #pull all the feature data and place into a df
                 return pd.DataFrame()
             else:
                 raise Error('unexpected fmt type')
-            
     
     #===========================================================================
     # result formatting
@@ -2260,7 +2097,6 @@ def vlay_get_fdf( #pull all the feature data and place into a df
         #build the dict
         
         df_raw = pd.DataFrame.from_dict(fid_attvs, orient='index', columns=all_fnl)
-        
         
         #handle column slicing and Qnulls
         """if the requester worked... we probably  wouldnt have to do this"""
@@ -2312,9 +2148,6 @@ def vlay_get_fdata(vlay,
     request = request.setFlags(QgsFeatureRequest.NoGeometry)
     request = request.setSubsetOfAttributes([fieldn],vlay.fields())
     
-    
-    
-    
     if selected:
         """
         todo: check if there is already a fid filter placed on the reuqester
@@ -2334,8 +2167,6 @@ def vlay_get_geo( #get geometry dict from layer
         #logger=mod_logger,
         ):
     
- 
-    
     #===========================================================================
     # build the request
     #===========================================================================
@@ -2343,7 +2174,6 @@ def vlay_get_geo( #get geometry dict from layer
     if request is None:
         request = QgsFeatureRequest()
     request = request.setNoAttributes() #dont get any attributes
-    
     
     if selected:
         """
@@ -2358,13 +2188,11 @@ def vlay_get_geo( #get geometry dict from layer
         
         request = request.setFilterFids(sfids)
         
-        
     #===========================================================================
     # loop through and collect hte data
     #===========================================================================
 
     d = {f.id():f.geometry() for f in vlay.getFeatures(request)}
- 
     
     #===========================================================================
     # checks
@@ -2375,6 +2203,7 @@ def vlay_get_geo( #get geometry dict from layer
     # wrap
     #===========================================================================
     return d
+
 
 def vlay_new_mlay(#create a new mlay
                       gtype, #"Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", or "MultiPolygon".
@@ -2388,7 +2217,6 @@ def vlay_new_mlay(#create a new mlay
         #=======================================================================
         # defaults
         #=======================================================================
- 
 
         #=======================================================================
         # prechecks
@@ -2420,8 +2248,6 @@ def vlay_new_mlay(#create a new mlay
         
         vlaym.updateExtents()
         
-
-        
         #=======================================================================
         # checks
         #=======================================================================
@@ -2432,16 +2258,9 @@ def vlay_new_mlay(#create a new mlay
                 #log.debug(msg)
             else:
                 raise Error(msg)
-
         
         #log.debug('constructed \'%s\''%vlaym.name())
         return vlaym
-    
-
-    
-    
-    
-    
     
     
 def field_new(fname, 
@@ -2470,7 +2289,6 @@ def field_new(fname,
             fname = fname[:max_len]
         else:
             raise Error('field name too long')
-        
     
     qtype = ptype_to_qtype(pytype)
     
@@ -2489,13 +2307,13 @@ def field_new(fname,
     
     return new_qfield
 
+
 def fields_build_new( #build qfields from different data containers
                     samp_d = None, #sample data from which to build qfields {fname: value}
                     fields_d = None, #direct data from which to build qfields {fname: pytype}
                     fields_l = None, #list of QgsField objects
                     #logger=mod_logger,
                     ):
-
  
     #===========================================================================
     # buidl the fields_d
@@ -2516,8 +2334,6 @@ def fields_build_new( #build qfields from different data containers
             fields_l.append(field_new(fname, pytype=type(value)))
             
         #log.debug('built %i fields from sample data'%len(fields_l))
-        
-    
     
     #===========================================================================
     # buidl the fields set
@@ -2535,9 +2351,6 @@ def fields_build_new( #build qfields from different data containers
             
     elif fields_d is None: #check we have the other
         raise IOError
-    
-    
-    
             
     #===========================================================================
     # build the Qfields
@@ -2553,7 +2366,6 @@ def fields_build_new( #build qfields from different data containers
 
     #report
     if len(fail_msg_d)>0:
- 
             
         raise Error('failed to write %i fields'%len(fail_msg_d))
     
@@ -2564,16 +2376,11 @@ def fields_build_new( #build qfields from different data containers
     
     """
     
-    
     #check it 
     if not len(Qfields) == len(fields_l):
         raise Error('length mismatch')
 
-
     return Qfields
-
-
-
 
 
 def view(#view the vector data (or just a df) as a html frame
@@ -2600,6 +2407,7 @@ def view(#view the vector data (or just a df) as a html frame
 #==============================================================================
 # type conversions----------------
 #==============================================================================
+
 
 def np_to_pytype(npdobj, 
                  #logger=mod_logger
@@ -2629,17 +2437,11 @@ def qtype_to_pytype( #convert object to the pythonic type taht matches the passe
     if is_qtype_match(obj, qtype_code): #no conversion needed
         return obj 
     
-    
     #===========================================================================
     # shortcut for nulls
     #===========================================================================
     if qisnull(obj):
         return None
-
-        
-    
-        
-    
     
     #get pythonic type for this code
     py_type = type_qvar_py_d[qtype_code]
@@ -2650,8 +2452,6 @@ def qtype_to_pytype( #convert object to the pythonic type taht matches the passe
         #datetime
         if qtype_code == 16:
             return obj.toPyDateTime()
-        
-        
  
         if obj is None:
             msg = 'got NONE type'
@@ -2663,6 +2463,7 @@ def qtype_to_pytype( #convert object to the pythonic type taht matches the passe
             msg ='unable to map object \'%s\' of type \'%s\' to type \'%s\''%(obj, type(obj), py_type)
  
         raise IOError(msg)
+
     
 def ptype_to_qtype(py_type, 
                    #logger=mod_logger
@@ -2690,8 +2491,8 @@ def ptype_to_qtype(py_type,
     QMetaType.typeName(qv.type())
     """
     
-    
     return qv.type()
+
 
 def rlay_to_npArray(lyr, dtype=np.dtype(float)): #Input: QgsRasterLayer
     """silently crashing
@@ -2704,23 +2505,16 @@ def rlay_to_npArray(lyr, dtype=np.dtype(float)): #Input: QgsRasterLayer
     provider= lyr.dataProvider()
     block = provider.block(1,lyr.extent(),lyr.width(),lyr.height())
     
-    
     l = list()
     for j in range(lyr.height()):
         l.append([block.value(i,j) for i in range(lyr.width())])
-
- 
-    
  
     return np.array(l, dtype=dtype)
-
- 
-        
- 
 
 #==============================================================================
 # type checks-----------------
 #==============================================================================
+
 
 def qisnull(obj):
     if obj is None:
@@ -2731,17 +2525,16 @@ def qisnull(obj):
             return True
         else:
             return False
-        
     
     if pd.isnull(obj):
         return True
     else:
         return False
+
     
 def is_qtype_match(obj, qtype_code, 
                    #logger=mod_logger,
                    ): #check if the object matches the qtype code
-
     
     #get pythonic type for this code
     try:
@@ -2758,29 +2551,16 @@ def is_qtype_match(obj, qtype_code,
     else:
         return True
 
+
 def test_install(): #test your qgis install
-    
-    
     
     proj = Qproj()
     proj._install_info()
-    
-    
-    
     
     
 if __name__ == '__main__':
 
     test_install()
     
-
-    
     print('finished')
-    
-    
-    
-    
-    
-    
-    
     

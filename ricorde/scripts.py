@@ -32,11 +32,7 @@ from hp.whitebox import Whitebox
         
         
 class Session(TComs, baseSession):
-    """
-    session for RICorDE calcs
-        for downloading data, see data_collect
-    
-    """
+    """Calc session and methods for RICorDE"""
     
  
     afp_d = {}
@@ -47,16 +43,80 @@ class Session(TComs, baseSession):
     smry_d = dict() #container of frames summarizing some calcs
     meta_d = dict() #1d summary data (goes on the first page of the smry_d)_
     
-    config_params = {
-        'dem':{
+    config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get method)}}
+         'session':{
+            'aoi_fp':(False, 'get'),
             'dem_fp':(True, 'get'),
+            'pwb_fp':(True, 'get'),
+            'inun_fp':(True, 'get'),
+            'crsid':(True, 'get'),'name':(True, 'get'),
+            },
+                             
+        'dem':{
             'resolution':(False, 'getint'),
-            }
+            },
+        'pwb_rlay':{
+            'resampling':(False, 'get'),
+            },
+        'inun_rlay':{
+            'resampling':(False, 'get'),
+            },
+        
+        'dem_hyd':{
+            
+            },
+        'HAND':{
+            
+            },
+        'HAND_mask':{
+            
+            },
+        'inun1':{
+            
+            },
+        'beach1':{
+            
+            },
+        'b1Bounds':{
+            
+            },
+        'inunHmax':{
+            
+            },
+        'inun2':{
+            
+            },
+        'beach2':{
+            
+            },
+        'hgInterp':{
+            
+            },
+        'hgRaw':{
+            
+            },
+        'hgSmooth':{
+            
+            },
+        'hInunSet':{
+            
+            },
+        'hWslSet':{
+            
+            },
+        'wslMosaic':{
+            
+            },
+        'depths':{
+            
+            },
         
         }
     
     def __init__(self, 
                  tag='tag',
+                 
+                 #special filepath parmaeters (passable here or in 
                  aoi_fp = None, #optional area of interest polygon filepath
                  dem_fp=None, #dem rlay filepath
                  pwb_fp=None, #permanent water body filepath (raster or polygon)
@@ -66,6 +126,7 @@ class Session(TComs, baseSession):
                  data_retrieve_hndls = {},
                  **kwargs):
         
+        
         #=======================================================================
         # #retrieval handles----------
         #=======================================================================
@@ -73,7 +134,7 @@ class Session(TComs, baseSession):
         data_retrieve_hndls.update({
             'dem':{
                 'compiled':lambda **kwargs:self.load_dem(**kwargs), #only rasters
-                'build':lambda **kwargs:self.build_dem(**kwargs),
+                'build':lambda **kwargs:self.build_dem(dem_fp, **kwargs),
                 },
             'pwb_rlay':{ #permanent waterbodies (raster)
                 'compiled':lambda **kwargs:self.rlay_load(**kwargs), #only rasters
@@ -216,7 +277,7 @@ class Session(TComs, baseSession):
  
 
     def build_dem(self, #checks and reprojection on the DEM
-                  dem_fp=None,
+                  dem_fp, 
                   
                   #parameters
                   resolution=None, #optional resolution for resampling the DEM
@@ -237,7 +298,7 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         if overwrite is None: overwrite=self.overwrite
         assert dkey =='dem'
-        if dem_fp is None: dem_fp=self.dem_fp
+        #if dem_fp is None: dem_fp=self.dem_fp
         if aoi_vlay is None: aoi_vlay=self.aoi_vlay
         
         if not resolution is  None:
@@ -345,7 +406,6 @@ class Session(TComs, baseSession):
         log.info('loaded %s w/ dem_psize=%.2f'%(rlay.name(), dem_psize))
         
         return rlay 
- 
 
     def build_rlay(self, 
                         fp,
@@ -354,7 +414,6 @@ class Session(TComs, baseSession):
                         aoi_vlay=None,
                         
                         resampling='Maximum', #resampling method
-                                        
                         
                         clean_inun_kwargs={},
                         dkey=None,write=None,
@@ -430,7 +489,6 @@ class Session(TComs, baseSession):
                                         )
             else:
                 vlay1=vlay_raw
- 
                 
             #===================================================================
             # #cleaning
@@ -441,7 +499,6 @@ class Session(TComs, baseSession):
             
             meta_d.update(d)
  
- 
             #===================================================================
             # #build the raster 
             #===================================================================
@@ -450,7 +507,6 @@ class Session(TComs, baseSession):
                                           )
             
             log.debug('\'%s\' saved to \n    %s'%(dkey, rlay_fp))
-            
             
         #=======================================================================
         # convert to a binary mask
@@ -733,6 +789,7 @@ class Session(TComs, baseSession):
                       #generals
                       dkey=None, logger=None,write=None,
                       ):
+        """Build the hydraulically corrected DEM needed by the HAND builder"""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -807,6 +864,7 @@ class Session(TComs, baseSession):
                    write=None,logger=None,write_dir=None,
 
                  ):
+        """Build the Height Above Nearest Drainage (HAND) layer"""
 
         #=======================================================================
         # defaults

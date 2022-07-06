@@ -1,4 +1,48 @@
-[dem]
-dem_fp = C:\LS\10_OUT\2202_TC\ins\dem\merit_0304\MERIT_merge_0304_90x90_aoiT01.tif
-#resolution = None
+[session]
+name=project1       #project name
+aoi_fp =            #optional area of interest polygon filepath
+dem_fp=             #dem rlay filepath
+pwb_fp=             #permanent water body filepath (raster or polygon)
+inun_fp=            #inundation filepath (raster or polygon)
+crsid=EPSG:4326     #CRSID
 
+[dem]
+#resolution = 
+
+[pwb_rlay]
+resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
+
+[inun_rlay]
+resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
+
+[dem_hyd]
+
+[HAND]
+
+[HAND_mask]
+
+[inun1]
+
+[beach1]
+
+[b1Bounds]
+
+[inunHmax]
+
+[inun2]
+
+[beach2]
+
+[hgInterp]
+
+[hgRaw]
+
+[hgSmooth]
+
+[hInunSet]
+
+[hWslSet]
+
+[wslMosaic]
+
+[depths]

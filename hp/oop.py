@@ -35,7 +35,7 @@ class Basic(object): #simple base class
                  #labelling
                  mod_name       = 'RICorDE',
                  name           = 'SessionName', 
-                 tag            = '',
+                 tag            = 'r0',
                 
                 #logging control 
                 logger         = None,

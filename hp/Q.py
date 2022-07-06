@@ -115,7 +115,7 @@ class Qproj(QAlgos, Basic):
                  aoi_set_proj_crs=False, #force hte project crs from the aoi
                  aoi_vlay = None,
                  
-                 compress='med', #raster compression default
+                 compress='none', #raster compression default
                  
                  #inheritance
                  session=None, #parent session for child mode

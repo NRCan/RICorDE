@@ -98,7 +98,7 @@ class Qproj(QAlgos, Basic):
     common methods for Qgis projects
     """
     
-    crsID_default = 'EPSG:4326'
+    #crsID_default = 'EPSG:4326'
     
     driverName = 'SpatiaLite' #default data creation driver type
     out_dName = driverName #default output driver/file type
@@ -108,7 +108,7 @@ class Qproj(QAlgos, Basic):
     def __init__(self, 
                  feedback=None, 
                  crs = None,
-                 crsID_default = None,
+                 crsid = None,
                  
                  #aois
                  aoi_fp = None,
@@ -152,11 +152,19 @@ class Qproj(QAlgos, Basic):
             
         self.feedback = feedback
         
+        #crs defaults
         if aoi_set_proj_crs:
             assert crs is None
+            assert crsid is None
         
-        if not crsID_default is None: 
-            self.crsID_default=crsID_default
+        if isinstance(crsid, str):
+            assert crs is None
+            crs = QgsCoordinateReferenceSystem(crsid)
+        
+        #=======================================================================
+        # if not crsID_default is None: 
+        #     self.crsID_default=crsID_default
+        #=======================================================================
             
         #standalone
         if session is None:

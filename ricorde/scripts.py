@@ -114,8 +114,7 @@ class Session(TComs, baseSession):
         }
     
     def __init__(self, 
-                 tag='tag',
-                 
+ 
                  #special filepath parmaeters (passable here or in 
                  aoi_fp = None, #optional area of interest polygon filepath
                  dem_fp=None, #dem rlay filepath
@@ -214,14 +213,8 @@ class Session(TComs, baseSession):
         #attach inputs
         self.dem_fp, self.pwb_fp, self.inun_fp = dem_fp, pwb_fp, inun_fp
         self.exit_summary=exit_summary 
-            
-        """
-        data_retrieve_hndls.keys()
-        """
-        
-        super().__init__(tag=tag, 
-                         data_retrieve_hndls=data_retrieve_hndls,
  
+        super().__init__(data_retrieve_hndls=data_retrieve_hndls, 
                          **kwargs)
         
  
@@ -231,11 +224,7 @@ class Session(TComs, baseSession):
             #get the aoi
             aoi_vlay = self.load_aoi(aoi_fp, reproj=True)
             self.aoi_fp = aoi_fp
-        """
-        self.out_dir
-        """
  
-    
 
     #===========================================================================
     # PHASE0: Data Prep---------

@@ -67,7 +67,7 @@ class Basic(object): #simple base class
         mod_name: str, default 'RICorDE'
             Base name for all labels and directories,
         name: str, default 'SessionName'
-            Name of a sub-class. (is this used?)
+            Project name
         tag: str, default ''
             Label for a specific run or version.
         logger: logging.RootLogger, optional

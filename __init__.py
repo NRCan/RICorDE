@@ -22,5 +22,11 @@ create a master parameter list  (documentation)
     explan function/roll of each parameter
     which functions use the parameter
     default value
+    
+ 
+ 
+        
+collapse all necessary hp and tcom ricorde into a single hp.py
+ 
 
 """

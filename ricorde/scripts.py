@@ -1,37 +1,4 @@
-'''
-Created on Mar. 27, 2021
-
-@author: cefect
-
-deriving gridded depth estimates from inundation polygons and DEMs
-
- 
- 
-        
-#===============================================================================
-# resolution 
-#===============================================================================
-see 'RICorDE - notes.xlsx'
-
-
-#===============================================================================
-# TODO
-#===============================================================================
- 
-
-paralleleize expensive loops
-
-add some better logic checks (%inundation)
-
-create a master parameter list  (documentation)
-    explan function/roll of each parameter
-    which functions use the parameter
-    default value
-
- 
-
-
-'''
+'''Primary session object with algo methods'''
 #===============================================================================
 # imports-----------
 #===============================================================================

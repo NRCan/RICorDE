@@ -151,6 +151,12 @@ def session(tmp_path,
 # session.fixtures----------
 #===============================================================================
 @pytest.fixture(scope='session')
+def proj_dir():
+    from definitions import proj_dir
+    return proj_dir
+
+
+@pytest.fixture(scope='session')
 def root_dir():
     from definitions import root_dir
     return root_dir

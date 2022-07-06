@@ -1,10 +1,77 @@
 '''
 Functions for running RICorDE workflows
 '''
+import os
+import configparser
 from ricorde.scripts import Session, QgsCoordinateReferenceSystem
+from definitions import proj_dir
 
 
+def load_params(param_fp,
+                config_params=Session.config_params,
+                ):
+    """
+    Load RICorDE run parameters from a config file
+    
+    Parameters
+    ----------
+    param_fp : str
+        Filepath to parameter file
+    config_params : dict, default Session.config_params
+        paramters for the configarser {sectionName:{varName:(mandatory_flag, ConfigParser get method)}}
+        defaults ot Sess
+
+    
+    """
+    
+    #===========================================================================
+    # init the parser
+    #===========================================================================
+    assert os.path.exists(param_fp), param_fp
+    
+    parser=configparser.ConfigParser(inline_comment_prefixes='#')
+    parser.read(param_fp)
+    
+    #===========================================================================
+    # check parameter file
+    #===========================================================================
+    for sectName, sect in parser.items():
+        if sectName =='DEFAULT': 
+            continue
+        assert sectName in config_params, 'got unrecognized section name \'%s\''%sectName
+        for varName, var in sect.items():
+            assert varName in config_params[sectName], 'got unrecognized variable: \'%s.%s\''%(sectName, varName)
+            print('%s.%s'%(sectName, varName))
+    
+    #===========================================================================
+    # load usin the parameters
+    #===========================================================================
+    cnt = 0
+    res_lib = {k:dict() for k in config_params.keys()}  #results congainer
+    for sectName, d in config_params.items():
+        assert sectName in parser.sections(), '%s missing from parameter file'%sectName
+        for varName, (required, method) in d.items():
+            #print('%s.%s: required=%s, method=%s'%(sectName, varName, required, method))
+            
+            #check if the parameter is in the file
+            if varName in parser[sectName]:
+                f = getattr(parser, method)
+                res_lib[sectName][varName] = f(sectName, varName)
+                cnt+=1
+            else:
+                assert not required, '%s.%s is required and not found in the parameter file'%(sectName, varName)
+            
+    print('retrieved %i parameters from file'%cnt)
+    
+    return res_lib
+    
  
+ 
+
+def rum_from_params(
+                param_fp=os.path.join(proj_dir, 'params_default.txt'),
+                ):
+    """execute a RICorDE workflow from a parameter file"""
 
 def runr(
         tag = 'r1',
@@ -79,4 +146,4 @@ def runr(
     return out_dir
 
 if __name__ == "__main__":
-    pass
+    run_from_params()

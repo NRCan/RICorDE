@@ -47,6 +47,14 @@ class Session(TComs, baseSession):
     smry_d = dict() #container of frames summarizing some calcs
     meta_d = dict() #1d summary data (goes on the first page of the smry_d)_
     
+    config_params = {
+        'dem':{
+            'dem_fp':(True, 'get'),
+            'resolution':(False, 'getint'),
+            }
+        
+        }
+    
     def __init__(self, 
                  tag='tag',
                  aoi_fp = None, #optional area of interest polygon filepath

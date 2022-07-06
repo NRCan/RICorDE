@@ -5,9 +5,8 @@ Created on Mar. 25, 2022
 
 integration tests
 '''
-import pytest, copy, os
-from tests.conftest import search_fp, retrieve_data
- 
+import pytest, copy, os 
+
 
 #@pytest.mark.parametrize('hval_prec',[0.4]) #feeds through the session (see conftest.py) 
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 

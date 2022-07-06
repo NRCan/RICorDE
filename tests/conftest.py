@@ -5,47 +5,25 @@ Created on Feb. 21, 2022
 
 copied from 2112_Agg
 '''
-import os, shutil
-import pytest
-import numpy as np
-from definitions import proj_dir
-from numpy.testing import assert_equal
-import pandas as pd
-from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal
-idx = pd.IndexSlice
 
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsWkbTypes, QgsRasterLayer, \
-    QgsMapLayer
     
-import processing
-from ricorde.scripts import Session
+from definitions import proj_dir
 from hp.Q import vlay_get_fdf
 from hp.gdal import getRasterStatistics, rlay_to_array, getRasterMetadata
+from numpy.testing import assert_equal
+from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer, QgsWkbTypes, QgsRasterLayer, \
+    QgsMapLayer
+from ricorde.scripts import Session
+
+import numpy as np
+import os, shutil
+import pandas as pd
+idx = pd.IndexSlice
+import processing
+import pytest
     
-#test project data
-#relative to data_dir (C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\)
-rproj_lib = { 
-        'fred01':{ #raster inputs (a bit faster)
-            'aoi_fp':'aoi01T_fred_20220325.geojson',
-            'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
-            'inun_fp':'test_tag_0326_inun_rlay.tif',
-            'pwb_fp':'test_tag_0326_pwb_rlay.tif',     
-            'crsid':'EPSG:3979',                
-                },
-        'fred02':{ #vector layers
-            'aoi_fp':'aoi01T_fred_20220325.geojson',
-            'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
-            'inun_fp':'inun_fred_aoi01T_0325.geojson',
-            'pwb_fp':'pwater_fred_aoi01T_0325.geojson',     
-            'crsid':'EPSG:3979',                
-                },
-        'fred03':{#messy rasters
-            'aoi_fp':'aoi01T_fred_20220325.geojson',
-            'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
-            'inun_fp':'test_fred03_0328_inun_rlay.tif',#reproject to EPSG4326 w/ a nasty resolution
-            'crsid':'EPSG:3979', 
-            },
-        }
+
 
 @pytest.fixture(scope='session')
 def write():
@@ -65,7 +43,7 @@ def write():
 # function.fixtures-------
 #===============================================================================
 @pytest.fixture(scope='function')
-def proj_d(data_dir, request): #retrieve test project data and convert paths
+def proj_d(data_dir, rproj_lib, request): #retrieve test project data and convert paths
  
     #retrieve requested test project
     name = request.param
@@ -84,9 +62,7 @@ def proj_d(data_dir, request): #retrieve test project data and convert paths
  
     return proj_d
 
-@pytest.fixture(scope='session')
-def data_dir(): 
-    return os.path.join(proj_dir, 'tests', 'data')
+
     
 @pytest.fixture(scope='function')
 def test_name(request):
@@ -151,9 +127,41 @@ def session(tmp_path,
 # session.fixtures----------
 #===============================================================================
 @pytest.fixture(scope='session')
+def rproj_lib():
+    #test project data
+    #relative to data_dir (C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\)
+    return { 
+        'fred01':{ #raster inputs (a bit faster)
+            'aoi_fp':'aoi01T_fred_20220325.geojson',
+            'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
+            'inun_fp':'test_tag_0326_inun_rlay.tif',
+            'pwb_fp':'test_tag_0326_pwb_rlay.tif',     
+            'crsid':'EPSG:3979',                
+                },
+        'fred02':{ #vector layers
+            'aoi_fp':'aoi01T_fred_20220325.geojson',
+            'dem_fp':'dem_fred_aoi01T_2x2_0325.tif',
+            'inun_fp':'inun_fred_aoi01T_0325.geojson',
+            'pwb_fp':'pwater_fred_aoi01T_0325.geojson',     
+            'crsid':'EPSG:3979',                
+                },
+        'fred03':{#messy rasters
+            'aoi_fp':'aoi01T_fred_20220325.geojson',
+            'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
+            'inun_fp':'test_fred03_0328_inun_rlay.tif',#reproject to EPSG4326 w/ a nasty resolution
+            'crsid':'EPSG:3979', 
+            },
+        }
+
+
+@pytest.fixture(scope='session')
 def proj_dir():
     from definitions import proj_dir
     return proj_dir
+
+@pytest.fixture(scope='session')
+def data_dir(proj_dir): 
+    return os.path.join(proj_dir, 'tests', 'data')
 
 
 @pytest.fixture(scope='session')

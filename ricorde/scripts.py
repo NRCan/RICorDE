@@ -1965,7 +1965,7 @@ class Session(TComs, baseSession):
               dkey=None, logger=None,write=None,
                   ):
         """
-        Interpolate and grow the beach 2 values
+        Build an interpolated surface from  beach 2 point HAND values
         
         Parameters
         -----------
@@ -1982,10 +1982,14 @@ class Session(TComs, baseSession):
         radius: float, optional
             Search Radius in map units (larger is faster) for whitebox.IdwInterpolation
             Defaults to resolution*6
+            
+        Returns
+        --------
+        QgsRasterLayer
+            Interpolated beach HAND values
         
         """
         """
-        should this be split?
         
         2022-03-28:
             changed to use wbt
@@ -2113,12 +2117,12 @@ class Session(TComs, baseSession):
  
     def build_hgRaw(self,
                 #input layers
-                hgInterp_rlay=None,
-                inun2_rlay=None,
+                hgInterp_rlay=None,inun2_rlay=None,
                 
                #gen
               dkey=None, logger=None,write=None,
                   ):
+        """Grow the interpolated HAND values onto the interior"""
     
         #=======================================================================
         # defaults
@@ -2131,13 +2135,10 @@ class Session(TComs, baseSession):
  
         layname, ofp = self.get_outpars(dkey, write)
         
-        
         if inun2_rlay is None:
-            """basically a mask of the beach2_vlay points"""
             inun2_rlay=self.retrieve('inun2')
             
         if hgInterp_rlay is None:
-            """basically a mask of the beach2_vlay points"""
             hgInterp_rlay=self.retrieve('hgInterp')
       
         meta_d = dict()
@@ -2146,7 +2147,7 @@ class Session(TComs, baseSession):
         # resolution match
         #=======================================================================
         """
-        hgInterp is often (and can now be) a lower resolution than the inundation
+        hgInterp is often a lower resolution than the inundation
             but we want to preserve inundation resolution for the grow
             TODO: investigate relaxing this 
             
@@ -2167,7 +2168,6 @@ class Session(TComs, baseSession):
         else:
             hgInterp2_rlay_fp = hgInterp_rlay.source()
         
-        
         #=======================================================================
         # #re-interpolate interior regions-----
         #=======================================================================
@@ -2178,9 +2178,6 @@ class Session(TComs, baseSession):
         #=======================================================================
         rlay = self.rlay_load(ofp, logger=log)
         
-        
-        
-        
         if write:
             self.ofp_d[dkey] = ofp
  
@@ -2190,8 +2187,6 @@ class Session(TComs, baseSession):
         mstore.removeAllMapLayers()
  
         return rlay
-        
- 
         
     def build_hgSmooth(self, #smoth the rolling hand grid (low-pass and downsample)
              

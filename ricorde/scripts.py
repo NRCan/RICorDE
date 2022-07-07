@@ -24,6 +24,7 @@ from hp.oop import Session as baseSession
 from ricorde.tcoms import TComs
 from hp.gdal import get_nodata_val, rlay_to_array
 from hp.whitebox import Whitebox
+from definitions import config_params
 
 
 #===============================================================================
@@ -43,75 +44,7 @@ class Session(TComs, baseSession):
     smry_d = dict() #container of frames summarizing some calcs
     meta_d = dict() #1d summary data (goes on the first page of the smry_d)_
     
-    config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get method)}}
-         'session':{
-            'aoi_fp':(False, 'get'),
-            'dem_fp':(True, 'get'),
-            'pwb_fp':(True, 'get'),
-            'inun_fp':(True, 'get'),
-            'crsid':(True, 'get'),'name':(True, 'get'),
-            },
-                             
-        'dem':{
-            'resolution':(False, 'getint'),
-            },
-        'pwb_rlay':{
-            'resampling':(False, 'get'),
-            },
-        'inun_rlay':{
-            'resampling':(False, 'get'),
-            },
-        
-        'dem_hyd':{
-            
-            },
-        'HAND':{
-            
-            },
-        'HAND_mask':{
-            
-            },
-        'inun1':{
-            
-            },
-        'beach1':{
-            
-            },
-        'b1Bounds':{
-            
-            },
-        'inunHmax':{
-            
-            },
-        'inun2':{
-            
-            },
-        'beach2':{
-            
-            },
-        'hgInterp':{
-            
-            },
-        'hgRaw':{
-            
-            },
-        'hgSmooth':{
-            
-            },
-        'hInunSet':{
-            
-            },
-        'hWslSet':{
-            
-            },
-        'wslMosaic':{
-            
-            },
-        'depths':{
-            
-            },
-        
-        }
+
     
     def __init__(self, 
  
@@ -213,6 +146,7 @@ class Session(TComs, baseSession):
         #attach inputs
         self.dem_fp, self.pwb_fp, self.inun_fp = dem_fp, pwb_fp, inun_fp
         self.exit_summary=exit_summary 
+        self.config_params = config_params
  
         super().__init__(data_retrieve_hndls=data_retrieve_hndls, 
                          **kwargs)

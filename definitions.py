@@ -41,14 +41,10 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
     'dem_hyd':{
         'dist':(False, 'getint'),
         },
-    'HAND':{
-        
-        },
-    'HAND_mask':{
-        
-        },
+    'HAND':{},
+    'HAND_mask':{},
     'inun1':{
-        
+        'buff_dist':(False, 'getint')
         },
     'beach1':{
         

@@ -970,9 +970,6 @@ class Session(TComs, baseSession):
         log.info('finished in %s'%tdelta)
         self._log_datafiles()
         return tdelta
-    
-    
-        
 
     def build_inun1(self,             
             #layer inputs
@@ -995,8 +992,8 @@ class Session(TComs, baseSession):
             Primary input inundation raster layer (uncorrected)
         HAND_mask: QgsRasterLayer
             HAND layer extents
-        buff_dist: float, optional
-            buffer to apply to pwb_rlay. Defaults to pixel size of DEM.
+        buff_dist: int, optional
+            buffer (in pixels) to apply to pwb_rlay. Defaults to pixel size of DEM*2.
             
         Returns
         ----------
@@ -1051,7 +1048,6 @@ class Session(TComs, baseSession):
         
         assert_func(lambda:  self.rlay_check_match(pwb_rlay,inun_rlay, logger=log))
         assert_func(lambda:  self.rlay_check_match(pwb_rlay,HAND_mask, logger=log))
-            
  
         #===================================================================
         # buffer
@@ -1067,7 +1063,6 @@ class Session(TComs, baseSession):
             
             #get back on same extents
             pwb_buff2_fp = self.warpreproject(pwb_buff1_fp, extents=pwb_rlay.extent(), logger=log)
- 
             
             assert_func(lambda:  self.rlay_check_match(pwb_buff2_fp,pwb_rlay, logger=log))
             
@@ -1078,14 +1073,11 @@ class Session(TComs, baseSession):
         else:
             pwb_buff3_fp = pwb_rlay
         
- 
-        
         #=======================================================================
         # merge inundation and pwb
         #=======================================================================
         inun1_1_fp = self.mask_combine([pwb_buff3_fp, inun_rlay], logger=log,
                                      ofp = os.path.join(self.temp_dir, 'inun1_1.tif'))
-        
         
         #===================================================================
         # crop to HAND extents

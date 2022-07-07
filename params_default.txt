@@ -58,3 +58,4 @@ max_fail_cnt=5          #Maximum number of wsl failures to allow
 [wslMosaic] #WSL raster mosaiked from underlying HAND values             
 
 [depths]
+precision=1             #Rounding to apply for delta calculation

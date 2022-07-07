@@ -3396,8 +3396,8 @@ class Session(TComs, baseSession):
             
         Returns
         ----------
-        hInunSet: dict
-            Filepaths of each inundation raster created {hval:fp}
+        QgsRasterLayer
+            Computed raster of depths values
  
         Notes
         ----------

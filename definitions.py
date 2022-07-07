@@ -83,11 +83,9 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
     'hWslSet':{
         'max_fail_cnt':(False, 'getint'),
         },
-    'wslMosaic':{
-        
-        },
+    'wslMosaic':{},
     'depths':{
-        
+        'precision':(False, 'getint'),
         },
     
     }

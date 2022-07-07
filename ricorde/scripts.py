@@ -848,16 +848,18 @@ class Session(TComs, baseSession):
  
         return rlay
     
-    def build_hand_mask(self, #get the no-data boundary of the HAND rlay (as a vector)
+    def build_hand_mask(self,  
                 dkey=None,
-                  hand_rlay=None,
-                  #stream_fp='',
+                  hand_rlay=None, 
                   logger=None,
                   write=None,
                   ):
         
-        """
-        TODO: try and simplify this
+        """Build the no-data boundary of the HAND rlay 
+         
+        Returns
+        --------
+        QgsRasterLayer
         """
         #=======================================================================
         # defautls
@@ -875,15 +877,11 @@ class Session(TComs, baseSession):
         # #setup
         #===================================================================
         log.info('building \'%s\' on \'%s\''%(dkey, hand_rlay.name()))
-        
  
         if write:
             ofp = os.path.join(self.wrk_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
         else:
             ofp = os.path.join(self.temp_dir, '%s_%s.tif'%(self.layName_pfx, dkey))
-            
- 
-        
         
         #=======================================================================
         # #convert raster to binary
@@ -896,7 +894,6 @@ class Session(TComs, baseSession):
                                    )
  
         rlay = self.rlay_load(ofp, logger=log)
-        
  
         #=======================================================================
         # check
@@ -904,7 +901,6 @@ class Session(TComs, baseSession):
         assert_func(lambda:  self.rlay_check_match(rlay,hand_rlay, logger=log))
         
         assert_func(lambda:  self.mask_check(rlay))
-            
  
         #=======================================================================
         # wrap
@@ -914,7 +910,6 @@ class Session(TComs, baseSession):
         if write:self.ofp_d[dkey] = ofp
         
         return rlay
-    
     
     #===========================================================================
     # PHASE1: Inundation Correction---------

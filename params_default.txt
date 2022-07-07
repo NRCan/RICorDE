@@ -20,7 +20,7 @@ dist=                   #Maximum search distance for breach paths in cells
 
 [HAND]      #Height Above Nearest Drainage (HAND) layer                  
 
-[HAND_mask]
+[HAND_mask] #no-data boundary of the HAND rlay
 
 [inun1]
 

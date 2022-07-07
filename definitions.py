@@ -68,11 +68,14 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
         'pts_cnt':(False, 'getint'),
         'radius':(False, 'getfloat'),
         },
-    'hgRaw':{
-        
-        },
+    'hgRaw':{},
     'hgSmooth':{
-        
+        'resolution':(False, 'getint'),
+        'max_grade':(False, 'getfloat'),
+        'neighborhood_size':(False, 'getint'),
+        'range_thresh':(False, 'getfloat'),
+        'max_iter':(False, 'getint'),
+        'precision':(False, 'getfloat'),
         },
     'hInunSet':{
         

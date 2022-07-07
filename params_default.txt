@@ -42,10 +42,15 @@ method=pixels           #method for extracting beach points from the inundation 
 distP=2.0               #distance coefficient for whitebox.IdwInterpolation (unitless?)
 pts_cnt=5               #number of points to include in search for whitebox.IdwInterpolation(min_point)
 #radius=                #Search Radius in map units (larger is faster) for whitebox.IdwInterpolation. Defaults to resolution*6
-[hgRaw] #Interpolated HAND values grown onto interior
+[hgRaw] #Interpolated HAND values grown onto interior (raw rolling HAND grid)
 
-[hgSmooth]
-
+[hgSmooth] #Smoothed rolling HAND grid (low-pass filtering)
+#resolution=            #Resolution for rNeigbour averaging. not output.Defaults to input raster resolution *3
+max_grade = 0.1         #maximum hand value grade to allow 
+neighborhood_size = 7   #neighbourhood size for grass7:r.neighbors
+#range_thresh=          #maximum range (between HAND cell values) to allow. should no exceed 2.0. Defaults to min(max_grade*resolution, 2.0),2)
+max_iter=5              #maximum number of smoothing iterations to allow
+precision=0.2           #precision of resulting HAND values (value to round to nearest multiple of)
 [hInunSet]
 
 [hWslSet]

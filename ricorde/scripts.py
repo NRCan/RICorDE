@@ -2188,29 +2188,51 @@ class Session(TComs, baseSession):
  
         return rlay
         
-    def build_hgSmooth(self, #smoth the rolling hand grid (low-pass and downsample)
+    def build_hgSmooth(self, #
              
              #datalayesr
              hgRaw_vlay=None,
              
              #parameters
-              resolution=None, #resolution for rNeigbour averaging. not output
-             
-             range_thresh=None, #maximum range (between HAND cell values) to allow
-                #None: calc from max_slope and resolution
-                #NOTE: this is also used to spatially select where the smoothing applies.. so it will change the result
-                #lower values mean smoomther... should no exceed 2.0
-             max_grade = 0.1, #maximum hand value grade to allow 
-             
-             neighborhood_size = 7,
-             
-             max_iter=5, #maximum number of smoothing iterations to allow
-             precision=0.2,  #prevision of resulting HAND values (value to round to nearest multiple of)
-             
+              resolution=None,  
+               max_grade = 0.1,  
+               neighborhood_size = 7,
+              range_thresh=None,  
+             max_iter=5,
+             precision=0.2,  
              
                #gen
               dkey=None, logger=None,write=None, debug=False,write_dir=None,
                   ):
+        """
+        Smooth the rolling HAND grid using grass7:r.neighbors
+        
+        Parameters
+        ----------
+        resolution: int, optional
+            Resolution for rNeigbour averaging. not output.
+            Defaults to input raster resolution *3
+            
+        max_grade: float, default 0.1
+            maximum hand value grade to allow 
+            
+        neighborhood_size: int, default 7
+            neighbourhood size for grass7:r.neighbors
+            
+        range_thresh: float, optional
+            maximum range (between HAND cell values) to allow. should no exceed 2.0.
+            Defaults to min(max_grade*resolution, 2.0),2)
+            NOTE: this is also used to spatially select where the smoothing applies,
+            so it will change the result. lower values mean smoother. 
+            
+        max_iter: int, default 5
+            maximum number of smoothing iterations to allow
+            
+        precision: float, default 0.2
+            precision of resulting HAND values (value to round to nearest multiple of)
+        
+        
+        """
         """
         this is super nasty... must be a nice pre-built low-pass filter out there
         """
@@ -2226,7 +2248,6 @@ class Session(TComs, baseSession):
         
         layname, ofp = self.get_outpars(dkey, write, write_dir=write_dir)
         meta_d = dict()
-        
  
         #=======================================================================
         # retrieve
@@ -2250,11 +2271,9 @@ class Session(TComs, baseSession):
             range_thresh = round(min(max_grade*resolution, 2.0),2)
             
         assert range_thresh<=2.0
- 
             
         log.info('applying low-pass filter and downsampling (%.2f) from %s'%(
             resolution, hgRaw_vlay.name()))
- 
         
         #=======================================================================
         # run smoothing
@@ -2282,7 +2301,6 @@ class Session(TComs, baseSession):
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
             self.smry_d['%s_smoothing'%dkey] = smry_df
- 
  
         return rlay
     

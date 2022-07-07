@@ -48,10 +48,13 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
         },
     'beach1':{},
     'b1Bounds':{
-        
+        'qhigh':(False, 'getfloat'),
+        'cap':(False, 'getfloat'),
+        'qlow':(False, 'getfloat'),
+        'floor':(False, 'getfloat'),
         },
     'inunHmax':{
-        
+        'hval':(False, 'getfloat'),
         },
     'inun2':{
         

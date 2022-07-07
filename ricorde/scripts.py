@@ -1354,18 +1354,23 @@ class Session(TComs, baseSession):
         meta_d = {**{'qhigh':qhigh, 'qlow':qlow, 'cap':cap, 'floor':floor}, **res_d}
         
         return res_d, meta_d
-    
-    
 
-    def build_hmax(self, #get the hydrauilc maximum inundation from sampled HAND values
+    def build_hmax(self, #
                    
-                   hand_rlay=None,
-                   hval=None,
- 
-               
+                   hand_rlay=None,hval=None,               
                #gen
               dkey=None, logger=None,write=None,
                ):
+        """
+        Build the hydraulic maximum inundation from sampled HAND values
+        
+        Parameters
+        ----------
+        hval : float, optional
+            HAND value for computing the maximum inundation.
+            Defaults to b1Bounds['qhi']
+        
+        """
         
         #=======================================================================
         # defaults
@@ -1373,32 +1378,26 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
-        
-
  
         assert dkey=='inunHmax'
-        
  
         layname, ofp = self.get_outpars(dkey, write)
         
         #=======================================================================
         # retrieve
         #=======================================================================
- 
         if hand_rlay is None:
             hand_rlay=self.retrieve('HAND')
             
         if hval is None:
             bounds=self.retrieve('b1Bounds')
             hval = bounds['qhi']
-
         
         #=======================================================================
         # get inundation
         #=======================================================================
  
         self.get_hand_inun(hand_rlay,hval, logger=log, ofp=ofp)
-            
 
         #=======================================================================
         # wrap
@@ -1407,18 +1406,15 @@ class Session(TComs, baseSession):
         
         assert_func(lambda:  self.rlay_check_match(rlay,hand_rlay, logger=log))
         
-        
         if self.exit_summary:
  
             self.smry_d[dkey] = pd.Series({'hval':hval}).to_frame()
         
         if write:self.ofp_d[dkey]=ofp
-        
  
         log.info('for \'%s\' built: \n    %s'%(dkey, ofp))
 
         return rlay
-    
 
     def build_inun2(self, #merge inun_2 with the max
                     inun1_rlay=None,

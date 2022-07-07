@@ -26,13 +26,13 @@ crsid=EPSG:4326     #CRSID
 #buff_dist=2              #buffer (in pixels) to apply to pwb_rlayDefaults to pixel size of DEM*2.
 [beach1]    #HAND beach (shoreline) values raster
 
-[b1Bounds]
-qhigh=0.9                #Quartile to use for upper bound
+[b1Bounds]  #filter values for the HAND beach values              
+qhigh=0.9               #Quartile to use for upper bound
 cap=7.0                 #Maximum value to allow for upper bound
 qlow=0.1                #Quartile to use for lower bound
 floor=0.5               #Minimum value to allow for lower bound
 [inunHmax]
-
+#hval=                  #HAND value for computing the maximum inundation. Defaults to b1Bounds['qhi']
 [inun2]
 
 [beach2]

@@ -34,10 +34,11 @@ def test_03inun(session, true_dir, dem, write, base_dir):
     dkey = 'inun_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
  
-
+@pytest.mark.dev
 @pytest.mark.parametrize('dem_fp',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
-def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
+@pytest.mark.parametrize('dist',[None, 100])
+def test_04demHyd(session, true_dir, write, base_dir, dem_fp, dist):
     
     #set the compiled references
     session.compiled_fp_d = {
@@ -46,8 +47,10 @@ def test_04demHyd(session, true_dir, write, base_dir, dem_fp):
     
     
     dkey = 'dem_hyd'
-    test_rlay = session.retrieve(dkey, write=write )
-
+    """Session.build_dem_hyd()"""
+    test_rlay = session.retrieve(dkey, write=write, dist=dist)
+    
+    #if dist is None:
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
 
@@ -344,7 +347,7 @@ def test_14wslMosaic(session, true_dir, write, base_dir, hWslSet, hgSmooth):
  
     layer_post(dkey, true_dir, session, test_rlay, test_data=False)
 
-@pytest.mark.dev
+
 @pytest.mark.parametrize('wslMosaic',[r'test_14wslMosaic_fred01_test_10\working\test_tag_0620_wslMosaic.tif'] ) 
 @pytest.mark.parametrize('dem',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) 
 @pytest.mark.parametrize('inun2',[r'test_09inun2_fred01_test_06inu0\working\test_tag_0328_inun2.tif'] )   

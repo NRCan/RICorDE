@@ -56,9 +56,7 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
     'inunHmax':{
         'hval':(False, 'getfloat'),
         },
-    'inun2':{
-        
-        },
+    'inun2':{},
     'beach2':{
         
         },

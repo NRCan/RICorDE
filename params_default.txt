@@ -22,7 +22,7 @@ crsid=EPSG:4326     #CRSID
 
 [HAND_mask] #no-data boundary of the HAND rlay
 
-[inun1]     #Hydro-corrected inundation raster 
+[inun1]     #Hydro-corrected observed inundation raster 
 #buff_dist=2              #buffer (in pixels) to apply to pwb_rlayDefaults to pixel size of DEM*2.
 [beach1]    #HAND beach (shoreline) values raster
 
@@ -31,9 +31,9 @@ qhigh=0.9               #Quartile to use for upper bound
 cap=7.0                 #Maximum value to allow for upper bound
 qlow=0.1                #Quartile to use for lower bound
 floor=0.5               #Minimum value to allow for lower bound
-[inunHmax]
+[inunHmax] #Maximum inundation raster
 #hval=                  #HAND value for computing the maximum inundation. Defaults to b1Bounds['qhi']
-[inun2]
+[inun2]   #Hydro-corrected observed inundation (max filtered)
 
 [beach2]
 

@@ -1419,11 +1419,11 @@ class Session(TComs, baseSession):
     def build_inun2(self, #merge inun_2 with the max
                     inun1_rlay=None,
                     inun_hmax=None,
-                    
                   
                #gen
               dkey=None, logger=None,write=None,write_dir=None,
                   ):
+        """Filter hydraulically corrected inundations with maximum"""
  
         #=======================================================================
         # defaults
@@ -1431,11 +1431,8 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
-        
-
  
         assert dkey=='inun2'
-        
  
         layname, ofp = self.get_outpars(dkey, write, write_dir=write_dir)
  
@@ -1448,20 +1445,15 @@ class Session(TComs, baseSession):
         if inun1_rlay is None:
             inun1_rlay = self.retrieve('inun1')
  
- 
         log.info('maxFiltering \'%s\' with \'%s\''%(
             inun1_rlay.name(),
             inun_hmax.name()))
-        
- 
- 
         
         #===================================================================
         # apply fillter
         #===================================================================
         self.inun_max_filter(inun_hmax.source(), inun1_rlay.source(),
                              ofp=ofp,logger=log)
-            
  
         #=======================================================================
         # wrap
@@ -1469,10 +1461,8 @@ class Session(TComs, baseSession):
         rlay = self.rlay_load(ofp, logger=log)
         
         assert_func(lambda:  self.rlay_check_match(rlay,inun1_rlay, logger=log))
- 
         
         if write:self.ofp_d[dkey]=ofp
-        
  
         log.info('for \'%s\' built: \n    %s'%(dkey, ofp))
 

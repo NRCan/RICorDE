@@ -51,10 +51,10 @@ neighborhood_size = 7   #neighbourhood size for grass7:r.neighbors
 #range_thresh=          #maximum range (between HAND cell values) to allow. should no exceed 2.0. Defaults to min(max_grade*resolution, 2.0),2)
 max_iter=5              #maximum number of smoothing iterations to allow
 precision=0.2           #precision of resulting HAND values (value to round to nearest multiple of)
-[hInunSet]
+[hInunSet] #Set of HAND inundation rasters
 animate=False           #Flag to create animations of outputs.
-[hWslSet]
+[hWslSet] #Set of WSL rasters
 max_fail_cnt=5          #Maximum number of wsl failures to allow 
-[wslMosaic]
+[wslMosaic] #WSL raster mosaiked from underlying HAND values             
 
 [depths]

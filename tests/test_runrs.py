@@ -73,12 +73,13 @@ def test_load_params(param_fp):
     assert isinstance(result, dict)
     assert 'session' in result
     
-
+@pytest.mark.dev 
 @pytest.mark.parametrize('param_fp', ['params_default.txt'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 def test_run_from_params(param_fp, 
                          tmp_path, qgis_app, qgis_processing, logger, feedback,
                          write):
+    """see test_run_parsed for slightly more comprehensive test"""
     
     #load the parameters
     param_lib = load_params(param_fp)
@@ -102,14 +103,13 @@ def test_parse_args(args):
     assert isinstance(parsed_kwargs, dict)
  
     
-@pytest.mark.dev 
+
 @pytest.mark.parametrize('param_fp', ['params_default.txt'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 @pytest.mark.parametrize('exit_summary',[None, True]) 
 @pytest.mark.parametrize('compress',[None, 'none'])                
 def test_run_parsed(args,  
-                    tmp_path,
-                    qgis_app, qgis_processing, logger, feedback):
+                    tmp_path,qgis_app, qgis_processing, logger, feedback):
     """full integration test on different arg combinations"""
     
     #===========================================================================

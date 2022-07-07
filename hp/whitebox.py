@@ -13,7 +13,7 @@ import subprocess, os, logging
 
 from hp.dirz import get_temp_dir
 from hp.gdal import get_nodata_val
-from definitions import whitebox_exe, max_procs
+from definitions import whitebox_exe_d, max_procs
 #===============================================================================
 # classes------
 #===============================================================================
@@ -25,18 +25,19 @@ class Whitebox(object):
                  out_dir=None,
                  logger=None,
                  overwrite=True,
-                 exe_fp=whitebox_exe,
+                 version='v1.4.0',
  
                  max_procs=max_procs, 
                  ):
         
+        self.exe_d=whitebox_exe_d
         if out_dir is None: out_dir = get_temp_dir()
         if logger is None:
             logger = logging.getLogger(__name__)
         self.out_dir=out_dir
         self.logger=logger.getChild('wbt')
         self.overwrite =overwrite
-        self.exe_fp=exe_fp
+        self.exe_fp=self.exe_d[version]
         self.max_procs=max_procs
 
         assert os.path.exists(self.exe_fp), 'bad exe: \n    %s'%self.exe_fp

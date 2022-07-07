@@ -3,8 +3,10 @@ import os
 
  
 #location of whitebox executable
-whitebox_exe = r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe'
-#r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe'
+whitebox_exe_d = {
+        'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
+        'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
+        }
 
 #maximum processors to use
 max_procs = 4 
@@ -58,7 +60,7 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
         },
     'inun2':{},
     'beach2':{
-        
+        'method':(False, 'get'),
         },
     'hgInterp':{
         

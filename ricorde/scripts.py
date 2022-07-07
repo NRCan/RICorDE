@@ -704,16 +704,29 @@ class Session(TComs, baseSession):
         
         return
     
-    def build_dem_hyd(self, #hydraulically corrected DEM
+    def build_dem_hyd(self, #
                       dem_rlay=None,
                       
                       #parameters
-                      dist=None, #Maximum search distance for breach paths in cells
+                      dist=None, #
                       
                       #generals
                       dkey=None, logger=None,write=None,
                       ):
-        """Build the hydraulically corrected DEM needed by the HAND builder"""
+        """Build the hydraulically corrected DEM needed by the HAND builder
+        
+        Parameters
+        ----------
+        dist : int, optional
+            Maximum search distance for breach paths in cells
+            for WhiteBox.breachDepressionsLeastCost tool
+            Defaults to min(int(2000/self.dem_psize), 100)
+            
+        Returns
+        ----------
+        QgsRasterLayer
+            DEM hydraulically corrected with breachDepressionsLeastCost
+        """
         #=======================================================================
         # defaults
         #=======================================================================
@@ -721,8 +734,6 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         log=logger.getChild('build_dem_hyd')
         assert dkey=='dem_hyd'
-        
-
         
         if dem_rlay is None:
             dem_rlay = self.retrieve('dem')
@@ -732,7 +743,6 @@ class Session(TComs, baseSession):
             dist = min(int(2000/self.dem_psize), 100)
         
         assert isinstance(dist, int)
- 
         
         #output
         layname = '%s_%s'%(self.layName_pfx, dkey) 
@@ -772,11 +782,8 @@ class Session(TComs, baseSession):
             self.smry_d[dkey] = pd.Series({'search_dist':dist}).to_frame()
         
         log.info('finished on %s'%rlay.name())
- 
         
         return rlay
-            
-            
      
     def build_hand(self, #load or build the HAND layer
                    dkey=None,

@@ -7,7 +7,7 @@ inun_fp=            #inundation filepath (raster or polygon)
 crsid=EPSG:4326     #CRSID
 
 [dem]
-#resolution = 
+resolution = 
 
 [pwb_rlay]
 resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
@@ -15,7 +15,8 @@ resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
 [inun_rlay]
 resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
 
-[dem_hyd]
+[dem_hyd]               #Hydraulically corrected DEM
+dist=                   #Maximum search distance for breach paths in cells
 
 [HAND]
 

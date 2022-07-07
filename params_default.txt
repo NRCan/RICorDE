@@ -7,27 +7,30 @@ inun_fp=            #inundation filepath (raster or polygon)
 crsid=EPSG:4326     #CRSID
 
 [dem]
-resolution = 
+#resolution =10             #optional resolution for resampling the DEM
 
 [pwb_rlay]
-resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
+#resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
 
 [inun_rlay]
-resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
+#resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
 
 [dem_hyd]   #Hydraulically corrected DEM
-dist=                   #Maximum search distance for breach paths in cells
+#dist=                   #Maximum search distance for breach paths in cells
 
 [HAND]      #Height Above Nearest Drainage (HAND) layer                  
 
 [HAND_mask] #no-data boundary of the HAND rlay
 
 [inun1]     #Hydro-corrected inundation raster 
-buff_dist=              #buffer (in pixels) to apply to pwb_rlayDefaults to pixel size of DEM*2.
+#buff_dist=2              #buffer (in pixels) to apply to pwb_rlayDefaults to pixel size of DEM*2.
 [beach1]    #HAND beach (shoreline) values raster
 
 [b1Bounds]
-
+qhigh=0.9                #Quartile to use for upper bound
+cap=7.0                 #Maximum value to allow for upper bound
+qlow=0.1                #Quartile to use for lower bound
+floor=0.5               #Minimum value to allow for lower bound
 [inunHmax]
 
 [inun2]

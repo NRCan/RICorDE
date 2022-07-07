@@ -1192,11 +1192,9 @@ class Session(TComs, baseSession):
         log.debug('finsihed on %s'%samp_fp)
         
         return samp_fp
-        
             
     def build_b1Bounds(self,
                beach1_rlay = None,
-
                           
                 #hand value stats for bouding beach1 samples
                qhigh=0.9, cap=7.0,  #uppers               
@@ -1205,6 +1203,27 @@ class Session(TComs, baseSession):
                #gen
               dkey=None, logger=None,write=None,
                ):
+        """
+        Compute the upper and lower bounds of the HAND beach values
+        
+        Parameters
+        -----------
+        qhigh : float, default 0.9
+            Quartile to use for upper bound
+        cap : float, default 7.0
+            Maximum value to allow for upper bound
+        qlow : float, default 0.1
+            Quartile to use for lower bound
+        floor : float, default 0.5
+            Minimum value to allow for lower bound
+        
+        Returns
+        -------
+        dict
+            Upper and lower quartiles of HAND beach values 
+            {'qhi': 7.0, 'qlo': 2.225}
+            
+        """
         
         #=======================================================================
         # defaults
@@ -1212,11 +1231,8 @@ class Session(TComs, baseSession):
         if logger is None: logger=self.logger
         if write is None: write=self.write
         log=logger.getChild('b.%s'%dkey)
-        
-
  
         assert dkey=='b1Bounds'
-        
  
         layname, ofp = self.get_outpars(dkey, write)
         
@@ -1236,9 +1252,6 @@ class Session(TComs, baseSession):
         if self.exit_summary:
  
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
-        
- 
-        
  
         log.info('for \'%s\' built: \n    %s'%(dkey, hv_d))
         if write:
@@ -1247,9 +1260,6 @@ class Session(TComs, baseSession):
                                                logger=log)
 
         return hv_d
-        
-        
-        
     
     def get_sample_bounds(self, #get the min/max HAND values to use (from sample stats)
                           beach_lay,

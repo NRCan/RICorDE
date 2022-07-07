@@ -704,11 +704,11 @@ class Session(TComs, baseSession):
         
         return
     
-    def build_dem_hyd(self, #
+    def build_dem_hyd(self,  
                       dem_rlay=None,
                       
                       #parameters
-                      dist=None, #
+                      dist=None,  
                       
                       #generals
                       dkey=None, logger=None,write=None,
@@ -795,7 +795,11 @@ class Session(TComs, baseSession):
                    write=None,logger=None,write_dir=None,
 
                  ):
-        """Build the Height Above Nearest Drainage (HAND) layer"""
+        """
+        Build the Height Above Nearest Drainage (HAND) layer
+        
+        Uses Whitebox.elevationAboveStream
+        """
 
         #=======================================================================
         # defaults
@@ -806,18 +810,15 @@ class Session(TComs, baseSession):
         #if dem_fp is None: dem_fp=self.dem_fp
         if write is None: write=self.write
         
-        
         layname, ofp = self.get_outpars(dkey, write, write_dir=write_dir)
         #=======================================================================
         # retrieve
         #=======================================================================
         if pwb_rlay is None:
             pwb_rlay = self.retrieve('pwb_rlay')
-             
 
         if demH_rlay is None:
             demH_rlay = self.retrieve('dem_hyd')
-
         
         pwb_fp = pwb_rlay.source()
         dem_fp = demH_rlay.source() 
@@ -835,8 +836,6 @@ class Session(TComs, baseSession):
         #=======================================================================
         Whitebox(out_dir=self.out_dir, logger=logger
                  ).elevationAboveStream(dem_fp, pwb_fp, out_fp=ofp)
-        
-        
             
         #=======================================================================
         # wrap 
@@ -846,10 +845,8 @@ class Session(TComs, baseSession):
         assert_func(lambda:  self.rlay_check_match(rlay,demH_rlay, logger=log))
         
         if write:self.ofp_d[dkey] = ofp
-            
  
         return rlay
-    
     
     def build_hand_mask(self, #get the no-data boundary of the HAND rlay (as a vector)
                 dkey=None,

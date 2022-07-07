@@ -15,10 +15,10 @@ resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
 [inun_rlay]
 resampling='Maximum'    #gdalwarp resampling method (for polygon inputs)
 
-[dem_hyd]               #Hydraulically corrected DEM
+[dem_hyd]   #Hydraulically corrected DEM
 dist=                   #Maximum search distance for breach paths in cells
 
-[HAND]
+[HAND]      #Height Above Nearest Drainage (HAND) layer                  
 
 [HAND_mask]
 

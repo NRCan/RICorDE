@@ -1,6 +1,14 @@
 '''Application wide defaults'''
 import os
 
+ 
+#location of whitebox executable
+whitebox_exe = r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe'
+#r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe'
+
+#maximum processors to use
+max_procs = 4 
+
 #location of source code
 proj_dir = os.path.dirname(os.path.abspath(__file__))
 

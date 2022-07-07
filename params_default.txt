@@ -52,9 +52,9 @@ neighborhood_size = 7   #neighbourhood size for grass7:r.neighbors
 max_iter=5              #maximum number of smoothing iterations to allow
 precision=0.2           #precision of resulting HAND values (value to round to nearest multiple of)
 [hInunSet]
-
+animate=False           #Flag to create animations of outputs.
 [hWslSet]
-
+max_fail_cnt=5          #Maximum number of wsl failures to allow 
 [wslMosaic]
 
 [depths]

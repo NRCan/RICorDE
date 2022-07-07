@@ -81,7 +81,7 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
         'animate':(False, 'getboolean'),
         },
     'hWslSet':{
-        
+        'max_fail_cnt':(False, 'getint'),
         },
     'wslMosaic':{
         

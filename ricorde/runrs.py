@@ -60,7 +60,11 @@ def load_params(param_fp,
             #check if the parameter is in the file
             if varName in parser[sectName]:
                 f = getattr(parser, method)
-                val = f(sectName, varName)
+                try:
+                    val = f(sectName, varName)
+                except Exception as e:
+                    raise IOError('failed to get %s.%s w/ \n    %s'%(sectName, varName, e))
+                    
                 if val in ['']:
                     assert not required, '%s.%s is required but was passed empty'%(sectName, varName)
                 else:

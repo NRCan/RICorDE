@@ -1105,23 +1105,14 @@ class Session(TComs, baseSession):
 
         return rlay
     
-    def build_beach1(self, #raster of beach values (on HAND layer)
-            #inputs
+    def build_beach1(self, 
             hand_rlay=None,
-            #handM_rlay=None,
             inun1_rlay=None,
-            
-    
                 
               #generals
-              dkey=None,
-              logger=None,write=None,
+              dkey=None,logger=None,write=None,
              ):
-        """
-        (rToSamp_fp=hand_fp, 
-        inun_fp=inun1_fp,
-        #                                 ndb_fp=ndb_fp, sample_spacing=sample_spacing)
-        """
+        """Build raster of HAND beach (shoreline) values"""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -1131,8 +1122,6 @@ class Session(TComs, baseSession):
         assert dkey=='beach1'
  
         layname, ofp = self.get_outpars(dkey, write)
-        
-
             
         #=======================================================================
         # retrieve
@@ -1142,16 +1131,12 @@ class Session(TComs, baseSession):
  
         if inun1_rlay is None:
             inun1_rlay=self.retrieve('inun1')
-            
- 
 
         #=======================================================================
         # execute
         #=======================================================================
         self.get_beach_rlay(
             inun_rlay=inun1_rlay, base_rlay=hand_rlay, logger=log, ofp=ofp)
-            
-            
  
         #=======================================================================
         # wrap
@@ -1160,10 +1145,8 @@ class Session(TComs, baseSession):
         
         assert_func(lambda:  self.rlay_check_match(rlay,hand_rlay, logger=log))
         
-        
         if write:
             self.ofp_d[dkey] = ofp
- 
         
         return rlay
     

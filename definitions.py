@@ -46,9 +46,7 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
     'inun1':{
         'buff_dist':(False, 'getint')
         },
-    'beach1':{
-        
-        },
+    'beach1':{},
     'b1Bounds':{
         
         },

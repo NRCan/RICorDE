@@ -23,9 +23,8 @@ dist=                   #Maximum search distance for breach paths in cells
 [HAND_mask] #no-data boundary of the HAND rlay
 
 [inun1]     #Hydro-corrected inundation raster 
-buff_dist=              #buffer (in pixels) to apply to pwb_rlay 
-
-[beach1]
+buff_dist=              #buffer (in pixels) to apply to pwb_rlayDefaults to pixel size of DEM*2.
+[beach1]    #HAND beach (shoreline) values raster
 
 [b1Bounds]
 

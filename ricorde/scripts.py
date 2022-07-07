@@ -196,8 +196,6 @@ class Session(TComs, baseSession):
         
         log.info('finished in %s'%tdelta)
         self._log_datafiles()
-        
- 
 
     def build_dem(self, #checks and reprojection on the DEM
                   dem_fp, 
@@ -206,11 +204,13 @@ class Session(TComs, baseSession):
                   resolution=None, #optional resolution for resampling the DEM
                   aoi_vlay=None,
                   
-                  
                   #gen
                   dkey=None,write=None,overwrite=None,
                   ):
-        """
+        """Load a DEM raster, apply any transformations, and extract parameters
+        
+        Notes
+        ----------
         user can pass a pixel size, or we reproject to the nearest integer
         see also self.build_rlay()
         """
@@ -267,8 +267,6 @@ class Session(TComs, baseSession):
                                resample=resample, resolution=resolution, resampling='Average', ofp=ofp,
                                compress='none',
                                logger=log)
-            
- 
         
         meta_d.update(d)
 
@@ -280,13 +278,11 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
- 
         
         if self.exit_summary: 
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
         if write: self.ofp_d[dkey] = ofp
         mstore.removeAllMapLayers()
- 
         
         return rlay1
     

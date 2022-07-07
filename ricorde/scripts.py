@@ -332,7 +332,7 @@ class Session(TComs, baseSession):
                         ref_lay=None,
                         aoi_vlay=None,
                         
-                        resampling='Maximum', #resampling method
+                        resampling='Maximum',  
                         
                         clean_inun_kwargs={},
                         dkey=None,write=None,
@@ -340,15 +340,20 @@ class Session(TComs, baseSession):
         """
         Build inundation raster from inundation data
         
+        Used by 'pwb_rlay' and 'inun_rlay'
+        
         Parameters
         ----------
         fp : str
             Filepath to raw inundation layer.
+            
+        resampling : str, default 'Maximum'
+            gdalwarp resampling method (for polygon inputs)
         
             
         Returns
         ----------
-        rlay : QgsRasterLayer
+        QgsRasterLayer
             Binary inundation raster layer.
             
         Notes

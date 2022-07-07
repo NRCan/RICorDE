@@ -2722,7 +2722,7 @@ class Session(TComs, baseSession):
                 animate=False,
                                 
                #gen
-              dkey=None, logger=None,write=None, debug=False,compress=None,
+              dkey=None, logger=None,write=None, compress=None,
               relative=None,  
                   ): 
         """

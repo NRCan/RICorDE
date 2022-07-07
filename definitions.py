@@ -78,7 +78,7 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
         'precision':(False, 'getfloat'),
         },
     'hInunSet':{
-        
+        'animate':(False, 'getboolean'),
         },
     'hWslSet':{
         

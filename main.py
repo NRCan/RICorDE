@@ -24,7 +24,8 @@ def parse_args(args):
     parser.add_argument("param_fp",help='filepath to parameter .txt file (see documentation for format)') #positional 
  
     #scripts.Session
-    parser.add_argument("-exit_summary",'-exs', help='flag to disable writing the exit summary', action='store_true')#defaults to False
+    parser.add_argument("-exit_summary",'-exs', help='flag to disable writing the exit summary', 
+                        action='store_false', default=True)#defaults to False
     
     #hp.Q.Qproj
     parser.add_argument("-compress",'-c', help='set the default raster compression level', 
@@ -45,8 +46,8 @@ def parse_args(args):
     parser.add_argument("-write",'-w', help='flag to write outputs', action='store_true')#defaults to False
     parser.add_argument("-name",'-n', help='project name', default='proj1')
     parser.add_argument("-prec", help='Default float precision', default=None, type=int)
-    parser.add_argument("-overwrite", help='Default behavior when attempting to overwrite a file', action='store_false')
-    parser.add_argument("-relative", help='Default behavior of filepaths (relative vs. absolute)', action='store_true')
+    parser.add_argument("-overwrite", help='Default behavior when attempting to overwrite a file', action='store_true', default=False)
+    parser.add_argument("-relative", help='Default behavior of filepaths (relative vs. absolute)', action='store_true', default=False)
     
     #===========================================================================
     # parse
@@ -57,13 +58,13 @@ def parse_args(args):
     
     return kwargs
 
-def run_from_args(args):
+def run_from_args(args, **kwargs):
     
-    kwargs = parse_args(args)
+    parsed_kwargs = parse_args(args)
     print('\n\nSTART \n\n\n\n')
     
     from ricorde.runrs import run_from_params
-    run_from_params(**kwargs)
+    return run_from_params(**parsed_kwargs, **kwargs)
 
 if __name__ == "__main__":
     print(sys.argv)

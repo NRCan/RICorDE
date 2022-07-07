@@ -1521,11 +1521,10 @@ class Session(TComs, baseSession):
              #datalayesr
              hand_rlay=None,
              inun2_rlay=None,
- 
              
              #parameters
-             method='pixels', #method for extracting beach points from the inundation ratser
-             bounds=None,  # hi/low quartiles from beach1
+             method='pixels', #
+             bounds=None,  
              fieldName='hvals',
              
              #parameters (polygon)
@@ -1537,13 +1536,24 @@ class Session(TComs, baseSession):
               dkey=None, logger=None,write=None,
                   ):
         """
-        TODO:
-            add alterative for vector-based
-                polygonize
-                buffer (half resolution)
-                simplify
-                extract points (make sure we have some minimum interaval)
-            just retrieve the original methods?
+        Build the HAND beacu values from inun2
+        
+        Parameters
+        -----------
+        method : str, default 'pixels'
+            method for extracting beach points from the inundation raster
+            pixels: use donut raster then convert pixels to points
+            polygons: convert inundation to a polygon then build edge points
+            
+        bounds : dict, optional
+            upper and lower HAND values for filtering.
+            Defaults to b1Bounds
+        
+        Returns
+        --------
+        QgsVectorLayer
+            Points with sampled and filtered HAND beach values
+ 
         """
  
         #=======================================================================
@@ -1553,11 +1563,8 @@ class Session(TComs, baseSession):
         if write is None: write=self.write
         if write_plotData is None: write_plotData=write
         log=logger.getChild('b.%s'%dkey)
-        
- 
  
         assert dkey=='beach2'
-        
  
         layname, ofp = self.get_outpars(dkey, write, ext='.gpkg')
  
@@ -1597,8 +1604,7 @@ class Session(TComs, baseSession):
             samp_raw_fp = self.get_beach_rlay(
                 inun_rlay=inun2_rlay, base_rlay=hand_rlay, logger=log)
             
-            #convert to points
-            
+            #convert to points            
             samp_raw_pts = self.pixelstopoints(samp_raw_fp, logger=log, fieldName=fieldName)
         
         #=======================================================================
@@ -1612,16 +1618,11 @@ class Session(TComs, baseSession):
             #setup
             temp_dir = os.path.join(self.temp_dir, dkey)
             if not os.path.exists(temp_dir): os.makedirs(temp_dir)
- 
             
             #get these points )w/ some edge filtering
             samp_raw_pts, d = self.get_beach_pts_poly(inun2_vlay_fp, 
-                  base_rlay=hand_rlay,
-                logger=log, 
- 
-                spacing=spacing, dist=dist, fieldName=fieldName,
-                out_dir=temp_dir,
-                )
+                  base_rlay=hand_rlay,logger=log, spacing=spacing, dist=dist, fieldName=fieldName,
+                out_dir=temp_dir,)
         
             meta_d.update(d)
             
@@ -1629,8 +1630,6 @@ class Session(TComs, baseSession):
             
         else:
             raise KeyError('unrecognized method')
-    
-            
         
         mstore.addMapLayer(samp_raw_pts)
         samp_raw_pts.setName('%s_samp_raw'%dkey)
@@ -1647,7 +1646,6 @@ class Session(TComs, baseSession):
         samp_cap_vlay.setName(layname)
         log.info('finished on %s'%samp_cap_vlay.name())
         
-        
         if write:
             self.ofp_d[dkey] = self.vlay_write(samp_cap_vlay,ofp,  logger=log)
             log.info('wrote %s to \n    %s'%(dkey, ofp))
@@ -1660,10 +1658,8 @@ class Session(TComs, baseSession):
                              logger=log)
             #log.info('wrote %s to %s'%(str(df.shape), ofp))
             
-            
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
- 
  
         return samp_cap_vlay
     
@@ -1953,7 +1949,7 @@ class Session(TComs, baseSession):
         
         return res_vlay, df, meta_d
     
-    def build_hgInterp(self, #interpolate and grow the beach 2 values
+    def build_hgInterp(self, #
              
              #datalayesr
              beach2_vlay=None,
@@ -1962,17 +1958,32 @@ class Session(TComs, baseSession):
              fieldName=None, #field name with sample values
              
              #parameters
-             resolution = None, #base resolution for output of interp raster
-             distP=2.0, #distance coeffiocient#I think this is unitless
-
-             pts_cnt = 5, #number of points to include in seawrches
-             radius=None, #Search Radius in map units
-                #WARNING: larger radius is faster
+             resolution = None,distP=2.0, pts_cnt = 5, radius=None,  
              max_procs=4,
              
                #gen
               dkey=None, logger=None,write=None,
                   ):
+        """
+        Interpolate and grow the beach 2 values
+        
+        Parameters
+        -----------
+        resolution: int, optional
+            base resolution for output.
+            Defaults to dem pixel size x 2
+            
+        distP: float, default 2.0
+            distance coefficient for whitebox.IdwInterpolation (unitless?)
+            
+        pts_cnt: int, default 5
+            number of points to include in search for whitebox.IdwInterpolation(min_point)
+            
+        radius: float, optional
+            Search Radius in map units (larger is faster) for whitebox.IdwInterpolation
+            Defaults to resolution*6
+        
+        """
         """
         should this be split?
         
@@ -2008,7 +2019,6 @@ class Session(TComs, baseSession):
         assert dkey=='hgInterp'
  
         layname, ofp = self.get_outpars(dkey, write)
-        
  
         #=======================================================================
         # retrieve
@@ -2029,8 +2039,6 @@ class Session(TComs, baseSession):
             fnl = [f.name() for f  in beach2_vlay.fields() if not f.name()=='fid']
             assert len(fnl)==1
             fieldName = fnl[0]
-        
- 
         
         if radius is None:
             radius=resolution*6
@@ -2070,7 +2078,6 @@ class Session(TComs, baseSession):
                                 cell_size=resolution,
                                 #ref_lay_fp=dem_rlay.source(),
                                 out_fp=os.path.join(self.temp_dir, 'wbt_IdwInterpolation_raw_%s.tif'%dkey))
-                               
  
         """GRASS.. a bit slow
         #=======================================================================
@@ -2087,7 +2094,6 @@ class Session(TComs, baseSession):
                                      logger=log, extents=dem_rlay.extent(), 
                                      crsOut=self.qproj.crs(), crsIn=self.qproj.crs(),
                                      output=ofp)
-        
  
         #=======================================================================
         # wrap
@@ -2103,9 +2109,7 @@ class Session(TComs, baseSession):
         if self.exit_summary:
             self.smry_d[dkey] = pd.Series(meta_d).to_frame()
  
- 
         return rlay
-        
  
     def build_hgRaw(self,
                 #input layers

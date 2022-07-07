@@ -63,7 +63,10 @@ config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get metho
         'method':(False, 'get'),
         },
     'hgInterp':{
-        
+        'resolution':(False, 'getint'),
+        'distP':(False, 'getfloat'),
+        'pts_cnt':(False, 'getint'),
+        'radius':(False, 'getfloat'),
         },
     'hgRaw':{
         

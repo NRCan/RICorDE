@@ -35,10 +35,13 @@ floor=0.5               #Minimum value to allow for lower bound
 #hval=                  #HAND value for computing the maximum inundation. Defaults to b1Bounds['qhi']
 [inun2]   #Hydro-corrected observed inundation (max filtered)
 
-[beach2]
-
+[beach2]  #HAND value samples on inun2 beach
+method=pixels           #method for extracting beach points from the inundation raster
 [hgInterp]
-
+#resolution=            #base resolution for output.  Defaults to dem pixel size x 2
+distP=2.0               #distance coefficient for whitebox.IdwInterpolation (unitless?)
+pts_cnt=5               #number of points to include in search for whitebox.IdwInterpolation(min_point)
+#radius=                #Search Radius in map units (larger is faster) for whitebox.IdwInterpolation. Defaults to resolution*6
 [hgRaw]
 
 [hgSmooth]

@@ -368,7 +368,7 @@ class Qproj(QAlgos, Basic):
         
         #file
         assert not fp is None
-        assert os.path.exists(fp), fp
+        assert os.path.exists(fp), 'bad filepath on vectorlayer: %s'%fp
         fname, ext = os.path.splitext(os.path.split(fp)[1])
         assert not ext in ['tif'], 'passed invalid filetype: %s'%ext
         log.debug('on %s'%fp)

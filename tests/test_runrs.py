@@ -9,10 +9,14 @@ import pytest, copy, os, configparser
 # fixtures
 #===============================================================================
 @pytest.fixture(scope='function')
-def param_fp(proj_dir, proj_d, request, tmp_path):
+def param_fp(proj_dir, proj_d, tmp_path):
+    
+    #check the proj_d
+    assert 'pwb_fp' in proj_d
+    
     sectName='session'
-    fileName = request.param
-    param_fp = os.path.join(proj_dir, fileName)
+    fileName = 'test_params.ini'
+    param_fp = os.path.join(proj_dir, 'tests', fileName) #just using one file now
     parser=get_parser(param_fp)
     
     parser.remove_section(sectName)
@@ -60,9 +64,9 @@ def args(param_fp, exit_summary, compress):
 # unit tests
 #===============================================================================
 
-@pytest.mark.dev 
+
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
-@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
+#@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 def test_load_params(param_fp):
     result = load_params(param_fp)
     
@@ -70,7 +74,7 @@ def test_load_params(param_fp):
     assert 'session' in result
     
 
-@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
+#@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 @pytest.mark.parametrize('exit_summary',[None, True]) 
 @pytest.mark.parametrize('compress',[None, 'hiT', 'hi', 'med', 'none'])
@@ -84,7 +88,8 @@ def test_parse_args(args):
 #===============================================================================
 # integration tests
 #===============================================================================
-@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
+@pytest.mark.dev 
+#@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01', 'fred02', 'fred03'], indirect=True) #using the faster setup files
 def test_run_from_params(param_fp, 
                          tmp_path, qgis_app, qgis_processing, logger, feedback,
@@ -106,7 +111,7 @@ def test_run_from_params(param_fp,
  
     
 
-@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
+#@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 @pytest.mark.parametrize('exit_summary',[True]) 
 @pytest.mark.parametrize('compress',['none'])                

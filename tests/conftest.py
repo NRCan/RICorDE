@@ -113,6 +113,7 @@ def session(tmp_path,
         
         assert len(ses.data_d)==0
         assert len(ses.compiled_fp_d)==0
+        assert len(ses.ofp_d)==0
         yield ses
  
  
@@ -142,6 +143,7 @@ def rproj_lib():
             'aoi_fp':'aoi01T_fred_20220325.geojson',
             'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
             'inun_fp':'test_fred03_0328_inun_rlay.tif',#reproject to EPSG4326 w/ a nasty resolution
+            'pwb_fp':'pwater_fred_aoi01T_0325.geojson',  
             'crsid':'EPSG:3979', 
             },
         }

@@ -648,13 +648,14 @@ class Qproj(QAlgos, Basic):
         
         return ofp
     
-    def rlay_load(self, fp,  #load a raster layer and apply an aoi clip
+    def rlay_load(self, fp,  
   
                   logger=None,
                   dkey=None, #dummy recievor for retrieve calls
 
                   mstore=None,
                   ):
+        """Load a raster layer from file and do some checks"""
         
         #=======================================================================
         # defautls
@@ -677,7 +678,6 @@ class Qproj(QAlgos, Basic):
         #===========================================================================
         # check
         #===========================================================================
-        
         assert isinstance(rlay_raw, QgsRasterLayer), 'failed to get a QgsRasterLayer'
         assert rlay_raw.isValid(), "Layer failed to load!"
         log.debug('loaded \'%s\' from \n    %s'%(rlay_raw.name(), fp))
@@ -692,7 +692,6 @@ class Qproj(QAlgos, Basic):
         #=======================================================================
         # wrap
         #=======================================================================
-
         if not mstore is None:
             mstore.addMapLayer(rlay_raw)
         

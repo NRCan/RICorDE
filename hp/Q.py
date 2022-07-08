@@ -1038,7 +1038,7 @@ class Qproj(QAlgos, Basic):
         if logger is None: logger=self.logger
         log=logger.getChild('vlay_poly_tarea')
         mstore = QgsMapLayerStore()
-
+        assert not 'area' in [f.name().lower() for f in vlay_raw.fields()]
         #=======================================================================
         # add the geometry
         #=======================================================================

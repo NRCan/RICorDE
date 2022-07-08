@@ -157,7 +157,12 @@ class Session(TComs, baseSession):
         if not aoi_fp is None:
             #get the aoi
             aoi_vlay = self.load_aoi(aoi_fp, reproj=True)
-            self.aoi_fp = aoi_fp
+            #self.aoi_fp = aoi_fp
+            
+        else:
+            v1 = self.layerextent(inun_fp)
+            self.aoi_vlay = self.deletecolumn(v1, [f.name() for f in v1.fields()]) 
+            self._check_aoi(self.aoi_vlay)
  
 
     #===========================================================================
@@ -483,10 +488,8 @@ class Session(TComs, baseSession):
         if write: self.ofp_d[dkey] = ofp
         
         return rlay4
-    """
-    self.mstore_log()
-    """
-    def rlay_warp(self,  #special implementation of gdalwarp processing tools
+ 
+    def rlay_warp(self,  #
                   input_raster, #filepath or layer
                    ref_lay=None,
                    aoi_vlay=None,
@@ -497,17 +500,16 @@ class Session(TComs, baseSession):
                    resampling='Maximum', #resampling method
                    compress=None,
                    resolution=None,
-                   
                   
                   logger=None, ofp=None,out_dir=None,
                   ):
+        """special implementation of gdalwarp processing tools"""
         
         #=======================================================================
         # defaults
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('rlay_warp')
-        
         
         #=======================================================================
         # retrieve
@@ -516,14 +518,9 @@ class Session(TComs, baseSession):
         if out_dir is None: out_dir=self.temp_dir
         if ofp is None: 
             ofp=os.path.join(out_dir, '%s_warp.tif'%rlay_raw.name())
-        
- 
             
         if aoi_vlay is None: aoi_vlay=self.aoi_vlay
-        
-        """I guess were allowing this...
-        assert ref_lay.extent()==aoi_vlay.extent()"""
-        
+ 
         mstore = QgsMapLayerStore()
         #=======================================================================
         # parameters
@@ -544,7 +541,6 @@ class Session(TComs, baseSession):
             decompres=False
             if not self.getRasterCompression(rlay_raw.source()) is None:
                 decompres = True
-            
         
         if decompres:
             compress='none'
@@ -568,6 +564,13 @@ class Session(TComs, baseSession):
                 
             if decompres:
                 msg = msg + ' +decompress'
+                
+            #===================================================================
+            # build dummy aoi
+            #===================================================================
+            """probably a better way to do this..."""
+            if aoi_vlay is None:
+                aoi_vlay = self.layerextent(rlay_raw)
                 
             log.info(msg)
             mstore.addMapLayer(rlay_raw)
@@ -606,8 +609,6 @@ class Session(TComs, baseSession):
         #=======================================================================
         # resample-----
         #=======================================================================
-
-            
             
         reso_raw = self.rlay_get_resolution(rlay2)
         
@@ -646,9 +647,6 @@ class Session(TComs, baseSession):
             _ = self.warpreproject(rlay2, resolution=int(resolution), compress=compress, 
                 resampling=resampling, logger=log, extents=extents,
                 output=ofp)
-            
-            
-            
             
         else:
             _ = self.rlay_write(rlay2, ofp=ofp, logger=log, compress=compress)

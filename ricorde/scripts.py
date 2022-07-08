@@ -55,14 +55,14 @@ class Session(TComs, baseSession):
                  inun_fp=None, #inundation filepath (raster or polygon)
              
                  exit_summary=True,
-                 data_retrieve_hndls = {},
+                 data_retrieve_hndls = None,
                  **kwargs):
         
         
         #=======================================================================
         # #retrieval handles----------
         #=======================================================================
- 
+        if data_retrieve_hndls is None: data_retrieve_hndls=dict()
         data_retrieve_hndls.update({
             'dem':{
                 'compiled':lambda **kwargs:self.load_dem(**kwargs), #only rasters
@@ -687,7 +687,12 @@ class Session(TComs, baseSession):
         dem_hyd = self.retrieve('dem_hyd', logger=log)
         
         #get the hand layer
-        hand_rlay = self.retrieve('HAND', logger=log, write_dir=self.out_dir)  
+        if 'HAND' in self.compiled_fp_d:
+            kwargs = dict()
+        else:
+            kwargs=dict(write_dir=self.out_dir)
+            
+        hand_rlay = self.retrieve('HAND', logger=log, **kwargs)  
         
         #nodata boundary of hand layer (polygon)
         hand_mask = self.retrieve('HAND_mask', logger=log) 
@@ -957,7 +962,12 @@ class Session(TComs, baseSession):
         # reduce inun by the hydrauilc maximum
         #=======================================================================
         #clip inun1 by hydrauilc  maximum (raster)
-        inun2_rlay = self.retrieve('inun2', write_dir=self.out_dir, logger=log) 
+                #get the hand layer
+        if 'inun2' in self.compiled_fp_d:
+            kwargs = dict()
+        else:
+            kwargs=dict(write_dir=self.out_dir)
+        inun2_rlay = self.retrieve('inun2',  logger=log, **kwargs) 
         
 
         #=======================================================================
@@ -1503,7 +1513,11 @@ class Session(TComs, baseSession):
             this approximates the event HAND with rolling values
         
         """
-        hvgrid = self.retrieve('hgSmooth', logger=log, write_dir=self.out_dir)
+        if 'hgSmooth' in self.compiled_fp_d:
+            kwargs = dict()
+        else:
+            kwargs=dict(write_dir=self.out_dir)
+        hvgrid = self.retrieve('hgSmooth', logger=log, **kwargs)
         
         #=======================================================================
         # wrap

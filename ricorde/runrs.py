@@ -136,14 +136,11 @@ def run_from_params(
 
     #initilze the calculation session using these parameters
     from ricorde.scripts import Session
-    with Session(            
-                  
-            bk_lib = param_lib,            
-            #session_kwargs
-            #crsid=QgsCoordinateReferenceSystem(crsid),
-            #aoi_fp=aoi_fp, dem_fp=dem_fp, inun_fp=inun_fp, pwb_fp=pwb_fp, #filepaths for this project
+    with Session(                  
+            bk_lib = param_lib,
             **{**session_kwargs, **kwargs}
             ) as wrkr:
+
         wrkr.logger.info('\n\n start calc sequence\n\n')
         wrkr.run_dataPrep()
         wrkr.run_HAND()

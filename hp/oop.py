@@ -254,7 +254,7 @@ class Session(Basic): #analysis with flexible loading of intermediate results
     
     def __init__(self, 
                  bk_lib=dict(),         #kwargs for builder calls {dkey:kwargs}
-                 compiled_fp_d = dict(), #container for compiled (intermediate) results {dkey:filepath}
+                 compiled_fp_d = None, #container for compiled (intermediate) results {dkey:filepath}
                  data_retrieve_hndls=None, #data retrival handles
                              #default handles for building data sets {dkey: {'compiled':callable, 'build':callable}}
                             #all callables are of the form func(**kwargs)
@@ -264,7 +264,7 @@ class Session(Basic): #analysis with flexible loading of intermediate results
                 write=True,
 
                 **kwargs):
-        
+        if compiled_fp_d is None: compiled_fp_d=dict()
         assert isinstance(data_retrieve_hndls, dict), 'must past data retrival handles'
         
         super().__init__(**kwargs)
@@ -544,6 +544,11 @@ class Session(Basic): #analysis with flexible loading of intermediate results
                 print('        \'%s\':r\'%s\','%(k,v))
             print('\n')
             self.ofp_d = dict()
+            
+        #make sure these are cleared
+        self.compiled_fp_d=dict()
+        self.ofp_d=dict()
+        self.data_d=dict()
         
         super().__exit__(*args, **kwargs)
     

@@ -5,8 +5,8 @@ Created on Feb. 21, 2022
 
 copied from 2112_Agg
 '''
-
     
+
 from definitions import proj_dir
 from hp.Q import vlay_get_fdf
 from hp.gdal import getRasterStatistics, rlay_to_array, getRasterMetadata
@@ -19,12 +19,10 @@ from ricorde.scripts import Session
 import numpy as np
 import os, shutil
 import pandas as pd
-idx = pd.IndexSlice
 import processing
 import pytest
-    
 
-
+idx = pd.IndexSlice
 @pytest.fixture(scope='session')
 def write():
     #===========================================================================
@@ -38,6 +36,7 @@ def write():
     if write:
         print('WARNING!!! runnig in write mode')
     return write
+
 
 #===============================================================================
 # function.fixtures-------
@@ -62,13 +61,10 @@ def proj_d(data_dir, rproj_lib, request): #retrieve test project data and conver
  
     return proj_d
 
-
     
 @pytest.fixture(scope='function')
 def test_name(request):
     return request.node.name.replace('[','_').replace(']', '_')
- 
- 
 
 
 @pytest.fixture(scope='function')
@@ -93,9 +89,6 @@ def session(tmp_path,
         #retrieves a directory specific to the test... useful for writing compiled true data
         """this is dying after the yield statement for some reason...."""
         out_dir = os.path.join(base_dir, os.path.basename(tmp_path))
- 
-        
-    
     
     with Session( 
                  name='test', #probably a better way to propagate through this key 
@@ -159,6 +152,7 @@ def proj_dir():
     from definitions import proj_dir
     return proj_dir
 
+
 @pytest.fixture(scope='session')
 def data_dir(proj_dir): 
     return os.path.join(proj_dir, 'tests', 'data')
@@ -170,7 +164,6 @@ def root_dir():
     return root_dir
 
 
-
 @pytest.fixture(scope='session')
 def logger(root_dir):
 
@@ -180,6 +173,7 @@ def logger(root_dir):
     from hp.logr import BuildLogr
     lwrkr = BuildLogr()
     return lwrkr.logger
+
 
 @pytest.fixture(scope='session')
 def feedback(logger):
@@ -197,7 +191,6 @@ def base_dir():
     return base_dir
 
 
-
 @pytest.fixture
 def true_dir(write, tmp_path, base_dir):
     true_dir = os.path.join(base_dir, os.path.basename(tmp_path))
@@ -209,9 +202,9 @@ def true_dir(write, tmp_path, base_dir):
                 os.makedirs(os.path.join(true_dir, 'working')) #and the working folder
             except Exception as e:
                 print('failed to cleanup the true_dir: %s w/ \n    %s'%(true_dir, e))
-
             
     return true_dir
+
     
 #===============================================================================
 # helper funcs-------
@@ -231,7 +224,6 @@ def search_fp(dirpath, ext, pattern): #get a matching file with extension and be
     
     assert os.path.exists(result), result
         
-        
     return result
 
 
@@ -247,6 +239,7 @@ def retrieve_data(dkey, fp, ses, relative=None):
     
     """Session.load_pick()"""
     return hndl_d['compiled'](**kwargs)
+
 
 def compare_layers(lay_test, lay_true, #two containers of layers
                    test_data=True, #check vlay attributes
@@ -285,7 +278,6 @@ def compare_layers(lay_test, lay_true, #two containers of layers
                 true_df = true_df.sort_values(true_df.columns[0],  ignore_index=True) #sort by first column and reset index
                 test_df = test_df.sort_values(test_df.columns[0],  ignore_index=True)
             
-            
             assert_frame_equal(true_df, test_df,check_names=False)
             
     elif isinstance(lay_test, QgsRasterLayer):
@@ -301,7 +293,6 @@ def compare_layers(lay_test, lay_true, #two containers of layers
         trueStats_d = rasterstats(lay_true) # getRasterStatistics(lay_true.source())
         
         compare_dicts(testStats_d, trueStats_d, index_l=['MAX', 'MEAN', 'MIN', 'RANGE', 'SUM'])
- 
         
         """
         rasterstats(lay_test)
@@ -315,6 +306,7 @@ def compare_layers(lay_test, lay_true, #two containers of layers
             assert_equal(ar_test, ar_true)
     else:
         raise TypeError('unexpected type: %s'%type(lay_test))
+
             
 def compare_dicts(dtest, dtrue, index_l = None,
                  ):
@@ -337,11 +329,4 @@ def rasterstats(rlay):
               'OUTPUT_HTML_FILE' : 'TEMPORARY_OUTPUT' }
  
     return processing.run('native:rasterlayerstatistics', ins_d )   
-            
-            
-            
-            
-            
-            
-            
             

@@ -3,6 +3,7 @@ import os
 
  
 #location of whitebox executable
+"""both versions are used"""
 whitebox_exe_d = {
         'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
         'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',

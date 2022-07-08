@@ -530,8 +530,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         if clip is None:
             if aoi_vlay is None:
-                """get the ndb from the dem"""
-                raise Error('not implemnted')
+                clip =False
+                #raise Error('not implemnted')
             else:
                 clip = True
              
@@ -643,7 +643,7 @@ class Session(TComs, baseSession):
             else:
                 extents=None
             
-            rlay3_fp = self.warpreproject(rlay2, resolution=int(resolution), compress=compress, 
+            _ = self.warpreproject(rlay2, resolution=int(resolution), compress=compress, 
                 resampling=resampling, logger=log, extents=extents,
                 output=ofp)
             
@@ -651,7 +651,7 @@ class Session(TComs, baseSession):
             
             
         else:
-            rlay3_fp = self.rlay_write(rlay2, ofp=ofp, logger=log, compress=compress)
+            _ = self.rlay_write(rlay2, ofp=ofp, logger=log, compress=compress)
             """reloading here.. but this gives a consistent source"""
             
         rlay3 = self.rlay_load(ofp, logger=log)  

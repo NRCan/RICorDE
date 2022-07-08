@@ -126,7 +126,7 @@ def rproj_lib():
     #relative to data_dir (C:\LS\09_REPOS\03_TOOLS\RICorDE\tests\data\)
     return { 
         'fred01':{ #raster inputs (a bit faster)
-            'aoi_fp':'aoi01T_fred_20220325.geojson',
+            #'aoi_fp':'aoi01T_fred_20220325.geojson',
             'dem_fp':'test_tag_0326_dem.tif', #pre-cleaned to 2x2
             'inun_fp':'test_tag_0326_inun_rlay.tif',
             'pwb_fp':'test_tag_0326_pwb_rlay.tif',     

@@ -43,7 +43,7 @@ def parse_args(args):
                         help='Directory for temporary outputs (i.e., cache). Defaults to a sub-directory of out_dir.', 
                         default=None) 
     parser.add_argument("-tag",'-t', help='tag for the run', default='r0') 
-    parser.add_argument("-write",'-w', help='flag to write outputs', action='store_true')#defaults to False
+    parser.add_argument("-write",'-w', help='flag to disable output writing', action='store_false', default=True)#defaults to False
     parser.add_argument("-name",'-n', help='project name', default='proj1')
     parser.add_argument("-prec", help='Default float precision', default=None, type=int)
     parser.add_argument("-overwrite", help='Default behavior when attempting to overwrite a file', action='store_true', default=False)

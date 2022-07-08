@@ -44,9 +44,10 @@ def parse_args(args):
                         default=None) 
     parser.add_argument("-tag",'-t', help='tag for the run', default='r0') 
     parser.add_argument("-write",'-w', help='flag to disable output writing', action='store_false', default=True)#defaults to False
-    parser.add_argument("-name",'-n', help='project name', default='proj1')
+    #parser.add_argument("-name",'-n', help='project name', default='proj1')
     parser.add_argument("-prec", help='Default float precision', default=None, type=int)
-    parser.add_argument("-overwrite", help='Default behavior when attempting to overwrite a file', action='store_true', default=False)
+    parser.add_argument("-overwrite", help='Disable overwriting files as the default behavior when attempting to overwrite a file', 
+                        action='store_false', default=True)
     parser.add_argument("-relative", help='Default behavior of filepaths (relative vs. absolute)', action='store_true', default=False)
     
     #===========================================================================
@@ -67,6 +68,6 @@ def run_from_args(args, **kwargs):
     return run_from_params(**parsed_kwargs, **kwargs)
 
 if __name__ == "__main__":
-    print(sys.argv)
+    #print(sys.argv)
     
     run_from_args(sys.argv[1:])

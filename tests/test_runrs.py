@@ -1,7 +1,7 @@
 '''Unit tests on runner functions'''
 
 from main import parse_args, run_from_args, get_dict_str
-from ricorde.runrs import load_params, run_from_params
+from ricorde.runrs import load_params, run_from_params, get_parser
 import pytest, copy, os, configparser
 
 
@@ -13,11 +13,7 @@ def param_fp(proj_dir, proj_d, request, tmp_path):
     sectName='session'
     fileName = request.param
     param_fp = os.path.join(proj_dir, fileName)
-    assert os.path.exists(param_fp)
-    
-    #add the project info
-    parser=configparser.ConfigParser(inline_comment_prefixes='#')
-    parser.read(param_fp)
+    parser=get_parser(param_fp)
     
     parser.remove_section(sectName)
     parser.add_section(sectName)
@@ -61,21 +57,35 @@ def args(param_fp, exit_summary, compress):
     return args
  
 #===============================================================================
-# tests
+# unit tests
 #===============================================================================
 
-
+@pytest.mark.dev 
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
-@pytest.mark.parametrize('param_fp', ['params_default.txt'], indirect=True)
+@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 def test_load_params(param_fp):
     result = load_params(param_fp)
     
     assert isinstance(result, dict)
     assert 'session' in result
     
-@pytest.mark.dev 
-@pytest.mark.parametrize('param_fp', ['params_default.txt'], indirect=True)
+
+@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
+@pytest.mark.parametrize('exit_summary',[None, True]) 
+@pytest.mark.parametrize('compress',[None, 'hiT', 'hi', 'med', 'none'])
+#@pytest.mark.parametrize('root_dir',[None, os.getcwd()])                   
+def test_parse_args(args):
+    """test lots of parameter combinations...gets pretty redundant"""
+    parsed_kwargs = parse_args(args)
+    assert isinstance(parsed_kwargs, dict)
+
+
+#===============================================================================
+# integration tests
+#===============================================================================
+@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
+@pytest.mark.parametrize('proj_d',['fred01', 'fred02', 'fred03'], indirect=True) #using the faster setup files
 def test_run_from_params(param_fp, 
                          tmp_path, qgis_app, qgis_processing, logger, feedback,
                          write):
@@ -92,22 +102,14 @@ def test_run_from_params(param_fp,
                     exit_summary=False, write=True, overwrite=True) 
     
 
-@pytest.mark.parametrize('param_fp', ['params_default.txt'], indirect=True)
-@pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
-@pytest.mark.parametrize('exit_summary',[None, True]) 
-@pytest.mark.parametrize('compress',[None, 'hiT', 'hi', 'med', 'none'])
-#@pytest.mark.parametrize('root_dir',[None, os.getcwd()])                   
-def test_parse_args(args):
-    """test lots of parameter combinations...gets pretty redundant"""
-    parsed_kwargs = parse_args(args)
-    assert isinstance(parsed_kwargs, dict)
+
  
     
 
-@pytest.mark.parametrize('param_fp', ['params_default.txt'], indirect=True)
+@pytest.mark.parametrize('param_fp', ['RICorDE_params_default.ini'], indirect=True)
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
-@pytest.mark.parametrize('exit_summary',[None, True]) 
-@pytest.mark.parametrize('compress',[None, 'none'])                
+@pytest.mark.parametrize('exit_summary',[True]) 
+@pytest.mark.parametrize('compress',['none'])                
 def test_run_parsed(args,  
                     tmp_path,qgis_app, qgis_processing, logger, feedback):
     """full integration test on different arg combinations"""

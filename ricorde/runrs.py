@@ -10,6 +10,23 @@ from hp.basic import get_dict_str
 import configparser
 from definitions import config_params
 
+def print_parser(parser):
+    for sectName, sect in parser.items():
+ 
+        for varName, var in sect.items():
+            print(sectName, varName, var)
+    
+
+def get_parser(fp):
+    assert os.path.exists(fp), fp
+    
+    parser=configparser.ConfigParser(inline_comment_prefixes='#')
+    parser.optionxform =str #make case sensitive
+    parser.read(fp)
+    
+    #print_parser(parser)
+    
+    return parser
 
 def load_params(param_fp,
                 config_params=config_params,
@@ -31,11 +48,9 @@ def load_params(param_fp,
     #===========================================================================
     # init the parser
     #===========================================================================
-    assert os.path.exists(param_fp), param_fp
     
-    parser=configparser.ConfigParser(inline_comment_prefixes='#')
-    parser.read(param_fp)
-    
+
+    parser = get_parser(param_fp)
     #===========================================================================
     # check parameter file
     #===========================================================================
@@ -44,7 +59,8 @@ def load_params(param_fp,
             continue
         assert sectName in config_params, 'got unrecognized section name \'%s\''%sectName
         for varName, var in sect.items():
-            assert varName in config_params[sectName], 'got unrecognized variable: \'%s.%s\''%(sectName, varName)
+            assert varName in config_params[sectName], 'got unrecognized variable: \'%s.%s\' from %s'%(
+                sectName, varName, os.path.basename(param_fp))
             #print('%s.%s'%(sectName, varName))
     
     #===========================================================================
@@ -141,5 +157,17 @@ def run_from_params(
     return outputs
 
 
+if __name__=='__main__':
+    fp = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\RICorDE_params_default.txt'
+    
+    load_params(fp)
+    #===========================================================================
+    # parser=get_parser(fp)
+    # 
+    # print_parser(parser)
+    #===========================================================================
+    
 
+    
+    
  

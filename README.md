@@ -19,7 +19,7 @@ RICorDE must be run within a working pyqgis environment. To test if your environ
 
 If any of these result in an error, your environment is not set up correctly. 
 
-Once you've tested your setup, tell RICorDE where to access the Whitebox exes by entering these into the _whitebox_exe_d_ in [definitions.py](definitions.py).
+Once you've tested your setup, tell RICorDE where to access the Whitebox exes by entering these into  _whitebox_exe_d_ in [definitions.py](definitions.py). In this file, _root_dir_ can also be customized to control some default behaviour. 
 
 ## Use
 RICorDE routines can be run in sequence using the command-line parsing in [main.py](main.py) or by calling the session methods in [ricorde/scripts.py](ricorde/scripts.py) directly in custom python scripts.
@@ -81,13 +81,13 @@ To prepare a RICorDE run, first copy the provided [RICorDE_params_default.ini](R
 
 Once your parameter.ini file is prepared and you've decided on your run arguments, prepare your python call as shown above. For example:
 
-`python -O RICorDE/main.py -rd path/to/my/work -t r0 path/to/parameter.ini`
+`python RICorDE/main.py -rd path/to/my/work -t r0 path/to/parameter.ini`
 
-then execute this in your pyqgis environment (the '-O' flag removes some debug checks and speeds things up a bit). On Windows, this is typically accomplished via a batch script which performs the environment setup then makes the RICorDE call. An example of such a batch script is provided in the [tutorials folder](tutorial\bryant2022_fred12\run_tutorial.bat) (be sure to edit this with your own paths).
+then execute this in your pyqgis environment. On Windows, this is typically accomplished via a batch script which performs the environment setup then makes the RICorDE call. An example of such a batch script is provided in the [tutorials folder](tutorial\bryant2022_fred12\run_tutorial.bat) (be sure to edit this with your own paths). Once you're confident the run is configured correctly, python's '-O' flag can be passed to remove some checks. 
 
 ### Custom Scripting
 
-For more flexibility, RICorDE methods can be called in custom scripts by referencing the session methods in [ricorde/scripts.py](ricorde/scripts.py). The function [_run_from_params_](ricorde/runrs.py) provides a nice example (this is the default behaviour of the CLI call) and calls the following hi-level function sequence: 
+For more flexibility, RICorDE methods can be called in custom python scripts by referencing the session methods in [ricorde/scripts.py](ricorde/scripts.py) directly. The function [_run_from_params_](ricorde/runrs.py) provides a nice example (this is the default behaviour of the CLI call) and calls the following hi-level function sequence: 
 
     run_dataPrep() #Clean and load inputs into memory.
     run_HAND() #Build the HAND raster from the DEM using whiteboxtools
@@ -100,6 +100,16 @@ For more flexibility, RICorDE methods can be called in custom scripts by referen
 
 A pre-configured run of the Fredericton 2018 flood is provided in the [tutorials](tutorials\bryant2022_fred12) folder. See [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html) for data sources.
 
+## Logging
+
+For each run, RICorDE creates four log files [in a directory]:
+
+- __root.log__: This is the debug log where all messages from all runs are stored [root_dir]. 
+- __rootwarn.log__: Same as root.log, but only warnings and errors are stored [root_dir].
+- __Qproj.log__: Same as root.log, but only QGIS feedback messages are stored [root_dir].
+- __tag_datetime.log__: This log stores all messages for an individual run and is used to document the results [out_dir]
+
 ## Tests
 
 RICorDE is tested on Windows 10 and QGIS 3.22.8. pytest packages are provided in the tests folder. 
+

@@ -5,32 +5,30 @@ Created on Mar. 25, 2022
 
 integration tests
 '''
-import pytest, copy, os
-from tests.conftest import search_fp, retrieve_data
-#===============================================================================
-# from ricorde.scripts import Session as Session
-# from ricorde.scripts import force_open_dir, QgsCoordinateReferenceSystem
-#===============================================================================
+import pytest, copy, os 
 
-@pytest.mark.parametrize('hval_prec',[0.4]) #feeds through the session (see conftest.py) 
+
+#@pytest.mark.parametrize('hval_prec',[0.4]) #feeds through the session (see conftest.py) 
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #feeds through the session (see conftest.py) 
-def test_integ_full(session, hval_prec, true_dir):
+def test_integ_full(session,true_dir):
+    session.write=True #must write for handovers to work
+    #===========================================================================
+    # algorhithim phases
+    #===========================================================================
+    session.run_dataPrep()
     
-    #===========================================================================
-    # generate test set
-    #===========================================================================
-    session.afp_d = copy.copy(session.fp_d)
-    #adjust for hydrauilc maximum
     session.run_imax()
     
+    session.run_HANDgrid()
     
+    session.run_wslRoll()
     
-    #get depths mosaic
-    session.run_hdep_mosaic(hval_prec=hval_prec)
+    session.run_depths()
     
     #===========================================================================
     # compare
     #===========================================================================
+    """not implemented
     for dkey, fp in session.afp_d.items():
         if dkey in session.fp_d: continue #ignore loaded data
         #=======================================================================
@@ -44,5 +42,5 @@ def test_integ_full(session, hval_prec, true_dir):
         
         true_fp = search_fp(true_dir, ext, search_str) #find the data file.
         assert os.path.exists(true_fp), 'failed to find match for %s'%dkey
-        #true = retrieve_data(dkey, true_fp, session)
+        #true = retrieve_data(dkey, true_fp, session)"""
         

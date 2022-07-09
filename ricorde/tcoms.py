@@ -1,27 +1,16 @@
-'''
-Created on Jul. 17, 2021
-
-@author: cefect
-
-common methods for RiCORDE
-'''
+'''Misc methods'''
 
 #===============================================================================
 # imports
 #===============================================================================
-import os, datetime, copy
-import processing
 
 from hp.Q import Qproj, QgsCoordinateReferenceSystem, QgsMapLayerStore, QgsRasterLayer
-from osgeo import gdal
-
-from hp.exceptions import Error, assert_func
 from hp.dirz import delete_dir
-
+from hp.exceptions import Error, assert_func
 from hp.whitebox import Whitebox
-
-
-
+from osgeo import gdal
+import os, datetime, copy
+import processing
 
 
 class TComs(Qproj):
@@ -86,7 +75,6 @@ class TComs(Qproj):
             ref_lay = self.retreive('dem')
         else:
             ref_lay = self.get_layer(ref_lay)
-            
  
         assert ref_lay.crs() == self.qproj.crs()
         assert isinstance(ref_lay, QgsRasterLayer), type(ref_lay)
@@ -101,12 +89,10 @@ class TComs(Qproj):
             """special default"""
             ofp = os.path.join(self.wrk_dir, os.path.splitext(os.path.basename(vlay_fp))[0]+'.tif')
         
-        
         #get reference values
         rect = ref_lay.extent()
         extent = '%s,%s,%s,%s'%(rect.xMinimum(), rect.xMaximum(), rect.yMinimum(), rect.yMaximum())+ \
                 ' [%s]'%ref_lay.crs().authid()
-                
         
         #build pars
         """want to match the dem exactly... so using a special implementation"""
@@ -129,10 +115,6 @@ class TComs(Qproj):
         #=======================================================================
         # wrap
         #=======================================================================
- 
-    
- 
-            
         
         return ofp
     
@@ -194,7 +176,6 @@ class TComs(Qproj):
         else:
             vlay3=vlay2
         
-        
         #===================================================================
         # simplify 
         #===================================================================
@@ -221,7 +202,6 @@ class TComs(Qproj):
         #=======================================================================
         
         vlay5 = self.multiparttosingleparts(vlay4, logger=log)
-        
         
         #=======================================================================
         # remvoe small feats
@@ -250,7 +230,6 @@ class TComs(Qproj):
         #=======================================================================
         if logger is None: logger=self.logger
         log=logger.getChild('inun_max_filter')
-        
  
         #===================================================================
         # build the raster calc entries
@@ -275,8 +254,6 @@ class TComs(Qproj):
                           logger=log,
                           compress=compress,
                           **kwargs)
-        
-
     
     def wsl_extrap_grass(self, #carve our inundation and extrapolate with edges
                            dem_fp,
@@ -384,13 +361,11 @@ class TComs(Qproj):
         
         cd_fp, blink_fp = Whitebox(out_dir=out_dir, logger=log
                  ).costDistance(source_fp=rlay1_fp, cost_fp=cost_fp)
-                 
         
         #allocate the costs
         log.debug('getting the costAllocation raster')
         rlay2_fp = Whitebox(out_dir=out_dir, logger=log
                  ).costAllocation(source_fp=rlay1_fp, blink_fp=blink_fp)
-                 
                  
         assert os.path.exists(rlay2_fp),'costAllocation failed \n    input: %s'%(
             rlay1_fp)
@@ -421,8 +396,6 @@ class TComs(Qproj):
  
                       **kwargs):
         
-        
-        
         #=======================================================================
         # build calculator constructors
         #=======================================================================
@@ -443,7 +416,6 @@ class TComs(Qproj):
         assert_func(lambda:  self.rlay_check_match(ofp,hand_rlay))
         
         return ofp
-        
 
     #===========================================================================
     # HELPERS----
@@ -451,7 +423,6 @@ class TComs(Qproj):
     def createconstantrasterlayer(self,
             rlay_fp,
             burn_val=1, #value to burn
- 
  
             logger=None,
             output='TEMPORARY_OUTPUT',
@@ -465,7 +436,6 @@ class TComs(Qproj):
             out_fp=output
         
         assert isinstance(rlay_fp, str)
- 
         
         _ =  Whitebox(out_dir=self.out_dir, logger=logger
                  ).NewRasterFromBase(rlay_fp, value=burn_val, out_fp=out_fp)
@@ -494,20 +464,6 @@ class TComs(Qproj):
         else:
             return md['COMPRESSION']
         
- 
-        
-        
-        
-        
-        
-        
- 
-
-            
-                    
-                    
-        
-        
     def _log_datafiles(self, 
                        log=None,
                        d = None,
@@ -519,17 +475,12 @@ class TComs(Qproj):
             #print each datafile
             d = copy.copy(self.fp_d) #start with the passed
             d.update(self.ofp_d) #add the loaded
-        
-        
 
         s0=''
         for k,v in d.items():
             s0 = s0+'\n    \'%s\':r\'%s\','%(k,  v)
-
                 
         log.info(s0)
-            
-            
     
     def __exit__(self, #destructor
                  *args,**kwargs):
@@ -537,6 +488,7 @@ class TComs(Qproj):
         delete_dir(self.temp_dir)
         
         super().__exit__(*args,**kwargs) #initilzie teh baseclass
+
     
 #===============================================================================
 # FUNCTIONS---------
@@ -558,7 +510,6 @@ def test(
     #===========================================================================
     with TComs(name=name, overwrite=True, out_dir=os.path.join(out_dir, 'wbt'),
                crs=QgsCoordinateReferenceSystem(crsid)) as wrkr:
-
  
         wbt_ofp = wrkr.wsl_extrap_wbt(dem_fp, inunr_rp, out_dir=out_dir)
         
@@ -569,9 +520,6 @@ def test(
                crs=QgsCoordinateReferenceSystem(crsid)) as wrkr:
         
         r_ofp = wrkr.wsl_extraploate_in(dem_fp, inunr_rp, out_dir=out_dir)
-
-    
- 
     
     return 
 
@@ -582,7 +530,6 @@ if __name__ =="__main__":
     print('start at %s'%start)
     
     test()
-
     
     tdelta = datetime.datetime.now() - start
     print('finished in %s'%tdelta)

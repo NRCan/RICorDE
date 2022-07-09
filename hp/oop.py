@@ -1,78 +1,100 @@
-'''
-Created on Mar 10, 2019
+'''Methods for object-oriented-programming'''
 
-@author: cef
-
-object oriented programming
-
-'''
-
-
-import os, sys, datetime, gc, copy, pickle
-
-from hp.dirz import delete_dir
-
-from hp.exceptions import Error
+from hp.dirz import delete_dir 
 from qgis.core import QgsMapLayer
-
- 
+import os, sys, datetime, gc, copy, pickle
 
 #===============================================================================
 # functions------------------------------------------------------------------- 
 #===============================================================================
 
+
 class Basic(object): #simple base class
-    
-    
     
     def __init__(self, 
                  
                  #directories
-                 out_dir        = None,
                  root_dir       = None,
+                 out_dir        = None,
                  temp_dir       = None,
                  
                  #labelling
                  mod_name       = 'RICorDE',
                  name           = 'SessionName', 
-                 tag            = '',
+                 tag            = 'r0',
                 
                 #logging control 
                 logger         = None,
                 logcfg_file    = None,
                  
-                 
                  #general parameters
                  prec           = 2,
                  overwrite      = False, #file overwriting control
+                 relative       = False, #specify whether 
                  
                  #inheritancee
                  inher_d        = {}, #container of inheritance pars
                  session        = None,
                  ):
+        """
+        Initialize a generic class object.
+    
+        Provides common methods and parameters for object based programming.
+    
+        Parameters
+        ----------
+        root_dir: str, default from definitions
+            Base directory of the project. Used for generating default directories.            
+        out_dir : str, optional
+            Directory used for outputs. Defaults to a sub-directory of root_dir            
+        temp_dir: str, optional
+            Directory for temporary outputs (i.e., cache). Defaults to a sub-directory of out_dir.
+        mod_name: str, default 'RICorDE'
+            Base name for all labels and directories,
+        name: str, default 'SessionName'
+            Project name
+        tag: str, default ''
+            Label for a specific run or version.
+        logger: logging.RootLogger, optional
+            Logging worker.
+        logcfg_file: str, optional
+            Filepath of a python logging configuration file
+        prec: int, default 2
+            Default float precision.
+        overwrite: bool, default False
+            Default behavior when attempting to overwrite a file
+        relative: bool, default False
+            Default behavior of filepaths (relative vs. absolute)
+        inher_d: dict, default {}
+            Container of inheritance parameters {attribute name: object}
+        session: scripts.Session, optional
+            Reference to parent session
+        
+        """
         
         #=======================================================================
         # attachments
         #=======================================================================
         
         self.today_str = datetime.datetime.today().strftime('%Y%m%d')
-        self.root_dir = root_dir
         self.mod_name = mod_name
+        self.name = name
         self.tag = tag
         self.prec=prec
         self.overwrite=overwrite
-        self.name = name
+        self.relative=relative
+
         self.trash_fps = list() #container for files to delete on exit
         
         #setup inheritance handles
         self.inher_d = {**inher_d, #add all thosefrom parents 
                         **{'Basic':[ #add the basic
-                            'root_dir', 'mod_name', 'tag', 'overwrite']}, 
+                            'root_dir', 'mod_name', 'tag', 'overwrite', 'relative']}, 
                         }
         self.session=session
         
         #=======================================================================
-        # working directory
+        # root directory
         #=======================================================================
         if root_dir is None:
             from definitions import root_dir
@@ -81,6 +103,7 @@ class Basic(object): #simple base class
         if not os.getcwd() == root_dir:
             os.chdir(root_dir) #set this as the working directory (mostly used by the logger)
             print('set  directory to %s'%root_dir)
+            
         self.root_dir=root_dir
         #=======================================================================
         # output directory
@@ -125,10 +148,7 @@ class Basic(object): #simple base class
             lwrkr.duplicate(self.out_dir, 
                         basenm='%s_%s'%(tag, datetime.datetime.today().strftime('%m%d.%H.%M')))
 
-            
         self.logger=logger
-            
-        
         
         self.logger.debug('finished Basic.__init__')
         
@@ -231,13 +251,10 @@ class Session(Basic): #analysis with flexible loading of intermediate results
     """typically we only instance this once
         but tests will instance multiple times
         so beware of setting containers here"""
-
-    
-    
     
     def __init__(self, 
                  bk_lib=dict(),         #kwargs for builder calls {dkey:kwargs}
-                 compiled_fp_d = dict(), #container for compiled (intermediate) results {dkey:filepath}
+                 compiled_fp_d = None, #container for compiled (intermediate) results {dkey:filepath}
                  data_retrieve_hndls=None, #data retrival handles
                              #default handles for building data sets {dkey: {'compiled':callable, 'build':callable}}
                             #all callables are of the form func(**kwargs)
@@ -247,9 +264,8 @@ class Session(Basic): #analysis with flexible loading of intermediate results
                 write=True,
 
                 **kwargs):
-        
+        if compiled_fp_d is None: compiled_fp_d=dict()
         assert isinstance(data_retrieve_hndls, dict), 'must past data retrival handles'
-        
         
         super().__init__(**kwargs)
         
@@ -257,11 +273,9 @@ class Session(Basic): #analysis with flexible loading of intermediate results
     
         self.ofp_d = dict() #output filepaths generated this session
         
-        
         #=======================================================================
         # retrival handles---------
         #=======================================================================
-                    
             
         self.data_retrieve_hndls=data_retrieve_hndls
         
@@ -274,16 +288,13 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             l = set(compiled_fp_d.keys()).difference(keys)
             assert len(l)==0, 'keymismatch on compiled_fp_d \n    %s'%l
             
-            
         #attach    
         self.bk_lib=bk_lib
         self.compiled_fp_d = compiled_fp_d
         self.write=write
         
-        
         #start meta
         self.dk_meta_d = {k:dict() for k in keys}
- 
  
         #=======================================================================
         # defaults
@@ -296,7 +307,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             
         self.wrk_dir = wrk_dir
         
-        
     def retrieve(self, #flexible 3 source data retrival
                  dkey,
                  *args,
@@ -306,7 +316,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         
         if logger is None: logger=self.logger
         log = logger.getChild('retrieve')
-        
 
         start = datetime.datetime.now()
         #=======================================================================
@@ -327,7 +336,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             except Exception as e:
                 log.warning('failed to get a copy of \"%s\' w/ \n    %s'%(dkey, e))
                 return self.data_d[dkey]
-            
         
         #=======================================================================
         # retrieve handles
@@ -343,7 +351,7 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         #=======================================================================
  
         if dkey in self.compiled_fp_d and 'compiled' in hndl_d:
-            data = hndl_d['compiled'](fp=self.compiled_fp_d[dkey], dkey=dkey)
+            data = hndl_d['compiled'](fp=self.compiled_fp_d[dkey], dkey=dkey, **kwargs)
             method='loaded pre-compiled from %s'%self.compiled_fp_d[dkey]
         #=======================================================================
         # 3.build from scratch
@@ -375,7 +383,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             
             meta_d.update({'layname':data.name(), 'source':data.source()})
             
-            
         else:
             assert hasattr(data, '__len__'), '\'%s\' failed to retrieve some data'%dkey
         self.data_d[dkey] = data
@@ -386,8 +393,6 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         tdelta = round((datetime.datetime.now() - start).total_seconds(), 1)
         meta_d.update({
             'tdelta (secs)':tdelta, 'dtype':type(data), 'method':method})
-        
-        
             
         self.dk_meta_d[dkey].update(meta_d)
         #=======================================================================
@@ -397,26 +402,73 @@ class Session(Basic): #analysis with flexible loading of intermediate results
         
         return data
     
-
-    
-    def load_pick(self,
-                  fp=None, 
-                  dkey=None,
-                  ):
+    def load_pick(self,fp=None,dkey=None,
+                  relative=False, #best to keep this excplicit
+                  #only relevant when data is a dictionary
+                  
+                  data_dir=None,):        
+        """
+        Load data from a pickle
+                
+        Parameters
+        ----------
+        fp : str, default None
+            Filepath of pickle.
+        dkey: str, default None
+            Data key for this function (for error reporting)
+        relative:bool, default False
+            Convert a filepath dict from relative to absolute.
+        data_dir:str, optional
+            Directory to use for converting relative filepaths.
+            Defaults to directory of the pickle.
         
+            
+        Returns
+        ----------
+        data, varies
+            Data loaded from the pickle
+        """
         assert os.path.exists(fp), 'bad fp for \'%s\' \n    %s'%(dkey, fp)
         
         with open(fp, 'rb') as f:
-            data = pickle.load(f)
+            data_raw = pickle.load(f)
+            
+        #=======================================================================
+        # filepath conversion
+        #=======================================================================
+        if relative:
+            assert isinstance(data_raw, dict)
+            if data_dir is None: data_dir=os.path.join(os.path.dirname(fp), dkey)
+            assert os.path.exists(data_dir)
+            data = {k:os.path.join(data_dir, v) for k,v in data_raw.items()}
+        else:
+            data=data_raw
             
         return data
     
     def write_pick(self, 
-                   data, 
-                   out_fp,
-                   overwrite=None,
-                   protocol = 3, # added in Python 3.0. It has explicit support for bytes
-                   logger=None):
+                   data_raw, out_fp,protocol = 3, 
+                   relative=False,overwrite=None,logger=None):
+        """
+        Write data to a pickle
+                
+        Parameters
+        ----------
+        data_raw : varies 
+            Data to be written.
+        out_fp: str 
+            Filepath to write to.
+        protocol: int, default 3
+            Pickle writing protocol. 
+            added in Python 3.0. It has explicit support for bytes.
+        relative:bool, default False
+            Convert a filepath dict from relative to absolute.
+
+        Returns
+        ----------
+        out_fp, str
+            Filepath where pickle was written to
+        """
         
         #=======================================================================
         # defaults
@@ -433,14 +485,25 @@ class Session(Basic): #analysis with flexible loading of intermediate results
             assert overwrite, out_fp
             
         assert out_fp.endswith('.pickle')
+        
+        #=======================================================================
+        # convert to relative
+        #=======================================================================
+        if relative:
+            assert isinstance(data_raw, dict)
+            data = {k:os.path.basename(v) for k,v in data_raw.items()}
+        else:
+            data = data_raw
             
+        #=======================================================================
+        # write
+        #=======================================================================
         log.debug('writing to %s'%out_fp)
         
         with open(out_fp,  'wb') as f:
             pickle.dump(data, f, protocol)
         
-        log.info('wrote %i to %s'%(len(data), out_fp))
-            
+        log.info('wrote %i to %s'%(len(data), out_fp))            
         
         return out_fp
         
@@ -481,25 +544,11 @@ class Session(Basic): #analysis with flexible loading of intermediate results
                 print('        \'%s\':r\'%s\','%(k,v))
             print('\n')
             self.ofp_d = dict()
-              
-              
-        
+            
+        #make sure these are cleared
+        self.compiled_fp_d=dict()
+        self.ofp_d=dict()
+        self.data_d=dict()
         
         super().__exit__(*args, **kwargs)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     

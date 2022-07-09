@@ -1,25 +1,19 @@
 '''
-Created on Jul. 15, 2021
+Factory methods for Whitebox tools
 
-@author: cefect
-
-custom wrappers for whitebox command line
+Notes
+---------------
     would be nicer to use the project python libraries
         but these require tkinter
     could be nicer to use the QGIS processing algos
         but I can't get these to setup
 '''
 
-
 import subprocess, os, logging
-
 
 from hp.dirz import get_temp_dir
 from hp.gdal import get_nodata_val
-
-mod_logger = logging.getLogger(__name__)
-
-
+from definitions import whitebox_exe_d, max_procs
 #===============================================================================
 # classes------
 #===============================================================================
@@ -27,20 +21,19 @@ mod_logger = logging.getLogger(__name__)
 
 class Whitebox(object):
     
-    exe_d = {
-        'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
-        'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
-        }
-    
     def __init__(self,
                  out_dir=None,
-                 logger=mod_logger,
+                 logger=None,
                  overwrite=True,
                  version='v1.4.0',
-                 max_procs=4, 
+ 
+                 max_procs=max_procs, 
                  ):
         
+        self.exe_d=whitebox_exe_d
         if out_dir is None: out_dir = get_temp_dir()
+        if logger is None:
+            logger = logging.getLogger(__name__)
         self.out_dir=out_dir
         self.logger=logger.getChild('wbt')
         self.overwrite =overwrite
@@ -99,9 +92,6 @@ class Whitebox(object):
         #                         ) 
         #=======================================================================
         
- 
-        
-        
         return ofp
     
     def elevationAboveStream(self,
@@ -153,8 +143,6 @@ class Whitebox(object):
         
         if out_fp is None: 
             out_fp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(rlay_fp))[0]+'_fild.tif')
-            
-
         
         #=======================================================================
         # checks
@@ -201,8 +189,6 @@ class Whitebox(object):
         
         if out_fp is None: 
             out_fp = os.path.join(self.out_dir, os.path.splitext(os.path.basename(rlay_fp))[0]+'_burn.tif')
-            
-
         
         #=======================================================================
         # checks
@@ -265,7 +251,6 @@ class Whitebox(object):
         assert os.path.exists(vlay_pts_fp)
         
         assert vlay_pts_fp.endswith('.shp'), 'only shapefiles allowed'
- 
 
         #=======================================================================
         # setup
@@ -383,8 +368,6 @@ class Whitebox(object):
         
         return ofp
         
-
-        
     def __run__(self, args, logger=None):
         """I think this only returns info upon completion?
         check the verbose flag also"""
@@ -410,20 +393,13 @@ class Whitebox(object):
             self.logger.error('failed w/ \n    %s'%result.stderr)
             
         result.check_returncode()
-        
-
             
         return result
-
-
 
 
 if __name__ == '__main__':
     dem_fp = r'C:\LS\03_TOOLS\_jobs\202103_InsCrve\outs\HAND\HRDEM_cilp2.tif'
     result = Whitebox().breachDepressionsLeastCost(dem_fp)
     
-    
     print('finished')
-
-
 

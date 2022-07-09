@@ -3,7 +3,7 @@ RICorDE produces gridded water depth estimates from flood inundation data by inc
 
 ![img](/img/cover.png)
 
-To read more about the algorithm, its performance and applications, see [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html).
+To read more about the algorithm, and its performance and applications, see [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html).
 
 ## Installation
 RICorDE is a standalone application built on QGIS python bindings.  Before using, ensure the following are installed:
@@ -96,6 +96,7 @@ For more flexibility, RICorDE methods can be called in custom python scripts by 
     run_wslRoll() #Perform PHASE3: Rolling WSL grid
     run_depths() #PHASE4: Resultant Depths computation
     
+When developing your custom script, parameters from the parameter.ini file should be passed to the session as a dictionary in the _bk_lib_ key word argument (these can be loaded from the _load_params_ function if you'd like to still use the parameter.ini file). 
 ## Tutorial
 
 A pre-configured run of the Fredericton 2018 flood is provided in the [tutorials](tutorials\bryant2022_fred12) folder. See [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html) for data sources.

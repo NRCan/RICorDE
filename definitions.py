@@ -3,11 +3,17 @@ import os
 
  
 #location of whitebox executable
-"""both versions are used"""
+"""
+Change this to match your whitebox exe paths
+both versions are used
+TODO: move this to a different setup file?"""
 whitebox_exe_d = {
         'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
         'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
         }
+
+for k,v in whitebox_exe_d.items():
+    assert os.path.exists(v), 'got bad whitebox path for %s: \n    %s'%(k,v)
 
 #maximum processors to use
 max_procs = 4 

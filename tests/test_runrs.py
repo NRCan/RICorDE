@@ -123,7 +123,7 @@ def test_run_parsed(args,
     # add special args via parser
     #===========================================================================
     args = args + [
-        '-root_dir', str(tmp_path), '-w', '-t', 'test', '-overwrite'
+        '-root_dir', str(tmp_path), '-t', 'test',
         ]
     
     result = run_from_args(args, 

@@ -1,7 +1,7 @@
 REM =============
 REM VARIABLES
 REM =============
-set PARAM_FP=C:\LS\09_REPOS\03_TOOLS\RICorDE\tutorial\bryant2022_fred12\RICorDE_bryant2022.ini
+set PARAM_FP=C:\LS\09_REPOS\03_TOOLS\RICorDE\tutorials\bryant2022_fred12\RICorDE_bryant2022.ini
 set ROOT_DIR=C:\LS\10_IO\ricorde\bryant2022\
 
 REM =============
@@ -20,6 +20,6 @@ REM =============
 REM EXECUTE 
 REM =============
 ECHO Executing RICorDE
-python %MAIN% -rd %ROOT_DIR% %PARAM_FP% -t r1 -name tutorial1
+python -O %MAIN% %PARAM_FP% -rd %ROOT_DIR% -t r1 
 
 pause

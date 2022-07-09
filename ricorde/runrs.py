@@ -142,12 +142,12 @@ def run_from_params(
             ) as wrkr:
 
         wrkr.logger.info('\n\n start calc sequence\n\n')
-        wrkr.run_dataPrep()
-        wrkr.run_HAND()
-        wrkr.run_imax()
-        wrkr.run_HANDgrid()
-        wrkr.run_wslRoll()
-        wrkr.run_depths()
+        wrkr.run_dataPrep() #Clean and load inputs into memory.
+        wrkr.run_HAND() #Build the HAND raster from the DEM using whiteboxtools
+        wrkr.run_imax() #Perform the Phase 1: Inundation Correction
+        wrkr.run_HANDgrid() #Perform PHASE2: Compute Rolling HAND grid
+        wrkr.run_wslRoll() #Perform PHASE3: Rolling WSL grid
+        wrkr.run_depths() #PHASE4: Resultant Depths computation
         
         outputs = wrkr.out_dir, wrkr.ofp_d
         

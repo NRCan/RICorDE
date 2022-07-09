@@ -665,9 +665,8 @@ class Session(TComs, baseSession):
     #===========================================================================
     # PHASE0: Build HAND---------
     #===========================================================================
-    def run_HAND(self,
-                 logger=None,
-                 ):
+    def run_HAND(self,logger=None,):
+        """Build the HAND raster from the DEM using whiteboxtools"""
         """TODO: release dem_hyd?"""
         #=======================================================================
         # defaults
@@ -918,7 +917,7 @@ class Session(TComs, baseSession):
     # PHASE1: Inundation Correction---------
     #===========================================================================
     def run_imax(self,):
-        """Phase 1: Inundation Correction."""
+        """Perform the Phase 1: Inundation Correction."""
         #=======================================================================
         # defaults
         #=======================================================================
@@ -1482,7 +1481,7 @@ class Session(TComs, baseSession):
     def run_HANDgrid(self, #
                   logger=None,
                   ):
-        """PHASE2: Compute Rolling HAND grid"""
+        """Perform PHASE2: Compute Rolling HAND grid"""
  
         #=======================================================================
         # defaults
@@ -2679,7 +2678,7 @@ class Session(TComs, baseSession):
     # PHASE3: Rolling WSL grid-----------
     #=========================================================================== 
     def run_wslRoll(self,):
-        """PHASE3: Rolling WSL grid"""
+        """Perform PHASE3: Rolling WSL grid"""
         
         #=======================================================================
         # defaults    
@@ -3359,7 +3358,7 @@ class Session(TComs, baseSession):
     # PHASE4: Final Depth-----------
     #===========================================================================
     def run_depths(self,):
-        """PHASE4: Final Depth"""
+        """PHASE4: Resultant Depths computation"""
         
         #=======================================================================
         # defaults    

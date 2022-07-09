@@ -124,7 +124,9 @@ def run_from_params(
     Other sections will be passed in 'bk_lib'
     
     """
-    #load from teh parameter file
+    #===========================================================================
+    # #load from teh parameter file
+    #===========================================================================
     if param_lib is None:
         param_lib = load_params(param_fp)
     
@@ -133,8 +135,17 @@ def run_from_params(
     session_kwargs = {k:v for k,v in d.items() if not v==''} #clear empties
     print('running w/ \n%s\n\n'%get_dict_str(session_kwargs))
     
+    #===========================================================================
+    # prerun checks
+    #===========================================================================
+    for k,v in session_kwargs.items():
+        if k.endswith('_fp'):
+            assert os.path.exists(v), 'passed bad filepath for \'%s\':\n    \'%s\''%(
+                k, v)
 
-    #initilze the calculation session using these parameters
+    #===========================================================================
+    # #initilze the calculation session using these parameters
+    #===========================================================================
     from ricorde.scripts import Session
     with Session(                  
             bk_lib = param_lib,

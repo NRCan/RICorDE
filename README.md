@@ -1,5 +1,6 @@
 # RICorDE
 RICorDE produces gridded water depth estimates by incorporating a HAND sub-model and cost distancing algorithms to extrapolate edge values into the inundated region. 
+![img](/img/cover.png)
 
 ## Installation
 RICorDE is a standalone application built on QGIS python bindings.  Before using, ensure the following are installed:
@@ -84,7 +85,7 @@ To prepare a RICorDE run, first copy the provided [RICorDE_params_default.ini](R
 
 ### Custom Scripting
 
-For more flexibility, RICorDE methods can be called in custom scripts by referencing the session methods in [ricorde/scripts.py](ricorde/scripts.py). The function [_run_from_params_](ricorde\runrs.py) provides a nice example (this is the default behavior of the CLI call) and calls the following hi-level function sequence: 
+For more flexibility, RICorDE methods can be called in custom scripts by referencing the session methods in [ricorde/scripts.py](ricorde/scripts.py). The function [_run_from_params_](ricorde/runrs.py) provides a nice example (this is the default behavior of the CLI call) and calls the following hi-level function sequence: 
 
     run_dataPrep() #Clean and load inputs into memory.
     run_HAND() #Build the HAND raster from the DEM using whiteboxtools

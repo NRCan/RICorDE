@@ -20,6 +20,6 @@ REM =============
 REM EXECUTE 
 REM =============
 ECHO Executing RICorDE
-python -O %MAIN% %PARAM_FP% -rd %ROOT_DIR% -t r1 
+python %MAIN% %PARAM_FP% -rd %ROOT_DIR% -t r1 
 
 pause

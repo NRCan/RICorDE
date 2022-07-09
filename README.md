@@ -9,11 +9,9 @@ RICorDE is a standalone application built on QGIS python bindings.  Before using
 
 RICorDE must be run within a working pyqgis development environment. To test if your environment is working, try the following:
 
-`~python`
-
-`>>>import qgis.core`
-
-`>>>import processing`
+    ~python
+    >>>import qgis.core
+    >>>import processing
 
 If any of these result in an error, your environment is not set up correctly. 
 
@@ -32,7 +30,7 @@ Additional commands can be passed to control the file behavior and some defaults
  
     usage: RICorDE [-h] [-exit_summary] [-compress {hiT,hi,med,none}]
                    [-root_dir ROOT_DIR] [-out_dir OUT_DIR] [-temp_dir TEMP_DIR]
-                   [-tag TAG] [-write] [-name NAME] [-prec PREC] [-overwrite]
+                   [-tag TAG] [-write] [-prec PREC] [-overwrite]
                    [-relative]
                    param_fp
 
@@ -67,7 +65,7 @@ Additional commands can be passed to control the file behavior and some defaults
 
 #### Parameter.ini file
 
-The parameter file is where the input data and algorhithim parameters are specified. These are [pythonic ini files](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure) with 20 expected sections. Each of these sections corresponds to an intermediate or end result file, except for the [session] section where the primary inputs are specified. Here's the first 10 rows from [RICorDE_params_default.ini](RICorDE_params_default.ini) 
+The parameter file is a [pythonic ini files](https://docs.python.org/3/library/configparser.html#supported-ini-file-structure) where the input data and algorhithim parameters are specified. The parameter file expects 20 sections, each of which corresponds to an intermediate or end result file, except for the [session] section where the primary inputs are specified. Here's the first 10 rows from [RICorDE_params_default.ini](RICorDE_params_default.ini) 
 
     [session]
     name=project1       #project name
@@ -80,4 +78,17 @@ The parameter file is where the input data and algorhithim parameters are specif
     [dem]
     #resolution =10             #optional resolution for resampling the DEM
 
-Characters following '#' are ignored.
+Characters following '#' are ignored. 
+
+To prepare a RICorDE run, first copy the provided [RICorDE_params_default.ini](RICorDE_params_default.ini) into your working directory, then edit as needed, before saving and executing using main.py (see above).
+
+### Custom Scripting
+
+For more flexibility, RICorDE methods can be called in custom scripts by referencing the session methods in [ricorde/scripts.py](ricorde/scripts.py). The function [_run_from_params_](ricorde\runrs.py) provides a nice example (this is the default behavior of the CLI call) and calls the following hi-level function sequence: 
+
+    run_dataPrep() #Clean and load inputs into memory.
+    run_HAND() #Build the HAND raster from the DEM using whiteboxtools
+    run_imax() #Perform the Phase 1: Inundation Correction
+    run_HANDgrid() #Perform PHASE2: Compute Rolling HAND grid
+    run_wslRoll() #Perform PHASE3: Rolling WSL grid
+    run_depths() #PHASE4: Resultant Depths computation

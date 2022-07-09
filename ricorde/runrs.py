@@ -164,18 +164,7 @@ def run_from_params(
         
     return outputs
 
-
-if __name__=='__main__':
-    fp = r'C:\LS\09_REPOS\03_TOOLS\RICorDE\RICorDE_params_default.txt'
-    
-    load_params(fp)
-    #===========================================================================
-    # parser=get_parser(fp)
-    # 
-    # print_parser(parser)
-    #===========================================================================
-    
-
+ 
     
     
  

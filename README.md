@@ -5,6 +5,8 @@ RICorDE produces gridded water depth estimates from flood inundation data by inc
 
 To read more about the algorithm, and its performance and applications, see [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html).
 
+To see what's new, check out the [CHANGELOG.md](CHANGELOG.md)
+
 ## Installation
 RICorDE is a standalone application built on QGIS python bindings.  Before using, ensure the following are installed:
 

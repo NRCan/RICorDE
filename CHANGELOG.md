@@ -19,10 +19,25 @@ Unreleased
 ### Removed
 
 -->
+## v1.0.0 - 2022-07-09
+
+Private release for NRCan integration
+
+### Changed
+- Upgrade to QGIS 3.22.8
+- Expanded testing framework (more tests and pytest-qgis)
+
+### Added
+- argument parser for CLI
+- parameter files (includes explanation of inputs and intermediate files)
+- misc project files (readme.md, changelog, conributing, requirements)
+- tutorial
+- requirements file
+- docstrings
 
 ## v0.2.0 - 2022-05-31
 
-- Pre-release used for TC Idai work
+Pre-release used for TC Idai work
 
 ### Added
 
@@ -35,5 +50,5 @@ Unreleased
 
 ## v0.1.0 - 2021-09-28
 
-- Pre-release  used for NHESS manuscript calcs 
+Pre-release  used for NHESS manuscript calcs 
  

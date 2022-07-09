@@ -15,7 +15,7 @@ def param_fp(proj_dir, proj_d, tmp_path):
     assert 'pwb_fp' in proj_d
     
     sectName='session'
-    fileName = 'test_params.ini'
+    fileName = 'params.ini'
     param_fp = os.path.join(proj_dir, 'tests', fileName) #just using one file now
     parser=get_parser(param_fp)
     

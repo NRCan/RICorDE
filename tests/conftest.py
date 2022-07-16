@@ -1,7 +1,4 @@
-'''
-Created on Feb. 21, 2022
-
-@author: cefect
+'''pytest configuration
 
 copied from 2112_Agg
 '''

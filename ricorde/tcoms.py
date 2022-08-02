@@ -316,7 +316,7 @@ class TComs(Qproj):
         
         return rlay3_fp
     
-    def wsl_extrap_wbt(self, #carve our inundation and extrapolate with edges. using WBT
+    def wsl_extrap_wbt(self, #
                            dem_fp, #terrain to be clipped and extrapolted against
                            inun_fp, #rlay of inundation
                            
@@ -326,6 +326,9 @@ class TComs(Qproj):
                            compress=None,
                            ):
         """
+        carve out inundation and extrapolate interior beach values (from DEM). using WBT
+        
+        
         todo: flexible inputs
         """
         #=======================================================================

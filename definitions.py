@@ -10,6 +10,7 @@ TODO: move this to a different setup file?"""
 whitebox_exe_d = {
         'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
         'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
+        'v2.1.0':r'C:\LS\06_SOFT\whitebox\v2.1.0\whitebox_tools.exe'
         }
 
 for k,v in whitebox_exe_d.items():

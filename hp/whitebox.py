@@ -25,10 +25,20 @@ class Whitebox(object):
                  out_dir=None,
                  logger=None,
                  overwrite=True,
-                 version='v1.4.0',
+                 version='v2.1.0',
  
                  max_procs=max_procs, 
                  ):
+        """
+        worker for whitebox_tools.exe
+        
+        Parameters
+        -----------
+        version: str
+            which file path to use from definitions.py. 
+            because some tools are broken on newer versions
+        
+        """
         
         self.exe_d=whitebox_exe_d
         if out_dir is None: out_dir = get_temp_dir()
@@ -72,7 +82,7 @@ class Whitebox(object):
                 '--dist=%i'%dist,
                 '--min_dist=\'True\'', #Optional flag indicating whether to minimize breach distances
                 '--fill=\'True\'', # fill any remaining unbreached depressions
-                '--compress_raster=\'False\'',
+                #'--compress_raster=\'False\'',
                 '--output=\'{}\''.format(ofp),
 
                 '-v'

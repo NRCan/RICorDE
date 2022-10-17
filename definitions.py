@@ -25,7 +25,7 @@ proj_dir = os.path.dirname(os.path.abspath(__file__))
 logcfg_file=os.path.join(proj_dir, 'logger.conf')
 
 #root directory for building default directories in
-root_dir=r'C:\LS\10_OUT\ricorde'
+root_dir=r'C:\LS\10_IO\ricorde'
 
 #parameters for parsing the parameter file
 config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get method)}}

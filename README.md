@@ -101,7 +101,7 @@ For more flexibility, RICorDE methods can be called in custom python scripts by 
 When developing your custom script, parameters from the parameter.ini file should be passed to the session as a dictionary in the _bk_lib_ key word argument (these can be loaded from the _load_params_ function if you'd like to still use the parameter.ini file). 
 ## Tutorial
 
-A pre-configured run of the Fredericton 2018 flood is provided in the [tutorials](tutorials\bryant2022_fred12) folder. See [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html) for data sources.
+A pre-configured run of the Fredericton 2018 flood is provided in the [tutorials](tutorials\bryant2022_fred12) folder. See [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html) for data sources. Edit the batch file to reflect your own paths. 
 
 ## Logging
 

@@ -773,7 +773,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # wrap
         #=======================================================================
-        assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%ofp
+        """v.2+ is returning a compressed result regardless of the flag"""
+        #assert self.getRasterCompression(ofp) is None, 'result has some compression: %s'%ofp
         
         rlay = self.rlay_load(ofp, logger=log)
         
@@ -830,8 +831,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # precheck
         #=======================================================================
-        
-        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
+        """relaxing
+        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp"""
         
         #=======================================================================
         # execute
@@ -2084,7 +2085,8 @@ class Session(TComs, baseSession):
         
         #run tool
         """still very slow... may be the ref_lay"""
-        interp1_fp = Whitebox(logger=logger, version='v2.0.0', #1.4 wont cap processors
+        interp1_fp = Whitebox(logger=logger, 
+                              #version='v2.0.0', #1.4 wont cap processors
                                  max_procs=max_procs, 
                                ).IdwInterpolation(shp_fp, fieldName,
                                 weight=distP, 

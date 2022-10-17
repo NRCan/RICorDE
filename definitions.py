@@ -8,8 +8,8 @@ Change this to match your whitebox exe paths
 both versions are used
 TODO: move this to a different setup file?"""
 whitebox_exe_d = {
-        'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
-        'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
+
+        'v2.1.0':r'C:\LS\06_SOFT\whitebox\v2.1.0\whitebox_tools.exe'
         }
 
 for k,v in whitebox_exe_d.items():
@@ -25,7 +25,7 @@ proj_dir = os.path.dirname(os.path.abspath(__file__))
 logcfg_file=os.path.join(proj_dir, 'logger.conf')
 
 #root directory for building default directories in
-root_dir=r'C:\LS\10_OUT\ricorde'
+root_dir=r'C:\LS\10_IO\ricorde'
 
 #parameters for parsing the parameter file
 config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get method)}}

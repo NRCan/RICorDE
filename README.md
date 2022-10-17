@@ -8,10 +8,10 @@ To read more about the algorithm, and its performance and applications, see [Bry
 To see what's new, check out the [CHANGELOG.md](CHANGELOG.md)
 
 ## Installation
-RICorDE is a standalone application built on QGIS python bindings.  Before using, ensure the following are installed:
+RICorDE is a standalone application built on open source QGIS python bindings and WhiteboxTools.  Before using, ensure the following are installed:
 
 - [QGIS 3.22.8](https://download.qgis.org/downloads/) (see the [requirements.txt](requirements.txt) for dependencies usually shipped with QGIS)
-- [Whitebox.exe](https://github.com/jblindsay/whitebox-tools) (v1.4.0 and v2.0.0) (specify the exe locations in definitions.py)
+- [WhiteboxTools Open Core v2.1.0](https://www.whiteboxgeo.com/download-whiteboxtools/). This should install a _whitebox_tools.exe_ file. 
 
 RICorDE must be run within a working pyqgis environment. To test if your environment is working, try the following:
 
@@ -21,7 +21,7 @@ RICorDE must be run within a working pyqgis environment. To test if your environ
 
 If any of these result in an error, your environment is not set up correctly. 
 
-Once you've tested your setup, tell RICorDE where to access the Whitebox exes by entering these into  _whitebox_exe_d_ in [definitions.py](definitions.py). In this file, _root_dir_ can also be customized to control some default behaviour. 
+Once you've tested your setup, tell RICorDE where to access the _whitebox_tools.exe_ by entering the filepath into  _whitebox_exe_d_ in [definitions.py](definitions.py). In this file, _root_dir_ can also be customized to control some default behaviour. 
 
 ## Use
 RICorDE routines can be run in sequence using the command-line parsing in [main.py](main.py) or by calling the session methods in [ricorde/scripts.py](ricorde/scripts.py) directly in custom python scripts.

@@ -1,4 +1,7 @@
-'''Unit tests on runner functions'''
+'''Unit tests on runner functions
+
+tests handling of argument parser, and end-to-end runs
+'''
 
 from main import parse_args, run_from_args, get_dict_str
 from ricorde.runrs import load_params, run_from_params, get_parser

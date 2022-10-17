@@ -3,7 +3,8 @@ Created on Mar. 25, 2022
 
 @author: cefect
 
-integration tests
+run the full algorhithim (no checks)
+    redundant w/ test_runrs (less comprehensive)
 '''
 import pytest, copy, os 
 

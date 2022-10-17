@@ -34,7 +34,7 @@ def test_03inun(session, true_dir, dem, write, base_dir):
     dkey = 'inun_rlay'
     water_rlay_tests(dkey, session, true_dir, dem, write, base_dir)
  
-@pytest.mark.dev
+#@pytest.mark.dev
 @pytest.mark.parametrize('dem_fp',[r'test_01dem_None_fred02_0\working\test_tag_0328_dem.tif'] ) #from test_pwb
 @pytest.mark.parametrize('proj_d',['fred01'], indirect=True) #using the faster setup files
 @pytest.mark.parametrize('dist',[None, 100])

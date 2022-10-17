@@ -8,8 +8,7 @@ Change this to match your whitebox exe paths
 both versions are used
 TODO: move this to a different setup file?"""
 whitebox_exe_d = {
-        'v1.4.0':r'C:\LS\06_SOFT\whitebox\v1.4.0\whitebox_tools.exe',
-        'v2.0.0':r'C:\LS\06_SOFT\whitebox\v2.0.0\whitebox_tools.exe',
+
         'v2.1.0':r'C:\LS\06_SOFT\whitebox\v2.1.0\whitebox_tools.exe'
         }
 

@@ -831,8 +831,8 @@ class Session(TComs, baseSession):
         #=======================================================================
         # precheck
         #=======================================================================
-        
-        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp
+        """relaxing
+        assert self.getRasterCompression(dem_fp) is None, 'dem has some compression: %s'%dem_fp"""
         
         #=======================================================================
         # execute
@@ -2086,7 +2086,7 @@ class Session(TComs, baseSession):
         #run tool
         """still very slow... may be the ref_lay"""
         interp1_fp = Whitebox(logger=logger, 
-                              version='v2.0.0', #1.4 wont cap processors
+                              #version='v2.0.0', #1.4 wont cap processors
                                  max_procs=max_procs, 
                                ).IdwInterpolation(shp_fp, fieldName,
                                 weight=distP, 

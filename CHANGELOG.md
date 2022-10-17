@@ -19,6 +19,10 @@ Unreleased
 ### Removed
 
 -->
+## v1.0.1 - 2022-10-17
+
+Migrate to WBT 2.1.0
+
 ## v1.0.0 - 2022-07-09
 
 Private release for NRCan integration

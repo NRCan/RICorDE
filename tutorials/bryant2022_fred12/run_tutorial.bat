@@ -8,7 +8,7 @@ REM =============
 REM SETUP
 REM =============
 REM Activate pyqgis environment and 
-call "C:\Users\cefect\.venv\QGIS 3.22.8\ricorde\python-qgis-ltr_3228_activate.bat"
+call "C:\Users\cefect\.venv\QGIS 3.22.8\ricorde\activate.bat"
 
 REM add the project to the python path
 set PYTHONPATH=C:\LS\09_REPOS\03_TOOLS\RICorDE;%PYTHONPATH%

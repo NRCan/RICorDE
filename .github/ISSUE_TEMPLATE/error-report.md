@@ -21,3 +21,9 @@ All of the input data and parameter files necessary to reproduce the error.
 
 **Log files**
 Any log files
+
+**Version**
+Specify which version of RICorDE you are runniing
+
+**Build Info**
+Paste a screenshot of your QGIS>Help>About page (this has your system and QGIS build info). 

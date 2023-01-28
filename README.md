@@ -99,6 +99,18 @@ For more flexibility, RICorDE methods can be called in custom python scripts by 
     run_depths() #PHASE4: Resultant Depths computation
     
 When developing your custom script, parameters from the parameter.ini file should be passed to the session as a dictionary in the _bk_lib_ key word argument (these can be loaded from the _load_params_ function if you'd like to still use the parameter.ini file). 
+
+A typical end-to-end RICorDE run generates ~20 intermediate result data files. This architecture is useful for debugging, resuming a partial run, or for quickly replacing the results of some internal sub-routine (e.g., supplying your own HAND layer rather than using the one computed by RICorDE/WBT). Filepaths to an alternate intermediate (pre-compiled) result data file can be passed to a 'Session' object (e.g., via 'run_from_params') with the 'compiled_fp_d' key. For example:
+
+    run_from_params(
+        param_fp='path_to_parameters',
+
+        #use this hand raster file instead
+        compiled_fp_d = {'hand_fp':r'C:\LS\03_TOOLS\RICorDE\outs\2111_bene\1202\mozam_DR_1202_HAND.tif'},
+        )
+
+This will tell RICorDE to use the raster specified rather than call the building function (`build_hand` in this case). Most the building and (pre-compiled) loading functions are specified [here](https://github.com/cefect/RICorDE/blob/8579036e0747c4d97c391968772832f73d564741/ricorde/scripts.py#L66). Using this feature to supply an intermediate data file computed outside of RICorDE is not recommended as this may cause downstream issues in the computation pipeline. 
+
 ## Tutorial
 
 A pre-configured run of the Fredericton 2018 flood is provided in the [tutorials](tutorials\bryant2022_fred12) folder. See [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html) for data sources. Edit the batch file to reflect your own paths. A short video showing the execution of this tutorial can be found [here](https://youtu.be/BzAeMpCo23c).

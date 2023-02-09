@@ -2,7 +2,7 @@
 name: Documentation or Support request
 about: Ask for additional clarification, documentation, or support for using RICorDE
 title: ''
-labels: ''
+labels: 'documentation'
 assignees: 'cefect'
 
 ---

@@ -106,7 +106,7 @@ A typical end-to-end RICorDE run generates ~20 intermediate result data files. T
         param_fp='path_to_parameters',
 
         #use this hand raster file instead
-        compiled_fp_d = {'hand_fp':r'C:\LS\03_TOOLS\RICorDE\outs\2111_bene\1202\mozam_DR_1202_HAND.tif'},
+        compiled_fp_d = {'hand_fp':'path_to_layer'},
         )
 
 This will tell RICorDE to use the raster specified rather than call the building function (`build_hand` in this case). Most the building and (pre-compiled) loading functions are specified [here](https://github.com/cefect/RICorDE/blob/8579036e0747c4d97c391968772832f73d564741/ricorde/scripts.py#L66). Using this feature to supply an intermediate data file computed outside of RICorDE is not recommended as this may cause downstream issues in the computation pipeline. 

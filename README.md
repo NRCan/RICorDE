@@ -7,6 +7,8 @@ To read more about the algorithm, and its performance and applications, see [Bry
 
 To see what's new, check out the [CHANGELOG.md](CHANGELOG.md)
 
+The public repository is [here](https://github.com/cefect/RICorDE_pub)
+
 ## Installation
 RICorDE is a standalone application built on open source QGIS python bindings and WhiteboxTools.  Before using, ensure the following are installed:
 

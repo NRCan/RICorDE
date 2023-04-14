@@ -24,7 +24,77 @@ from hp.oop import Session as baseSession
 from ricorde.tcoms import TComs
 from hp.gdal import get_nodata_val, rlay_to_array
 from hp.whitebox import Whitebox
-from definitions import config_params
+ 
+
+
+config_params = { #{sectionName:{varName:(mandatory_flag, ConfigParser get method)}}
+     'session':{
+        'aoi_fp':(False, 'get'),
+        'dem_fp':(True, 'get'),
+        'pwb_fp':(True, 'get'),
+        'inun_fp':(True, 'get'),
+        'crsid':(True, 'get'),'name':(True, 'get'),
+        },
+                         
+    'dem':{
+        'resolution':(False, 'getint'),
+        },
+    'pwb_rlay':{
+        'resampling':(False, 'get'),
+        },
+    'inun_rlay':{
+        'resampling':(False, 'get'),
+        },
+    
+    'dem_hyd':{
+        'dist':(False, 'getint'),
+        },
+    'HAND':{},
+    'HAND_mask':{},
+    'inun1':{
+        'buff_dist':(False, 'getint')
+        },
+    'beach1':{},
+    'b1Bounds':{
+        'qhigh':(False, 'getfloat'),
+        'cap':(False, 'getfloat'),
+        'qlow':(False, 'getfloat'),
+        'floor':(False, 'getfloat'),
+        },
+    'inunHmax':{
+        'hval':(False, 'getfloat'),
+        },
+    'inun2':{},
+    'beach2':{
+        'method':(False, 'get'),
+        },
+    'hgInterp':{
+        'resolution':(False, 'getint'),
+        'distP':(False, 'getfloat'),
+        'pts_cnt':(False, 'getint'),
+        'radius':(False, 'getfloat'),
+        },
+    'hgRaw':{},
+    'hgSmooth':{
+        'resolution':(False, 'getint'),
+        'max_grade':(False, 'getfloat'),
+        'neighborhood_size':(False, 'getint'),
+        'range_thresh':(False, 'getfloat'),
+        'max_iter':(False, 'getint'),
+        'precision':(False, 'getfloat'),
+        },
+    'hInunSet':{
+        'animate':(False, 'getboolean'),
+        },
+    'hWslSet':{
+        'max_fail_cnt':(False, 'getint'),
+        },
+    'wslMosaic':{},
+    'depths':{
+        'precision':(False, 'getint'),
+        },
+    
+    }
 
 
 #===============================================================================

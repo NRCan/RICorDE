@@ -8,7 +8,7 @@ import os
 from definitions import proj_dir
 from hp.basic import get_dict_str
 import configparser
-from definitions import config_params
+from ricorde.scripts import config_params
 
 def print_parser(parser):
     for sectName, sect in parser.items():

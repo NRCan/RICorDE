@@ -1,4 +1,5 @@
 # RICorDE pytests
+see ./pytest_all.bat for command to run all tests (takes a few minutes)
 
 ## test_unit_alg.py 
 contains Unit tests for major RICorDE algorithm callers

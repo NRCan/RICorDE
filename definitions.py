@@ -25,5 +25,4 @@ logcfg_file=os.path.join(proj_dir, 'logger.conf')
 
 #root directory for building default directories in
 root_dir=r'C:\LS\10_IO\ricorde'
-
-#parameters for parsing the parameter file
+ 

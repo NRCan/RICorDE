@@ -99,7 +99,8 @@ class Basic(object): #simple base class
         if root_dir is None:
             from definitions import root_dir
         
-        assert os.path.exists(root_dir), root_dir
+        #assert os.path.exists(root_dir), root_dir
+        if not os.path.exists(root_dir): os.makedirs(root_dir)
         if not os.getcwd() == root_dir:
             os.chdir(root_dir) #set this as the working directory (mostly used by the logger)
             print('set  directory to %s'%root_dir)

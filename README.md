@@ -3,6 +3,8 @@ RICorDE produces gridded water depth estimates from flood inundation data by inc
 
 ![img](/img/cover.png)
 
+RICorDE is an open source software originally released under the Government of Canada’s Open Government License. RICorDE was co-developed by Bryant, McGrath and Boudreault. Full description of the methodology can be found here: Bryant, S., McGrath, H., and Boudreault, M.: Gridded flood depth estimates from satellite-derived inundations, Nat. Hazards Earth Syst. Sci., 22, 1437–1450, https://doi.org/10.5194/nhess-22-1437-2022, 2022.
+
 To read more about the algorithm, and its performance and applications, see [Bryant 2022](https://nhess.copernicus.org/articles/22/1437/2022/nhess-22-1437-2022.html).
 
 To see what's new, check out the [CHANGELOG.md](CHANGELOG.md)
